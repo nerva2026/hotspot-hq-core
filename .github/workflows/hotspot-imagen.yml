@@ -1,0 +1,98 @@
+name: Imagen HOT-SPOT HQ
+
+# Construye la imagen «play» de WorkAdventure con la personalización de HOT-SPOT HQ
+# y la publica en ghcr.io/nerva2026/hotspot-hq-play.
+#
+# No guardamos aquí el código entero de WorkAdventure: se descarga la versión oficial
+# indicada en WA_VERSION y encima se aplican los parches (carpeta parches/) y los
+# archivos propios (carpeta archivos/, que se copian tal cual encima del código).
+
+on:
+  push:
+    branches: [hotspot]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  WA_VERSION: v1.33.10
+  IMAGEN: ghcr.io/nerva2026/hotspot-hq-play
+
+concurrency:
+  group: imagen-hotspot
+  cancel-in-progress: true
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Liberar espacio en disco
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      - name: Personalización de HOT-SPOT HQ
+        uses: actions/checkout@v4
+        with:
+          path: hotspot
+
+      - name: Descargar WorkAdventure ${{ env.WA_VERSION }}
+        run: git clone --quiet --depth 1 --branch "$WA_VERSION" https://github.com/workadventure/workadventure.git wa
+
+      - name: Aplicar parches y archivos propios
+        working-directory: wa
+        run: |
+          set -e
+          for p in ../hotspot/parches/*.patch; do
+            [ -e "$p" ] || continue
+            echo "::group::Parche $(basename "$p")"
+            git apply --whitespace=nowarn --verbose "$p"
+            echo "::endgroup::"
+          done
+          if [ -d ../hotspot/archivos ]; then
+            rsync -a --exclude .gitkeep ../hotspot/archivos/ ./
+          fi
+          git status --short
+
+      - name: Preparar Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Entrar en el registro de GitHub
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Construir y publicar la imagen
+        uses: docker/build-push-action@v6
+        with:
+          context: wa
+          file: wa/play/Dockerfile
+          push: true
+          build-args: |
+            NODE_OPTIONS=--max-old-space-size=12288
+          tags: |
+            ${{ env.IMAGEN }}:${{ env.WA_VERSION }}-hq.${{ github.run_number }}
+            ${{ env.IMAGEN }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.title=HOT-SPOT HQ (play)
+            org.opencontainers.image.description=WorkAdventure ${{ env.WA_VERSION }} con la personalización de HOT-SPOT HQ
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
+
+      - name: Resumen
+        run: |
+          {
+            echo "### Imagen publicada"
+            echo ""
+            echo "- \`${IMAGEN}:${WA_VERSION}-hq.${{ github.run_number }}\`"
+            echo "- \`${IMAGEN}:latest\`"
+          } >> "$GITHUB_STEP_SUMMARY"
