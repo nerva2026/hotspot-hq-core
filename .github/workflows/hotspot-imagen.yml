@@ -10,6 +10,10 @@ name: Imagen HOT-SPOT HQ
 on:
   push:
     branches: [hotspot]
+    # El tablón de tareas tiene su propia imagen (hotspot-tareas.yml).
+    paths-ignore:
+      - "tareas/**"
+      - ".github/workflows/hotspot-tareas.yml"
   workflow_dispatch:
 
 permissions:

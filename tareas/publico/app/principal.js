@@ -1,0 +1,882 @@
+// Tablón de tareas de HOT SPOT S.L. · arranque, estado compartido, barra superior y filtros.
+
+import { h, $, vaciar, normalizar, hoy, plazo, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, pesoPrioridad, guardarLocal, leerLocal, fechaMedia } from "./util.js";
+import { api, escuchar, cuandoSePierdaLaSesion } from "./api.js";
+import { pantallaEntrar, pantallaAlta } from "./acceso.js";
+import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar, chipEtiqueta } from "./menus.js";
+import { hayArrastre } from "./arrastre.js";
+import { interpretar } from "./rapida.js";
+import { pintarTablero } from "./tablero.js";
+import { pintarLista } from "./lista.js";
+import { pintarCalendario } from "./calendario.js";
+import { pintarCronograma } from "./cronograma.js";
+import { abrirFicha, cerrarFicha, fichaAbierta, actualizarFicha } from "./ficha.js";
+
+const VISTAS = [
+    { id: "tablero", nombre: "Tablero", tecla: "1", pintar: pintarTablero },
+    { id: "lista", nombre: "Lista", tecla: "2", pintar: pintarLista },
+    { id: "calendario", nombre: "Calendario", tecla: "3", pintar: pintarCalendario },
+    { id: "cronograma", nombre: "Cronograma", tecla: "4", pintar: pintarCronograma },
+];
+
+const FILTROS_VACIOS = { texto: "", persona: "todos", prioridades: [], etiqueta: null, ocultarHechas: false };
+
+const E = {
+    yo: null,
+    usuarios: [],
+    tareas: new Map(),
+    vista: leerLocal("vista", "tablero"),
+    filtros: { ...FILTROS_VACIOS, ...leerLocal("filtros", {}), texto: "" },
+    porVista: {}, // estado propio de cada vista (mes del calendario, zoom del cronograma…)
+};
+if (!VISTAS.some((v) => v.id === E.vista)) E.vista = "tablero";
+
+const raiz = document.getElementById("app");
+let dejarDeEscuchar = null;
+let pintura = null;
+let pintarAlSoltarFoco = false;
+
+// ---------- acceso a los datos para las vistas ----------
+
+const ctx = {
+    E,
+    usuario: (id) => E.usuarios.find((u) => u.id === id) || null,
+    todasEtiquetas() {
+        const cuenta = new Map();
+        for (const t of E.tareas.values()) for (const e of t.etiquetas) cuenta.set(e, (cuenta.get(e) || 0) + 1);
+        return [...cuenta.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([e]) => e);
+    },
+    // Tareas que pasan los filtros. «incluirHechas» ignora el filtro de ocultar hechas.
+    visibles({ incluirHechas = false } = {}) {
+        const f = E.filtros;
+        const q = normalizar(f.texto);
+        return [...E.tareas.values()].filter((t) => {
+            if (f.ocultarHechas && !incluirHechas && t.estado === "hecho") return false;
+            if (f.persona === "yo" && !t.responsables.includes(E.yo.id)) return false;
+            if (f.persona === "nadie" && t.responsables.length) return false;
+            if (!["todos", "yo", "nadie"].includes(f.persona) && !t.responsables.includes(f.persona)) return false;
+            if (f.prioridades.length && !f.prioridades.includes(t.prioridad || "ninguna")) return false;
+            if (f.etiqueta && !t.etiquetas.includes(f.etiqueta)) return false;
+            if (q) {
+                const donde = normalizar(`${t.titulo} ${t.notas} ${t.etiquetas.join(" ")} ${t.subtareas.map((s) => s.texto).join(" ")}`);
+                if (!q.split(/\s+/).every((p) => donde.includes(p))) return false;
+            }
+            return true;
+        });
+    },
+    abrir: (id, opciones) => abrirFicha(id, ctx, opciones),
+    nueva: (base) => nuevaTarea(base),
+    async crear(parcial, { abrir = false } = {}) {
+        const base = { ...parcial };
+        // En «Mis tareas», lo nuevo es para mí si no se dice otra cosa.
+        if (!base.responsables?.length && E.filtros.persona === "yo") base.responsables = [E.yo.id];
+        if (!base.responsables?.length && E.usuarios.some((u) => u.id === E.filtros.persona)) base.responsables = [E.filtros.persona];
+        try {
+            const t = await api.crear(base);
+            E.tareas.set(t.id, t);
+            pintar();
+            if (abrir) ctx.abrir(t.id, { nueva: true });
+            else if (!ctx.visibles().some((x) => x.id === t.id)) aviso("Tarea creada (los filtros la ocultan).", { accion: "Ver", alAccion: () => ctx.abrir(t.id) });
+            return t;
+        } catch (err) {
+            aviso(err.message, { tipo: "malo" });
+            return null;
+        }
+    },
+    async cambiar(id, cambios) {
+        const t = E.tareas.get(id);
+        if (!t) return;
+        const c = { ...cambios };
+        // Al cambiar de columna sin decir dónde, la tarea va al final de la nueva.
+        if (c.estado && c.estado !== t.estado && !("orden" in c)) {
+            const orden = [...E.tareas.values()].filter((x) => x.estado === c.estado).reduce((m, x) => Math.max(m, x.orden), 0);
+            c.orden = orden + 1;
+        }
+        const antes = { ...t };
+        Object.assign(t, c);
+        if (t.inicio && t.fin && t.inicio > t.fin) [t.inicio, t.fin] = [t.fin, t.inicio];
+        if ("estado" in c) t.hechaEl = t.estado === "hecho" ? antes.hechaEl || new Date().toISOString() : null;
+        t.actualizada = new Date().toISOString();
+        t.actualizadaPor = E.yo.id;
+        pintar();
+        actualizarFicha(ctx);
+        try {
+            const nueva = await api.cambiar(id, c);
+            // Solo se copian los campos que se han pedido: si mientras tanto se ha seguido escribiendo, no se pisa.
+            const actual = E.tareas.get(id);
+            if (actual) {
+                for (const k of Object.keys(nueva)) if (!(k in c) || ["inicio", "fin", "hechaEl"].includes(k)) actual[k] = nueva[k];
+            }
+            pintar();
+            actualizarFicha(ctx);
+        } catch (err) {
+            aviso(`No se ha guardado: ${err.message}`, { tipo: "malo" });
+            await recargar();
+        }
+    },
+    async borrar(id) {
+        const t = E.tareas.get(id);
+        if (!t) return;
+        E.tareas.delete(id);
+        if (fichaAbierta() === id) cerrarFicha();
+        pintar();
+        try {
+            await api.borrar(id);
+            aviso(`Tarea borrada: «${t.titulo.slice(0, 40)}${t.titulo.length > 40 ? "…" : ""}»`, {
+                accion: "Deshacer",
+                duracion: 8000,
+                alAccion: async () => {
+                    const vuelta = await api.restaurar(id);
+                    E.tareas.set(vuelta.id, vuelta);
+                    pintar();
+                },
+            });
+        } catch (err) {
+            aviso(`No se ha borrado: ${err.message}`, { tipo: "malo" });
+            await recargar();
+        }
+    },
+    pintar: () => pintar(),
+};
+
+// ---------- pintar ----------
+
+function pintar() {
+    if (pintura) return;
+    pintura = requestAnimationFrame(() => {
+        pintura = null;
+        pintarYa();
+    });
+}
+
+function pintarYa() {
+    if (!E.yo) return;
+    if (hayArrastre()) {
+        setTimeout(pintar, 120);
+        return;
+    }
+    const cont = $("#vista");
+    if (!cont) return;
+    // Si alguien está escribiendo en la vista, se espera a que termine para no borrarle lo escrito…
+    const activo = document.activeElement;
+    let foco = null;
+    if (activo && cont.contains(activo) && activo.matches("input:not([type=checkbox]), textarea")) {
+        // …salvo en los campos de «nueva tarea», que se vuelven a crear con lo escrito y el cursor en su sitio.
+        if (!activo.dataset.foco) {
+            pintarAlSoltarFoco = true;
+            return;
+        }
+        foco = { clave: activo.dataset.foco, valor: activo.value, desde: activo.selectionStart, hasta: activo.selectionEnd };
+    }
+    const desplazamientos = new Map([...cont.querySelectorAll("[data-desplazar]")].map((el) => [el.dataset.desplazar, [el.scrollLeft, el.scrollTop]]));
+    const vista = VISTAS.find((v) => v.id === E.vista);
+    vaciar(cont);
+    cont.dataset.vista = vista.id;
+    E.porVista[vista.id] ||= {};
+    vista.pintar(cont, ctx, E.porVista[vista.id]);
+    for (const el of cont.querySelectorAll("[data-desplazar]")) {
+        const d = desplazamientos.get(el.dataset.desplazar);
+        if (d) [el.scrollLeft, el.scrollTop] = d;
+    }
+    if (foco) {
+        const el = cont.querySelector(`[data-foco="${CSS.escape(foco.clave)}"]`);
+        if (el) {
+            el.value = foco.valor;
+            el.focus({ preventScroll: true });
+            try {
+                el.setSelectionRange(foco.desde, foco.hasta);
+            } catch {
+                /* algunos campos no tienen cursor */
+            }
+        }
+    }
+    pintarBarra();
+}
+
+document.addEventListener("focusout", () => {
+    if (!pintarAlSoltarFoco) return;
+    setTimeout(() => {
+        const activo = document.activeElement;
+        const cont = $("#vista");
+        if (cont && activo && cont.contains(activo) && activo.matches("input, textarea")) return;
+        pintarAlSoltarFoco = false;
+        pintar();
+    }, 0);
+});
+
+// ---------- barra superior y filtros ----------
+
+function dentroDeLaOficina() {
+    try {
+        return window.top !== window;
+    } catch {
+        return true;
+    }
+}
+
+function montar() {
+    vaciar(raiz);
+    document.body.classList.toggle("en-oficina", dentroDeLaOficina());
+    raiz.append(
+        h(
+            "header",
+            { class: "barra" },
+            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("span", { class: "nombre-app" }, "TAREAS")),
+            h(
+                "nav",
+                { class: "pestanas", "aria-label": "Vistas" },
+                VISTAS.map((v) =>
+                    h(
+                        "button",
+                        {
+                            type: "button",
+                            class: "pestana",
+                            dataset: { vista: v.id },
+                            title: `${v.nombre} (${v.tecla})`,
+                            onclick: () => cambiarVista(v.id),
+                        },
+                        v.nombre,
+                    ),
+                ),
+            ),
+            h("div", { class: "barra-derecha" }, h("button", { type: "button", class: "btn primario", id: "boton-nueva", title: "Nueva tarea (N)", onclick: () => nuevaTarea() }, "+ Nueva"), h("button", { type: "button", class: "boton-yo", id: "boton-yo", onclick: (e) => menuYo(e.currentTarget) })),
+        ),
+        h(
+            "div",
+            { class: "filtros" },
+            h("input", {
+                id: "buscar",
+                class: "campo buscar",
+                type: "search",
+                placeholder: "Buscar…  ( / )",
+                "aria-label": "Buscar tareas",
+                value: E.filtros.texto,
+                oninput: (e) => {
+                    E.filtros.texto = e.target.value;
+                    pintar();
+                },
+                onkeydown: (e) => {
+                    if (e.key === "Escape") {
+                        e.target.value = "";
+                        E.filtros.texto = "";
+                        e.target.blur();
+                        pintar();
+                    }
+                },
+            }),
+            h("button", { type: "button", class: "filtro", id: "filtro-persona", onclick: (e) => menuFiltroPersona(e.currentTarget) }),
+            h("button", { type: "button", class: "filtro", id: "filtro-prioridad", onclick: (e) => menuFiltroPrioridad(e.currentTarget) }),
+            h("button", { type: "button", class: "filtro", id: "filtro-etiqueta", onclick: (e) => menuFiltroEtiqueta(e.currentTarget) }),
+            h(
+                "label",
+                { class: "filtro interruptor" },
+                h("input", {
+                    type: "checkbox",
+                    id: "filtro-hechas",
+                    onchange: (e) => {
+                        E.filtros.ocultarHechas = e.target.checked;
+                        guardarFiltros();
+                        pintar();
+                    },
+                }),
+                h("span", null, "Ocultar hechas"),
+            ),
+            h("button", { type: "button", class: "enlace", id: "limpiar-filtros", onclick: limpiarFiltros }, "Quitar filtros"),
+            h("div", { class: "resumen", id: "resumen" }),
+        ),
+        h("main", { id: "vista", class: "vista" }),
+    );
+    pintarYa();
+}
+
+function pintarBarra() {
+    for (const b of document.querySelectorAll(".pestana")) {
+        b.classList.toggle("activa", b.dataset.vista === E.vista);
+        b.setAttribute("aria-current", b.dataset.vista === E.vista ? "page" : "false");
+    }
+    const yo = $("#boton-yo");
+    if (yo) yo.replaceChildren(avatar(E.yo), h("span", { class: "nombre-yo" }, E.yo.nombre), h("span", { class: "flecha" }, "▾"));
+
+    const f = E.filtros;
+    const persona = $("#filtro-persona");
+    if (persona) {
+        const u = ctx.usuario(f.persona);
+        persona.replaceChildren(f.persona === "todos" ? "Todos" : f.persona === "yo" ? "Mis tareas" : f.persona === "nadie" ? "Sin asignar" : u ? u.nombre : "Todos", h("span", { class: "flecha" }, "▾"));
+        persona.classList.toggle("activo", f.persona !== "todos");
+    }
+    const prio = $("#filtro-prioridad");
+    if (prio) {
+        const nombres = f.prioridades.map((p) => (p === "ninguna" ? "Sin prioridad" : PRIORIDADES.find((x) => x.id === p)?.nombre)).filter(Boolean);
+        prio.replaceChildren(nombres.length ? nombres.join(", ") : "Prioridad", h("span", { class: "flecha" }, "▾"));
+        prio.classList.toggle("activo", nombres.length > 0);
+    }
+    const etq = $("#filtro-etiqueta");
+    if (etq) {
+        etq.replaceChildren(f.etiqueta ? `#${f.etiqueta}` : "Etiqueta", h("span", { class: "flecha" }, "▾"));
+        etq.classList.toggle("activo", Boolean(f.etiqueta));
+    }
+    const hechas = $("#filtro-hechas");
+    if (hechas) hechas.checked = f.ocultarHechas;
+    const limpiar = $("#limpiar-filtros");
+    if (limpiar) limpiar.hidden = !(f.texto || f.persona !== "todos" || f.prioridades.length || f.etiqueta || f.ocultarHechas);
+
+    // Resumen: lo mío que vence hoy o ya ha vencido.
+    const mias = [...E.tareas.values()].filter((t) => t.estado !== "hecho" && t.responsables.includes(E.yo.id) && t.fin);
+    const atrasadas = mias.filter((t) => t.fin < hoy()).length;
+    const deHoy = mias.filter((t) => t.fin === hoy()).length;
+    const resumen = $("#resumen");
+    if (resumen) {
+        const partes = [];
+        if (atrasadas) partes.push(h("span", { class: "chip plazo atrasada" }, `${atrasadas} atrasada${atrasadas > 1 ? "s" : ""}`));
+        if (deHoy) partes.push(h("span", { class: "chip plazo hoy" }, `${deHoy} para hoy`));
+        resumen.replaceChildren(
+            ...(partes.length
+                ? [
+                      h(
+                          "button",
+                          {
+                              type: "button",
+                              class: "enlace resumen-boton",
+                              title: "Ver mis tareas",
+                              onclick: () => {
+                                  E.filtros.persona = "yo";
+                                  guardarFiltros();
+                                  pintar();
+                              },
+                          },
+                          "Tú: ",
+                          ...partes,
+                      ),
+                  ]
+                : []),
+        );
+    }
+}
+
+function guardarFiltros() {
+    const { texto, ...resto } = E.filtros;
+    guardarLocal("filtros", resto);
+}
+
+function limpiarFiltros() {
+    E.filtros = { ...FILTROS_VACIOS };
+    const b = $("#buscar");
+    if (b) b.value = "";
+    guardarFiltros();
+    pintar();
+}
+
+function cambiarVista(id) {
+    if (E.vista === id) return;
+    E.vista = id;
+    guardarLocal("vista", id);
+    cerrarMenu();
+    pintarYa();
+}
+
+function opcionesMenu(opciones) {
+    const lista = h("div", { class: "opciones" });
+    for (const o of opciones) {
+        if (o === "-") {
+            lista.appendChild(h("hr"));
+            continue;
+        }
+        if (!o) continue;
+        lista.appendChild(
+            h(
+                o.href ? "a" : "button",
+                {
+                    class: ["opcion", o.marcado && "marcada"],
+                    type: o.href ? null : "button",
+                    href: o.href,
+                    download: o.download,
+                    target: o.target,
+                    rel: o.target ? "noopener" : null,
+                    onclick: (e) => {
+                        if (!o.mantener) cerrarMenu();
+                        o.accion?.(e);
+                    },
+                },
+                h("span", { class: "marca" }, o.marcado ? "✓" : o.icono || ""),
+                o.contenido,
+            ),
+        );
+    }
+    return lista;
+}
+
+function menuFiltroPersona(ancla) {
+    const elegir = (v) => () => {
+        E.filtros.persona = v;
+        guardarFiltros();
+        pintar();
+    };
+    abrirMenu(ancla, () =>
+        opcionesMenu([
+            { contenido: "Todos", marcado: E.filtros.persona === "todos", accion: elegir("todos") },
+            { contenido: "Mis tareas", marcado: E.filtros.persona === "yo", accion: elegir("yo") },
+            "-",
+            ...E.usuarios.filter((u) => u.id !== E.yo.id).map((u) => ({ contenido: [avatar(u), u.nombre], marcado: E.filtros.persona === u.id, accion: elegir(u.id) })),
+            { contenido: [avatar(null), "Sin asignar"], marcado: E.filtros.persona === "nadie", accion: elegir("nadie") },
+        ]),
+    );
+}
+
+function menuFiltroPrioridad(ancla) {
+    const pintarLista = () =>
+        opcionesMenu(
+            [...PRIORIDADES, { ...SIN_PRIORIDAD, id: "ninguna" }].map((p) => ({
+                contenido: [h("span", { class: "muestra-prioridad", style: { background: p.color } }), p.nombre],
+                marcado: E.filtros.prioridades.includes(p.id),
+                mantener: true,
+                accion: () => {
+                    const s = new Set(E.filtros.prioridades);
+                    if (s.has(p.id)) s.delete(p.id);
+                    else s.add(p.id);
+                    E.filtros.prioridades = PRIORIDADES.map((x) => x.id)
+                        .concat("ninguna")
+                        .filter((x) => s.has(x));
+                    guardarFiltros();
+                    pintar();
+                    caja.replaceChildren(pintarLista());
+                },
+            })),
+        );
+    const caja = h("div");
+    caja.appendChild(pintarLista());
+    abrirMenu(ancla, caja);
+}
+
+function menuFiltroEtiqueta(ancla) {
+    const todas = ctx.todasEtiquetas();
+    abrirMenu(ancla, () =>
+        todas.length
+            ? opcionesMenu([
+                  { contenido: "Todas", marcado: !E.filtros.etiqueta, accion: () => ((E.filtros.etiqueta = null), guardarFiltros(), pintar()) },
+                  "-",
+                  ...todas.map((e) => ({ contenido: chipEtiqueta(e), marcado: E.filtros.etiqueta === e, accion: () => ((E.filtros.etiqueta = e), guardarFiltros(), pintar()) })),
+              ])
+            : h("div", { class: "vacio-menu" }, "Todavía no hay etiquetas. Se ponen en cada tarea (o escribiendo #algo al crearla)."),
+    );
+}
+
+// ---------- menú de la cuenta ----------
+
+function menuYo(ancla) {
+    const enOficina = dentroDeLaOficina();
+    abrirMenu(ancla, () =>
+        h(
+            "div",
+            null,
+            h("div", { class: "menu-titulo" }, `Hola, ${E.yo.nombre}`),
+            opcionesMenu([
+                enOficina ? { contenido: "Abrir en pestaña nueva ↗", href: location.href.split("#")[0], target: "_blank" } : null,
+                { contenido: "Descargar en Excel", href: "api/excel", download: "" },
+                { contenido: "Importar desde Excel…", accion: importarExcel },
+                "-",
+                E.yo.admin ? { contenido: "Invitar a alguien…", accion: invitar } : null,
+                E.yo.admin && E.usuarios.length > 1 ? { contenido: "Contraseña olvidada de…", accion: () => recuperar(ancla) } : null,
+                { contenido: "Mi color y contraseña…", accion: ajustesYo },
+                { contenido: "Atajos de teclado", accion: atajos },
+                "-",
+                { contenido: "Salir", accion: salir },
+            ]),
+        ),
+    );
+}
+
+function copiable(texto) {
+    const entrada = h("input", { class: "campo", readonly: true, value: texto, onfocus: (e) => e.target.select() });
+    const boton = h(
+        "button",
+        {
+            type: "button",
+            class: "btn",
+            onclick: async () => {
+                entrada.select();
+                try {
+                    await navigator.clipboard.writeText(texto);
+                    boton.textContent = "¡Copiado!";
+                } catch {
+                    document.execCommand?.("copy");
+                    boton.textContent = "Copiado";
+                }
+            },
+        },
+        "Copiar",
+    );
+    return h("div", { class: "copiable" }, entrada, boton);
+}
+
+const enlaceCon = (codigo) => `${location.origin}${location.pathname}#alta=${codigo}`;
+
+async function invitar() {
+    try {
+        const { codigo } = await api.invitar({ tipo: "alta" });
+        ventana(
+            "Invitar a alguien",
+            h(
+                "div",
+                { class: "pila" },
+                h("p", null, "Mándale este enlace. Con él se crea su cuenta y ya puede entrar. Sirve una sola vez y caduca en 7 días."),
+                copiable(enlaceCon(codigo)),
+                h("p", { class: "nota" }, "Tendrá los mismos permisos que tú: podrá ver y cambiar todas las tareas e invitar a más gente."),
+            ),
+            { ancho: 480 },
+        );
+    } catch (err) {
+        aviso(err.message, { tipo: "malo" });
+    }
+}
+
+function recuperar(ancla) {
+    abrirMenu(ancla, () =>
+        h(
+            "div",
+            null,
+            h("div", { class: "menu-titulo" }, "¿Quién ha olvidado su contraseña?"),
+            opcionesMenu(
+                E.usuarios
+                    .filter((u) => u.id !== E.yo.id)
+                    .map((u) => ({
+                        contenido: [avatar(u), u.nombre],
+                        accion: async () => {
+                            try {
+                                const { codigo } = await api.invitar({ tipo: "clave", persona: u.id });
+                                ventana(
+                                    `Contraseña nueva para ${u.nombre}`,
+                                    h("div", { class: "pila" }, h("p", null, `Mándale este enlace a ${u.nombre}: con él elige una contraseña nueva. Sirve una vez y caduca en 7 días.`), copiable(enlaceCon(codigo))),
+                                    { ancho: 480 },
+                                );
+                            } catch (err) {
+                                aviso(err.message, { tipo: "malo" });
+                            }
+                        },
+                    })),
+            ),
+        ),
+    );
+}
+
+function ajustesYo() {
+    const colores = ["#e0562a", "#3b82c4", "#3a9d5d", "#8e5cc4", "#d6457f", "#c79100", "#1f9e98", "#6b5f58"];
+    let color = E.yo.color;
+    const muestras = h("div", { class: "muestras" });
+    const pintarMuestras = () =>
+        muestras.replaceChildren(
+            ...colores.map((c) =>
+                h("button", {
+                    type: "button",
+                    class: ["muestra", c === color && "elegida"],
+                    style: { background: c },
+                    "aria-label": `Color ${c}`,
+                    onclick: async () => {
+                        color = c;
+                        pintarMuestras();
+                        try {
+                            const { yo } = await api.cambiarYo({ color });
+                            actualizarUsuario(yo);
+                        } catch (err) {
+                            aviso(err.message, { tipo: "malo" });
+                        }
+                    },
+                }),
+            ),
+        );
+    pintarMuestras();
+    const actual = h("input", { class: "campo", type: "password", autocomplete: "current-password" });
+    const nueva = h("input", { class: "campo", type: "password", autocomplete: "new-password", minlength: 8 });
+    const error = h("p", { class: "error", role: "alert" });
+    const v = ventana(
+        "Mi cuenta",
+        h(
+            "div",
+            { class: "pila" },
+            h("div", { class: "etiqueta-campo" }, h("span", null, "Mi color"), muestras),
+            h(
+                "form",
+                {
+                    class: "pila",
+                    onsubmit: async (e) => {
+                        e.preventDefault();
+                        error.textContent = "";
+                        try {
+                            await api.cambiarYo({ claveActual: actual.value, clave: nueva.value });
+                            v.cerrar();
+                            aviso("Contraseña cambiada.");
+                        } catch (err) {
+                            error.textContent = err.message;
+                        }
+                    },
+                },
+                h("h3", null, "Cambiar la contraseña"),
+                h("label", { class: "etiqueta-campo" }, h("span", null, "Contraseña actual"), actual),
+                h("label", { class: "etiqueta-campo" }, h("span", null, "Contraseña nueva (8 o más caracteres)"), nueva),
+                error,
+                h("button", { class: "btn primario", type: "submit" }, "Cambiar contraseña"),
+            ),
+        ),
+    );
+}
+
+function atajos() {
+    const fila = (tecla, que) => h("tr", null, h("td", null, h("kbd", null, tecla)), h("td", null, que));
+    ventana(
+        "Atajos",
+        h(
+            "div",
+            { class: "pila" },
+            h("table", { class: "tabla-atajos" }, fila("N", "Nueva tarea"), fila("/", "Buscar"), fila("1 – 4", "Tablero, lista, calendario, cronograma"), fila("Esc", "Cerrar la tarea abierta")),
+            h("h3", null, "Al escribir una tarea nueva"),
+            h(
+                "table",
+                { class: "tabla-atajos" },
+                fila("@víctor", "Para quién (o @todos)"),
+                fila("!urgente  !alta  !media  !baja", "Prioridad (también !!! y !!)"),
+                fila("#etiqueta", "Etiqueta"),
+                fila("para mañana", "Fecha: hoy, mañana, el viernes, el 15/10, el 3 de noviembre…"),
+            ),
+        ),
+        { ancho: 520 },
+    );
+}
+
+function importarExcel() {
+    const entrada = h("input", { type: "file", accept: ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", hidden: true });
+    entrada.addEventListener("change", async () => {
+        const archivo = entrada.files[0];
+        entrada.remove();
+        if (!archivo) return;
+        try {
+            const r = await api.importar(archivo);
+            for (const t of r.tareas) E.tareas.set(t.id, t);
+            pintar();
+            aviso(
+                r.importadas
+                    ? `Importadas ${r.importadas} tarea${r.importadas > 1 ? "s" : ""} de la hoja «${r.hoja}»${r.repetidas ? ` (${r.repetidas} ya estaban)` : ""}.`
+                    : `No había tareas nuevas en «${r.hoja}»${r.repetidas ? ` (${r.repetidas} ya estaban)` : ""}.`,
+                { duracion: 7000 },
+            );
+        } catch (err) {
+            aviso(err.message, { tipo: "malo", duracion: 8000 });
+        }
+    });
+    document.body.appendChild(entrada);
+    entrada.click();
+}
+
+async function salir() {
+    try {
+        await api.salir();
+    } catch {
+        /* da igual: se sale igualmente */
+    }
+    sinSesion();
+}
+
+// ---------- tarea nueva (alta rápida) ----------
+
+function nuevaTarea(base = {}) {
+    const vista = h("div", { class: "piezas" });
+    const entrada = h("input", {
+        class: "campo grande",
+        placeholder: "¿Qué hay que hacer?",
+        maxlength: 300,
+        "aria-label": "Título de la tarea",
+    });
+    const interpretado = () => interpretar(entrada.value, E.usuarios);
+    const pintarPiezas = () => {
+        const r = interpretado();
+        const piezas = [];
+        const personas = [...new Set([...(base.responsables || []), ...r.responsables])];
+        for (const id of personas) {
+            const u = ctx.usuario(id);
+            if (u) piezas.push(h("span", { class: "chip" }, avatar(u), u.nombre));
+        }
+        const prio = r.prioridad || base.prioridad;
+        if (prio) {
+            const p = PRIORIDADES.find((x) => x.id === prio);
+            piezas.push(h("span", { class: "chip prioridad", style: { background: p.color, color: p.texto } }, p.nombre));
+        }
+        const fin = r.fin || base.fin;
+        if (fin) piezas.push(h("span", { class: "chip" }, `Para el ${fechaMedia(fin)}`));
+        for (const e of r.etiquetas) piezas.push(chipEtiqueta(e));
+        if (base.estado && base.estado !== "por-hacer") piezas.push(h("span", { class: "chip" }, ESTADOS.find((x) => x.id === base.estado)?.nombre));
+        vista.replaceChildren(...(piezas.length ? piezas : [h("span", { class: "nota" }, "Atajos: @persona  !alta  #etiqueta  para el viernes")]));
+    };
+    entrada.addEventListener("input", pintarPiezas);
+    const crear = async (abrir) => {
+        const r = interpretado();
+        if (!r.titulo) {
+            entrada.focus();
+            return;
+        }
+        const tarea = {
+            ...base,
+            titulo: r.titulo,
+            responsables: [...new Set([...(base.responsables || []), ...r.responsables])],
+            etiquetas: [...new Set([...(base.etiquetas || []), ...r.etiquetas])],
+        };
+        if (r.prioridad) tarea.prioridad = r.prioridad;
+        if (r.fin) tarea.fin = r.fin;
+        const t = await ctx.crear(tarea, { abrir });
+        if (!t) return;
+        if (abrir) v.cerrar();
+        else {
+            entrada.value = "";
+            pintarPiezas();
+            entrada.focus();
+            aviso(`Creada: «${t.titulo}»`, { accion: "Abrir", alAccion: () => (v.cerrar(), ctx.abrir(t.id)) });
+        }
+    };
+    entrada.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            crear(e.shiftKey);
+        }
+    });
+    pintarPiezas();
+    const v = ventana(
+        "Nueva tarea",
+        h(
+            "div",
+            { class: "pila" },
+            entrada,
+            vista,
+            h(
+                "div",
+                { class: "acciones-ventana" },
+                h("span", { class: "nota" }, "Intro: crear y seguir · Mayús+Intro: crear y abrir"),
+                h("button", { type: "button", class: "btn", onclick: () => crear(true) }, "Crear y abrir"),
+                h("button", { type: "button", class: "btn primario", onclick: () => crear(false) }, "Crear"),
+            ),
+        ),
+        { ancho: 560 },
+    );
+    entrada.focus();
+}
+
+// ---------- tiempo real ----------
+
+function actualizarUsuario(u) {
+    const i = E.usuarios.findIndex((x) => x.id === u.id);
+    if (i >= 0) E.usuarios[i] = u;
+    else E.usuarios.push(u);
+    if (E.yo.id === u.id) E.yo = u;
+    pintar();
+}
+
+function alRecibir(ev) {
+    if (ev.tipo === "tarea") {
+        E.tareas.set(ev.tarea.id, ev.tarea);
+        pintar();
+        if (fichaAbierta() === ev.tarea.id) actualizarFicha(ctx, { deFuera: true });
+    } else if (ev.tipo === "borrada") {
+        E.tareas.delete(ev.id);
+        if (fichaAbierta() === ev.id) {
+            cerrarFicha();
+            const quien = ctx.usuario(ev.autor);
+            aviso(`${quien ? quien.nombre : "Alguien"} ha borrado la tarea que tenías abierta.`);
+        }
+        pintar();
+    } else if (ev.tipo === "usuarios") {
+        E.usuarios = ev.usuarios;
+        const yo = ev.usuarios.find((u) => u.id === E.yo.id);
+        if (yo) E.yo = yo;
+        pintar();
+    }
+}
+
+async function recargar() {
+    try {
+        cargar(await api.datos());
+    } catch {
+        /* sin conexión: ya se avisará */
+    }
+}
+
+function cargar(datos) {
+    E.yo = datos.yo;
+    E.usuarios = datos.usuarios;
+    E.tareas = new Map(datos.tareas.map((t) => [t.id, t]));
+    if (E.filtros.persona && !["todos", "yo", "nadie"].includes(E.filtros.persona) && !ctx.usuario(E.filtros.persona)) E.filtros.persona = "todos";
+    pintar();
+    if (fichaAbierta()) {
+        if (E.tareas.has(fichaAbierta())) actualizarFicha(ctx, { deFuera: true });
+        else cerrarFicha();
+    }
+}
+
+function empezar(datos) {
+    cargar(datos);
+    montar();
+    dejarDeEscuchar?.();
+    dejarDeEscuchar = escuchar(alRecibir, recargar);
+    const pedida = new URLSearchParams(location.search).get("tarea");
+    if (pedida && E.tareas.has(pedida)) ctx.abrir(pedida);
+}
+
+function sinSesion() {
+    dejarDeEscuchar?.();
+    dejarDeEscuchar = null;
+    E.yo = null;
+    cerrarFicha();
+    cerrarMenu();
+    pantallaEntrar(raiz, empezar);
+}
+cuandoSePierdaLaSesion(() => {
+    if (E.yo) sinSesion();
+});
+
+// ---------- teclado ----------
+
+document.addEventListener("keydown", (e) => {
+    if (!E.yo || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target.closest("input, textarea, select, [contenteditable=true]") || document.querySelector(".fondo-ventana") || hayMenu()) return;
+    if (e.key === "Escape" && fichaAbierta()) {
+        cerrarFicha();
+        return;
+    }
+    if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        nuevaTarea();
+    } else if (e.key === "/") {
+        e.preventDefault();
+        $("#buscar")?.focus();
+    } else {
+        const v = VISTAS.find((x) => x.tecla === e.key);
+        if (v) cambiarVista(v.id);
+    }
+});
+
+// Al volver a la pestaña después de un rato, se refresca por si se ha perdido algún aviso.
+let oculta = 0;
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden) oculta = Date.now();
+    else if (E.yo && oculta && Date.now() - oculta > 60000) recargar();
+});
+
+// ---------- inicio ----------
+
+(async function inicio() {
+    const alta = /[#&]alta=([\w-]+)/.exec(location.hash);
+    if (alta) {
+        pantallaAlta(raiz, alta[1], empezar);
+        return;
+    }
+    try {
+        empezar(await api.datos());
+    } catch (err) {
+        if (err.estado === 401) pantallaEntrar(raiz, empezar);
+        else
+            vaciar(raiz).appendChild(
+                h(
+                    "main",
+                    { class: "acceso" },
+                    h("div", { class: "acceso-caja" }, h("h1", null, "No hay conexión"), h("p", null, err.message), h("button", { class: "btn ancho", type: "button", onclick: () => location.reload() }, "Reintentar")),
+                ),
+            );
+    }
+})();
+
+export { ctx, pesoPrioridad, plazo };

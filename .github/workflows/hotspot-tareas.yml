@@ -1,0 +1,84 @@
+name: Imagen del tablón de tareas
+
+# Construye el tablón de tareas (carpeta tareas/) y lo publica en ghcr.io/nerva2026/hotspot-hq-tareas.
+# Es una aplicación pequeña de Node sin dependencias: tarda un minuto.
+
+on:
+  push:
+    branches: [hotspot]
+    paths:
+      - "tareas/**"
+      - ".github/workflows/hotspot-tareas.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGEN: ghcr.io/nerva2026/hotspot-hq-tareas
+
+concurrency:
+  group: imagen-tareas
+  cancel-in-progress: true
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Comprobar el código
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: |
+          for f in tareas/servidor/*.js tareas/publico/app/*.js; do node --check "$f"; done
+
+      - name: Probar el servidor
+        working-directory: tareas
+        run: |
+          mkdir -p /tmp/datos
+          TAREAS_DATOS=/tmp/datos TAREAS_PUERTO=3999 node servidor/principal.js > /tmp/tablon.log 2>&1 &
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:3999/tareas/salud && break; sleep 0.5; done
+          curl -fs http://127.0.0.1:3999/tareas/ | grep -q "Tareas · HOT SPOT S.L."
+          grep -q "#alta=" /tmp/tablon.log
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3999/tareas/api/datos)" = 401
+          echo "Servidor del tablón: bien"
+
+      - name: Preparar Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Entrar en el registro de GitHub
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Construir y publicar la imagen
+        uses: docker/build-push-action@v6
+        with:
+          context: tareas
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.IMAGEN }}:${{ github.run_number }}
+            ${{ env.IMAGEN }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.title=HOT SPOT S.L. · tablón de tareas
+            org.opencontainers.image.description=Tablón de tareas de la oficina de HOT SPOT S.L.
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
+          provenance: false
+          sbom: false
+
+      - name: Resumen
+        run: |
+          {
+            echo "### Imagen publicada"
+            echo ""
+            echo "- \`${IMAGEN}:${{ github.run_number }}\`"
+            echo "- \`${IMAGEN}:latest\`"
+          } >> "$GITHUB_STEP_SUMMARY"

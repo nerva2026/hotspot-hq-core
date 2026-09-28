@@ -92,6 +92,10 @@
 }
 
 /* ---------- letras ---------- */
+/* Pixelify Sans dibuja «fi» como una sola letra que parece una A («oAcina», «Anal»): sin ligaduras. */
+* {
+    font-variant-ligatures: none !important;
+}
 html,
 body,
 .font-main,

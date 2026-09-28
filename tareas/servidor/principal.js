@@ -1,0 +1,642 @@
+// Tablón de tareas de HOT SPOT S.L. · servidor
+//
+// Sirve la aplicación (carpeta publico/) y su API bajo /tareas. Sin dependencias: solo Node.
+//
+// Variables de entorno:
+//   TAREAS_PUERTO   puerto (3000)
+//   TAREAS_DATOS    carpeta de datos (/datos)
+//   TAREAS_URL      dirección pública, para los enlaces de alta (https://oficina.hot-spot.es/tareas/)
+//   TAREAS_BASE     ruta bajo la que se sirve (/tareas)
+//
+// Órdenes (dentro del contenedor):
+//   node servidor/principal.js enlace   → imprime un enlace nuevo para dar de alta a alguien (con permisos
+//                                          de administración); útil si se ha perdido el primero.
+
+import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
+import { fileURLToPath } from "node:url";
+import { abrirAlmacen } from "./almacen.js";
+import * as cuentas from "./cuentas.js";
+import { aplicarCambios, crearTarea, publica, ErrorDeDatos, ESTADOS, NOMBRES_ESTADO, NOMBRES_PRIORIDAD, PRIORIDADES } from "./tareas.js";
+import { crearExcel, leerExcel, fechaDeCelda } from "./excel.js";
+
+const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const PUBLICO = path.join(RAIZ, "publico");
+const PUERTO = Number(process.env.TAREAS_PUERTO || 3000);
+const CARPETA_DATOS = process.env.TAREAS_DATOS || "/datos";
+const BASE = (process.env.TAREAS_BASE || "/tareas").replace(/\/$/, "");
+const URL_PUBLICA = process.env.TAREAS_URL || `http://localhost:${PUERTO}${BASE}/`;
+const COOKIE = "hs_tablon";
+const ARCHIVO_INTERNO = path.join(CARPETA_DATOS, ".interno");
+
+// ---------- orden «enlace» (se ejecuta junto al servidor que ya está en marcha) ----------
+
+if (process.argv[2] === "enlace") {
+    const clave = fs.readFileSync(ARCHIVO_INTERNO, "utf8").trim();
+    const r = await fetch(`http://127.0.0.1:${PUERTO}${BASE}/api/interno/enlace`, { method: "POST", headers: { "x-interno": clave } });
+    const cuerpo = await r.json();
+    if (!r.ok) {
+        console.error(cuerpo.error || r.statusText);
+        process.exit(1);
+    }
+    console.log(`\nEnlace para dar de alta a alguien en el tablón (sirve una vez, 7 días):\n\n  ${cuerpo.enlace}\n`);
+    process.exit(0);
+}
+
+// ---------- arranque ----------
+
+const almacen = abrirAlmacen(CARPETA_DATOS);
+const datos = () => almacen.datos;
+
+const claveInterna = crypto.randomBytes(24).toString("hex");
+const CLAVE_FALSA = await cuentas.cifrarClave(crypto.randomBytes(12).toString("hex"));
+fs.writeFileSync(ARCHIVO_INTERNO, claveInterna, { mode: 0o600 });
+
+function enlaceAlta(codigo) {
+    return `${URL_PUBLICA}#alta=${codigo}`;
+}
+
+if (datos().usuarios.length === 0) {
+    const codigo = cuentas.crearInvitacion(datos(), { tipo: "alta", admin: true });
+    almacen.guardarYa();
+    console.log("\n=============================================================");
+    console.log(" Tablón de tareas de HOT SPOT S.L.: todavía no hay cuentas.");
+    console.log(" Abre este enlace para crear la primera (sirve una vez, 7 días):");
+    console.log(`\n   ${enlaceAlta(codigo)}\n`);
+    console.log("=============================================================\n");
+}
+
+// ---------- tiempo real (Server-Sent Events) ----------
+
+const oyentes = new Set(); // { res, usuario, sesion }
+
+function emitir(evento, origen = null) {
+    const linea = `data: ${JSON.stringify({ ...evento, origen })}\n\n`;
+    for (const o of oyentes) o.res.write(linea);
+}
+
+setInterval(() => {
+    for (const o of oyentes) o.res.write(": sigo aquí\n\n");
+}, 25000).unref();
+
+setInterval(() => {
+    if (cuentas.limpiarCaducadas(datos())) almacen.guardar();
+    // Las tareas borradas se quedan 30 días en la papelera por si hay que recuperarlas.
+    const limite = Date.now() - 30 * 24 * 3600 * 1000;
+    const antes = datos().tareas.length;
+    datos().tareas = datos().tareas.filter((t) => !t.borrada || Date.parse(t.borrada) > limite);
+    if (datos().tareas.length !== antes) almacen.guardar();
+}, 3600 * 1000).unref();
+
+// ---------- utilidades HTTP ----------
+
+const TIPOS = {
+    ".html": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".png": "image/png",
+    ".svg": "image/svg+xml",
+    ".txt": "text/plain; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+};
+
+const CSP =
+    "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; " +
+    "font-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; object-src 'none'";
+
+function cabecerasComunes(res) {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Referrer-Policy", "same-origin");
+}
+
+function json(res, estado, cuerpo, extra = {}) {
+    const texto = JSON.stringify(cuerpo);
+    res.writeHead(estado, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...extra });
+    res.end(texto);
+}
+
+const fallo = (res, estado, error) => json(res, estado, { error });
+
+function leerCuerpo(req, limite) {
+    return new Promise((resolver, rechazar) => {
+        const trozos = [];
+        let total = 0;
+        req.on("data", (t) => {
+            total += t.length;
+            if (total > limite) {
+                rechazar(Object.assign(new Error("Demasiado grande"), { estado: 413 }));
+                req.destroy();
+                return;
+            }
+            trozos.push(t);
+        });
+        req.on("end", () => resolver(Buffer.concat(trozos)));
+        req.on("error", rechazar);
+    });
+}
+
+async function leerJson(req) {
+    const buf = await leerCuerpo(req, 1024 * 1024);
+    if (!buf.length) return {};
+    try {
+        const v = JSON.parse(buf.toString("utf8"));
+        return v && typeof v === "object" ? v : {};
+    } catch {
+        throw new ErrorDeDatos("Petición mal formada");
+    }
+}
+
+function leerCookies(req) {
+    const salida = {};
+    for (const trozo of (req.headers.cookie || "").split(";")) {
+        const i = trozo.indexOf("=");
+        if (i > 0) salida[trozo.slice(0, i).trim()] = decodeURIComponent(trozo.slice(i + 1).trim());
+    }
+    return salida;
+}
+
+const seguro = (req) => (req.headers["x-forwarded-proto"] || "").includes("https") || URL_PUBLICA.startsWith("https:");
+
+function ponerCookie(req, res, valor, maxAge) {
+    const partes = [`${COOKIE}=${valor}`, `Path=${BASE}/`, "HttpOnly", "SameSite=Lax", `Max-Age=${maxAge}`];
+    if (seguro(req)) partes.push("Secure");
+    res.setHeader("Set-Cookie", partes.join("; "));
+}
+
+const ipDe = (req) => String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+
+// ---------- archivos de la aplicación ----------
+
+function servirArchivo(req, res, ruta) {
+    const relativa = ruta === "/" ? "/index.html" : ruta;
+    const archivo = path.normalize(path.join(PUBLICO, relativa));
+    if (!archivo.startsWith(PUBLICO + path.sep)) return fallo(res, 404, "No existe");
+    let info;
+    try {
+        info = fs.statSync(archivo);
+    } catch {
+        return fallo(res, 404, "No existe");
+    }
+    if (!info.isFile()) return fallo(res, 404, "No existe");
+    const etag = `"${info.size.toString(36)}-${Math.floor(info.mtimeMs).toString(36)}"`;
+    const cabeceras = {
+        "Content-Type": TIPOS[path.extname(archivo)] || "application/octet-stream",
+        "Cache-Control": "no-cache",
+        ETag: etag,
+    };
+    if (archivo.endsWith(".html")) cabeceras["Content-Security-Policy"] = CSP;
+    if (req.headers["if-none-match"] === etag) {
+        res.writeHead(304, cabeceras);
+        return res.end();
+    }
+    res.writeHead(200, { ...cabeceras, "Content-Length": info.size });
+    if (req.method === "HEAD") return res.end();
+    fs.createReadStream(archivo).pipe(res);
+}
+
+// ---------- API ----------
+
+function datosPara(usuario) {
+    return {
+        yo: cuentas.usuarioPublico(usuario),
+        usuarios: datos().usuarios.map(cuentas.usuarioPublico),
+        tareas: datos().tareas.filter((t) => !t.borrada).map(publica),
+    };
+}
+
+function tocar(tarea, usuario) {
+    tarea.actualizada = new Date().toISOString();
+    tarea.actualizadaPor = usuario.id;
+}
+
+function exportar() {
+    const nombre = (id) => datos().usuarios.find((u) => u.id === id)?.nombre || "";
+    const orden = (t) => [ESTADOS.indexOf(t.estado), t.fin || "9999", PRIORIDADES.indexOf(t.prioridad ?? "") + 10, t.orden];
+    const tareas = datos()
+        .tareas.filter((t) => !t.borrada)
+        .sort((a, b) => {
+            const oa = orden(a);
+            const ob = orden(b);
+            for (let i = 0; i < oa.length; i++) if (oa[i] !== ob[i]) return oa[i] < ob[i] ? -1 : 1;
+            return 0;
+        });
+    return crearExcel({
+        hoja: "Tareas",
+        columnas: [
+            { titulo: "Tarea", ancho: 46, tipo: "largo" },
+            { titulo: "Estado", ancho: 12 },
+            { titulo: "Prioridad", ancho: 11 },
+            { titulo: "Para quién", ancho: 18 },
+            { titulo: "Pedido por", ancho: 13 },
+            { titulo: "Inicio", ancho: 12, tipo: "fecha" },
+            { titulo: "Para cuándo", ancho: 13, tipo: "fecha" },
+            { titulo: "Etiquetas", ancho: 18 },
+            { titulo: "Subtareas", ancho: 34, tipo: "largo" },
+            { titulo: "Notas", ancho: 50, tipo: "largo" },
+            { titulo: "Creada", ancho: 12, tipo: "fecha" },
+            { titulo: "Hecha el", ancho: 12, tipo: "fecha" },
+        ],
+        filas: tareas.map((t) => [
+            t.titulo,
+            NOMBRES_ESTADO[t.estado],
+            t.prioridad ? NOMBRES_PRIORIDAD[t.prioridad] : "",
+            t.responsables.map(nombre).filter(Boolean).join(", "),
+            nombre(t.pedidoPor),
+            t.inicio,
+            t.fin,
+            t.etiquetas.map((e) => `#${e}`).join(" "),
+            t.subtareas.map((s) => `${s.hecha ? "[x]" : "[ ]"} ${s.texto}`).join("\n"),
+            t.notas,
+            t.creada,
+            t.hechaEl,
+        ]),
+    });
+}
+
+// Importa tareas desde un Excel: la hoja de Pendiente de Drive o una exportación del propio tablón.
+function importar(buf, usuario) {
+    const hojas = leerExcel(buf);
+    const CAMPOS = {
+        tarea: "titulo",
+        titulo: "titulo",
+        "para quien": "responsables",
+        responsable: "responsables",
+        responsables: "responsables",
+        "pedido por": "pedidoPor",
+        "para cuando": "fin",
+        "fecha limite": "fin",
+        fecha: "fin",
+        fin: "fin",
+        inicio: "inicio",
+        estado: "estado",
+        prioridad: "prioridad",
+        importancia: "prioridad",
+        notas: "notas",
+        etiquetas: "etiquetas",
+        subtareas: "subtareas",
+    };
+    const n = (v) => cuentas.normalizar(typeof v === "string" ? v.replace(/[¿?:]/g, "") : "");
+    // Se elige la hoja «Pendiente» si existe; si no, la primera que tenga una columna «Tarea».
+    const candidatas = [...hojas].sort((a, b) => (n(b.nombre) === "pendiente") - (n(a.nombre) === "pendiente"));
+    let hoja = null;
+    let filaCabecera = -1;
+    let mapa = null;
+    for (const h of candidatas) {
+        for (let r = 0; r < Math.min(10, h.filas.length); r++) {
+            const cab = h.filas[r].map((c) => CAMPOS[n(c)] || null);
+            if (cab.includes("titulo")) {
+                hoja = h;
+                filaCabecera = r;
+                mapa = cab;
+                break;
+            }
+        }
+        if (hoja) break;
+    }
+    if (!hoja) throw new ErrorDeDatos("No encuentro ninguna hoja con una columna «Tarea».");
+
+    const usuarios = datos().usuarios;
+    const porNombre = (texto) => {
+        const t = n(texto);
+        if (!t) return [];
+        if (["los dos", "todos", "ambos", "los 2"].includes(t)) return usuarios.map((u) => u.id);
+        return t
+            .split(/\s*(?:,|;|\by\b|\/|&)\s*/)
+            .map((trozo) => usuarios.find((u) => n(u.nombre) === trozo || n(u.nombre).startsWith(trozo))?.id)
+            .filter(Boolean);
+    };
+    const estadoDe = (v) => {
+        const t = n(v);
+        if (!t) return "por-hacer";
+        if (t.startsWith("hech") || t === "terminada" || t === "si") return "hecho";
+        if (t.startsWith("en marcha") || t.startsWith("en curso") || t.startsWith("empezad")) return "en-marcha";
+        if (t.startsWith("esper") || t.startsWith("bloque")) return "esperando";
+        return "por-hacer";
+    };
+    const prioridadDe = (v) => {
+        const t = n(v);
+        return PRIORIDADES.find((p) => t.startsWith(p)) || null;
+    };
+    const existentes = new Set(datos().tareas.filter((t) => !t.borrada).map((t) => n(t.titulo)));
+    let importadas = 0;
+    let repetidas = 0;
+    const nuevas = [];
+    for (const fila of hoja.filas.slice(filaCabecera + 1)) {
+        const campo = {};
+        mapa.forEach((c, i) => {
+            if (c && fila[i] !== null && fila[i] !== undefined && fila[i] !== "") campo[c] = fila[i];
+        });
+        const titulo = String(campo.titulo ?? "").trim();
+        if (!titulo || /^ejemplo\b/i.test(titulo)) continue;
+        if (existentes.has(n(titulo))) {
+            repetidas += 1;
+            continue;
+        }
+        const notas = [];
+        if (campo.notas) notas.push(String(campo.notas));
+        const responsables = porNombre(campo.responsables);
+        if (campo.responsables && !responsables.length) notas.push(`Para: ${campo.responsables}`);
+        const entrada = {
+            titulo,
+            estado: estadoDe(campo.estado),
+            prioridad: prioridadDe(campo.prioridad),
+            responsables,
+            pedidoPor: porNombre(campo.pedidoPor)[0] || null,
+            inicio: fechaDeCelda(campo.inicio),
+            fin: fechaDeCelda(campo.fin),
+            etiquetas: String(campo.etiquetas ?? "")
+                .split(/[\s,]+/)
+                .map((e) => e.replace(/^#/, ""))
+                .filter(Boolean),
+            subtareas: String(campo.subtareas ?? "")
+                .split("\n")
+                .map((l) => l.trim())
+                .filter(Boolean)
+                .map((l) => ({ texto: l.replace(/^\[[ xX]\]\s*/, ""), hecha: /^\[[xX]\]/.test(l) })),
+            notas: notas.join("\n\n"),
+        };
+        try {
+            const tarea = crearTarea(entrada, usuario, datos());
+            if (!campo.pedidoPor) tarea.pedidoPor = null;
+            if (tarea.estado === "hecho") tarea.hechaEl = new Date().toISOString();
+            datos().tareas.push(tarea);
+            nuevas.push(tarea);
+            existentes.add(n(titulo));
+            importadas += 1;
+        } catch (error) {
+            if (!(error instanceof ErrorDeDatos)) throw error;
+        }
+    }
+    return { importadas, repetidas, hoja: hoja.nombre, nuevas };
+}
+
+async function api(req, res, ruta) {
+    const metodo = req.method;
+    const cookies = leerCookies(req);
+    const encontrada = cuentas.buscarSesion(datos(), cookies[COOKIE]);
+    const usuario = encontrada?.usuario || null;
+    const origen = typeof req.headers["x-cliente"] === "string" ? req.headers["x-cliente"].slice(0, 40) : null;
+
+    // Toda petición que cambia algo debe llevar la cabecera propia del tablón: un formulario de otra web
+    // no puede ponerla, así que nadie puede hacer cambios «en tu nombre» desde fuera.
+    if (metodo !== "GET" && metodo !== "HEAD" && ruta !== "/api/interno/enlace" && req.headers["x-tablon"] !== "1") {
+        return fallo(res, 403, "Petición no permitida");
+    }
+
+    // --- sin sesión ---
+    if (ruta === "/api/interno/enlace" && metodo === "POST") {
+        const ip = req.socket.remoteAddress || "";
+        if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(ip) || req.headers["x-interno"] !== claveInterna) {
+            return fallo(res, 403, "Petición no permitida");
+        }
+        const codigo = cuentas.crearInvitacion(datos(), { tipo: "alta", admin: true });
+        almacen.guardar();
+        return json(res, 200, { enlace: enlaceAlta(codigo) });
+    }
+
+    if (ruta === "/api/entrar" && metodo === "POST") {
+        const ip = ipDe(req);
+        if (cuentas.demasiadosFallos(ip)) return fallo(res, 429, "Demasiados intentos. Prueba otra vez dentro de un rato.");
+        const { nombre, clave } = await leerJson(req);
+        const quien = datos().usuarios.find((u) => cuentas.normalizar(u.nombre) === cuentas.normalizar(nombre));
+        // Si el nombre no existe se hace la misma cuenta igualmente, para no dar pistas por el tiempo de respuesta.
+        const bien = (await cuentas.comprobarClave(String(clave || ""), quien ? quien.clave : CLAVE_FALSA)) && Boolean(quien);
+        if (!bien) {
+            cuentas.apuntarFallo(ip);
+            return fallo(res, 401, "Nombre o contraseña incorrectos.");
+        }
+        cuentas.olvidarFallos(ip);
+        const codigo = cuentas.crearSesion(datos(), quien);
+        almacen.guardar();
+        ponerCookie(req, res, codigo, cuentas.DURACION_SESION / 1000);
+        return json(res, 200, datosPara(quien));
+    }
+
+    if (ruta === "/api/invitacion" && metodo === "GET") {
+        const codigo = new URL(req.url, "http://x").searchParams.get("codigo");
+        const inv = cuentas.buscarInvitacion(datos(), codigo);
+        if (!inv) return fallo(res, 404, "Este enlace ya no sirve: se ha usado o ha caducado. Pide uno nuevo.");
+        const persona = inv.tipo === "clave" ? datos().usuarios.find((u) => u.id === inv.usuario) : null;
+        return json(res, 200, {
+            tipo: inv.tipo,
+            nombre: persona?.nombre || null,
+            colores: cuentas.COLORES,
+            ocupados: datos().usuarios.map((u) => u.color),
+            primera: datos().usuarios.length === 0,
+        });
+    }
+
+    if (ruta === "/api/alta" && metodo === "POST") {
+        const ip = ipDe(req);
+        if (cuentas.demasiadosFallos(ip)) return fallo(res, 429, "Demasiados intentos. Prueba otra vez dentro de un rato.");
+        const { codigo, nombre, clave, color } = await leerJson(req);
+        const inv = cuentas.buscarInvitacion(datos(), codigo);
+        if (!inv) {
+            cuentas.apuntarFallo(ip);
+            return fallo(res, 404, "Este enlace ya no sirve: se ha usado o ha caducado. Pide uno nuevo.");
+        }
+        const errorClave = cuentas.validarClave(clave);
+        if (errorClave) return fallo(res, 400, errorClave);
+        let persona;
+        if (inv.tipo === "clave") {
+            persona = datos().usuarios.find((u) => u.id === inv.usuario);
+            persona.clave = await cuentas.cifrarClave(clave);
+            // Una contraseña nueva cierra las sesiones abiertas en otros sitios.
+            datos().sesiones = datos().sesiones.filter((s) => s.usuario !== persona.id);
+        } else {
+            const v = cuentas.validarNombre(nombre, datos().usuarios);
+            if (v.error) return fallo(res, 400, v.error);
+            persona = cuentas.nuevoUsuario(datos(), {
+                nombre: v.nombre,
+                color,
+                admin: inv.admin || datos().usuarios.length === 0,
+                clave: await cuentas.cifrarClave(clave),
+            });
+            emitir({ tipo: "usuarios", usuarios: datos().usuarios.map(cuentas.usuarioPublico) });
+        }
+        cuentas.gastarInvitacion(datos(), inv);
+        const sesion = cuentas.crearSesion(datos(), persona);
+        almacen.guardar();
+        ponerCookie(req, res, sesion, cuentas.DURACION_SESION / 1000);
+        return json(res, 200, datosPara(persona));
+    }
+
+    // --- con sesión ---
+    if (!usuario) return fallo(res, 401, "Tienes que entrar con tu cuenta.");
+
+    if (ruta === "/api/salir" && metodo === "POST") {
+        cuentas.cerrarSesion(datos(), cookies[COOKIE]);
+        almacen.guardar();
+        ponerCookie(req, res, "", 0);
+        for (const o of oyentes) if (o.sesion === encontrada.sesion) o.res.end();
+        return json(res, 200, { ok: true });
+    }
+
+    if (ruta === "/api/datos" && metodo === "GET") return json(res, 200, datosPara(usuario));
+
+    if (ruta === "/api/eventos" && metodo === "GET") {
+        res.writeHead(200, {
+            "Content-Type": "text/event-stream; charset=utf-8",
+            "Cache-Control": "no-store",
+            Connection: "keep-alive",
+            "X-Accel-Buffering": "no",
+        });
+        res.write("retry: 3000\n\n");
+        const oyente = { res, usuario, sesion: encontrada.sesion };
+        oyentes.add(oyente);
+        req.on("close", () => oyentes.delete(oyente));
+        return;
+    }
+
+    if (ruta === "/api/yo" && metodo === "PATCH") {
+        const { color, clave, claveActual, nombre } = await leerJson(req);
+        if (color !== undefined) {
+            if (!cuentas.COLORES.includes(color)) return fallo(res, 400, "Color no válido");
+            usuario.color = color;
+        }
+        if (nombre !== undefined) {
+            const v = cuentas.validarNombre(nombre, datos().usuarios, usuario.id);
+            if (v.error) return fallo(res, 400, v.error);
+            usuario.nombre = v.nombre;
+        }
+        if (clave !== undefined) {
+            if (!(await cuentas.comprobarClave(String(claveActual || ""), usuario.clave))) return fallo(res, 400, "La contraseña actual no es correcta.");
+            const e = cuentas.validarClave(clave);
+            if (e) return fallo(res, 400, e);
+            usuario.clave = await cuentas.cifrarClave(clave);
+        }
+        almacen.guardar();
+        emitir({ tipo: "usuarios", usuarios: datos().usuarios.map(cuentas.usuarioPublico) });
+        return json(res, 200, { yo: cuentas.usuarioPublico(usuario) });
+    }
+
+    if (ruta === "/api/invitar" && metodo === "POST") {
+        if (!usuario.admin) return fallo(res, 403, "Solo quien administra el tablón puede invitar.");
+        const { tipo = "alta", persona } = await leerJson(req);
+        if (tipo === "clave") {
+            if (!datos().usuarios.some((u) => u.id === persona)) return fallo(res, 404, "No existe esa persona.");
+            const codigo = cuentas.crearInvitacion(datos(), { tipo: "clave", usuario: persona, creadaPor: usuario.id });
+            almacen.guardar();
+            return json(res, 200, { codigo });
+        }
+        const codigo = cuentas.crearInvitacion(datos(), { tipo: "alta", admin: true, creadaPor: usuario.id });
+        almacen.guardar();
+        return json(res, 200, { codigo });
+    }
+
+    if (ruta === "/api/excel" && metodo === "GET") {
+        const hoy = new Date().toISOString().slice(0, 10);
+        const buf = exportar();
+        res.writeHead(200, {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename="Tareas HOT SPOT ${hoy}.xlsx"; filename*=UTF-8''Tareas%20HOT%20SPOT%20${hoy}.xlsx`,
+            "Content-Length": buf.length,
+            "Cache-Control": "no-store",
+        });
+        return res.end(buf);
+    }
+
+    if (ruta === "/api/importar" && metodo === "POST") {
+        const buf = await leerCuerpo(req, 15 * 1024 * 1024);
+        let resultado;
+        try {
+            resultado = importar(buf, usuario);
+        } catch (error) {
+            if (error instanceof ErrorDeDatos) throw error;
+            throw new ErrorDeDatos(`No he podido leer ese Excel (${error.message}).`);
+        }
+        almacen.guardar();
+        for (const t of resultado.nuevas) emitir({ tipo: "tarea", tarea: publica(t), autor: usuario.id }, origen);
+        return json(res, 200, { importadas: resultado.importadas, repetidas: resultado.repetidas, hoja: resultado.hoja, tareas: resultado.nuevas.map(publica) });
+    }
+
+    if (ruta === "/api/tareas" && metodo === "POST") {
+        const tarea = crearTarea(await leerJson(req), usuario, datos());
+        datos().tareas.push(tarea);
+        almacen.guardar();
+        emitir({ tipo: "tarea", tarea: publica(tarea), autor: usuario.id }, origen);
+        return json(res, 201, publica(tarea));
+    }
+
+    const m = /^\/api\/tareas\/([\w-]+)(\/restaurar)?$/.exec(ruta);
+    if (m) {
+        const tarea = datos().tareas.find((t) => t.id === m[1]);
+        if (!tarea) return fallo(res, 404, "Esa tarea no existe.");
+        if (m[2] && metodo === "POST") {
+            tarea.borrada = null;
+            tocar(tarea, usuario);
+            almacen.guardar();
+            emitir({ tipo: "tarea", tarea: publica(tarea), autor: usuario.id }, origen);
+            return json(res, 200, publica(tarea));
+        }
+        if (tarea.borrada) return fallo(res, 404, "Esa tarea está borrada.");
+        if (metodo === "PATCH") {
+            const cambiados = aplicarCambios(tarea, await leerJson(req), datos().usuarios);
+            if (!tarea.titulo) throw new ErrorDeDatos("La tarea necesita un título");
+            if (cambiados.length) {
+                tocar(tarea, usuario);
+                almacen.guardar();
+                emitir({ tipo: "tarea", tarea: publica(tarea), autor: usuario.id, cambiados }, origen);
+            }
+            return json(res, 200, publica(tarea));
+        }
+        if (metodo === "DELETE") {
+            tarea.borrada = new Date().toISOString();
+            tocar(tarea, usuario);
+            almacen.guardar();
+            emitir({ tipo: "borrada", id: tarea.id, autor: usuario.id }, origen);
+            return json(res, 200, { ok: true });
+        }
+    }
+
+    return fallo(res, 404, "No existe");
+}
+
+// ---------- servidor ----------
+
+const servidor = http.createServer(async (req, res) => {
+    cabecerasComunes(res);
+    let ruta;
+    try {
+        ruta = decodeURIComponent(new URL(req.url, "http://x").pathname);
+    } catch {
+        return fallo(res, 400, "Dirección no válida");
+    }
+    if (ruta === BASE) {
+        res.writeHead(301, { Location: `${BASE}/` });
+        return res.end();
+    }
+    if (!ruta.startsWith(`${BASE}/`)) return fallo(res, 404, "No existe");
+    ruta = ruta.slice(BASE.length);
+    try {
+        if (ruta === "/salud") return json(res, 200, { ok: true });
+        if (ruta.startsWith("/api/")) return await api(req, res, ruta);
+        if (req.method !== "GET" && req.method !== "HEAD") return fallo(res, 405, "Método no permitido");
+        return servirArchivo(req, res, ruta);
+    } catch (error) {
+        if (error instanceof ErrorDeDatos || error.estado) return fallo(res, error.estado || 400, error.message);
+        console.error("[tablón]", error);
+        if (!res.headersSent) return fallo(res, 500, "Algo ha fallado en el servidor.");
+        res.end();
+    }
+});
+
+servidor.keepAliveTimeout = 65000;
+servidor.listen(PUERTO, () => console.log(`[tablón] En marcha en el puerto ${PUERTO} (${BASE}/).`));
+
+function apagar() {
+    try {
+        if (almacen.pendiente()) almacen.guardarYa();
+    } catch (error) {
+        console.error("[tablón] Error al guardar antes de salir:", error);
+    }
+    for (const o of oyentes) o.res.end();
+    servidor.close(() => process.exit(0));
+    setTimeout(() => process.exit(0), 3000).unref();
+}
+process.on("SIGTERM", apagar);
+process.on("SIGINT", apagar);

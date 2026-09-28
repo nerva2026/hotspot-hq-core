@@ -1,0 +1,10 @@
+{
+  "name": "hotspot-tablon",
+  "private": true,
+  "description": "Tablón de tareas de HOT SPOT S.L. (sin dependencias)",
+  "type": "module",
+  "scripts": {
+    "start": "node servidor/principal.js"
+  },
+  "engines": { "node": ">=22" }
+}
