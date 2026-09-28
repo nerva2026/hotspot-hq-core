@@ -1,0 +1,88 @@
+diff --git a/play/src/front/Phaser/Entity/Character.ts b/play/src/front/Phaser/Entity/Character.ts
+index 1cf8c81..9d688c1 100644
+--- a/play/src/front/Phaser/Entity/Character.ts
++++ b/play/src/front/Phaser/Entity/Character.ts
+@@ -33,6 +33,13 @@ import Circle = Phaser.Geom.Circle;
+ import Body = Phaser.Physics.Arcade.Body;
+ 
+ const playerNameY = -18;
++
++// HOT SPOT S.L.: los muñecos propios (texturas «hs-…») están dibujados a 1 px por punto, como los personajes del
++// mapa antes de ampliarlo, así que se muestran al doble y apoyados en los pies. Su nombre va más alto.
++const HOTSPOT_TEXTURE_PREFIX = "hs-";
++const HOTSPOT_SCALE = 2;
++const HOTSPOT_ORIGIN_Y = 0.75;
++const hotspotPlayerNameY = -31;
+ const interactiveRadius = 25;
+ 
+ export const CHARACTER_BODY_WIDTH = 16;
+@@ -190,7 +197,7 @@ export abstract class Character extends Container implements OutlineableInterfac
+             this.usernameDisplay = new UsernameDisplay(
+                 scene,
+                 this.x,
+-                this.y + playerNameY,
++                this.y + this.playerNameOffsetY,
+                 this.playerName,
+                 playerNameOutlineColor,
+             );
+@@ -316,7 +323,15 @@ export abstract class Character extends Container implements OutlineableInterfac
+         const sprites = Array.from(this.sprites.values()).map((sprite) => {
+             return { sprite, frame: 1 };
+         });
+-        return TexturesHelper.getSnapshot(this.scene, ...sprites).catch((reason) => {
++        // La foto del muñeco (lista de personas, chat…) se hace a tamaño real, sin la ampliación del juego.
++        if (this.hotspotTextures) {
++            sprites.forEach(({ sprite }) => sprite.setScale(1).setOrigin(0.5, 0.5));
++        }
++        const snapshot = TexturesHelper.getSnapshot(this.scene, ...sprites);
++        if (this.hotspotTextures) {
++            sprites.forEach(({ sprite }) => sprite.setScale(HOTSPOT_SCALE).setOrigin(0.5, HOTSPOT_ORIGIN_Y));
++        }
++        return snapshot.catch((reason) => {
+             console.warn(reason);
+             for (const sprite of this.sprites.values()) {
+                 // we can be sure that either predefined woka or body texture is at this point loaded
+@@ -347,16 +362,26 @@ export abstract class Character extends Container implements OutlineableInterfac
+         this.companion = new Companion(this.scene, this.x, this.y, texturePromise);
+     }
+ 
++    private hotspotTextures = false;
++
++    private get playerNameOffsetY(): number {
++        return this.hotspotTextures ? hotspotPlayerNameY : playerNameY;
++    }
++
+     private addTextures(textures: string[], frame?: string | number): void {
+         if (textures.length < 1) {
+             throw new CharacterTextureError("No texture given");
+         }
++        this.hotspotTextures = textures.some((texture) => texture.startsWith(HOTSPOT_TEXTURE_PREFIX));
+ 
+         for (const texture of textures) {
+             if (this.scene && !this.scene.textures.exists(texture)) {
+                 throw new CharacterTextureError(`Texture "${texture}" not found`);
+             }
+             const sprite = new Sprite(this.scene, 0, 0, texture, frame);
++            if (this.hotspotTextures) {
++                sprite.setScale(HOTSPOT_SCALE).setOrigin(0.5, HOTSPOT_ORIGIN_Y);
++            }
+             this.add(sprite);
+             getPlayerAnimations(texture).forEach((d) => {
+                 if (!this.scene.anims.exists(d.key)) {
+@@ -374,6 +399,7 @@ export abstract class Character extends Container implements OutlineableInterfac
+             }
+             this.sprites.set(texture, sprite);
+         }
++        this.updateUsernameDisplayPosition();
+     }
+ 
+     protected playAnimation(direction: PositionMessage_Direction, moving: boolean): void {
+@@ -401,7 +427,7 @@ export abstract class Character extends Container implements OutlineableInterfac
+     }
+ 
+     protected updateUsernameDisplayPosition(x = this.x, y = this.y): void {
+-        this.usernameDisplay?.setPosition(x, y + playerNameY);
++        this.usernameDisplay?.setPosition(x, y + this.playerNameOffsetY);
+     }
+ 
+     setPosition(x: number, y: number): this {

@@ -1,0 +1,563 @@
+{
+  "woka": {
+    "collections": [
+      {
+        "name": "HOT SPOT",
+        "textures": [
+          {
+            "id": "hs-w01",
+            "name": "HOT SPOT 01",
+            "url": "resources/characters/hotspot/hs-w01.png"
+          },
+          {
+            "id": "hs-w02",
+            "name": "HOT SPOT 02",
+            "url": "resources/characters/hotspot/hs-w02.png"
+          },
+          {
+            "id": "hs-w03",
+            "name": "HOT SPOT 03",
+            "url": "resources/characters/hotspot/hs-w03.png"
+          },
+          {
+            "id": "hs-w04",
+            "name": "HOT SPOT 04",
+            "url": "resources/characters/hotspot/hs-w04.png"
+          },
+          {
+            "id": "hs-w05",
+            "name": "HOT SPOT 05",
+            "url": "resources/characters/hotspot/hs-w05.png"
+          },
+          {
+            "id": "hs-w06",
+            "name": "HOT SPOT 06",
+            "url": "resources/characters/hotspot/hs-w06.png"
+          },
+          {
+            "id": "hs-w07",
+            "name": "HOT SPOT 07",
+            "url": "resources/characters/hotspot/hs-w07.png"
+          },
+          {
+            "id": "hs-w08",
+            "name": "HOT SPOT 08",
+            "url": "resources/characters/hotspot/hs-w08.png"
+          },
+          {
+            "id": "hs-w09",
+            "name": "HOT SPOT 09",
+            "url": "resources/characters/hotspot/hs-w09.png"
+          },
+          {
+            "id": "hs-w10",
+            "name": "HOT SPOT 10",
+            "url": "resources/characters/hotspot/hs-w10.png"
+          },
+          {
+            "id": "hs-w11",
+            "name": "HOT SPOT 11",
+            "url": "resources/characters/hotspot/hs-w11.png"
+          },
+          {
+            "id": "hs-w12",
+            "name": "HOT SPOT 12",
+            "url": "resources/characters/hotspot/hs-w12.png"
+          },
+          {
+            "id": "hs-w13",
+            "name": "HOT SPOT 13",
+            "url": "resources/characters/hotspot/hs-w13.png"
+          },
+          {
+            "id": "hs-w14",
+            "name": "HOT SPOT 14",
+            "url": "resources/characters/hotspot/hs-w14.png"
+          },
+          {
+            "id": "hs-w15",
+            "name": "HOT SPOT 15",
+            "url": "resources/characters/hotspot/hs-w15.png"
+          },
+          {
+            "id": "hs-w16",
+            "name": "HOT SPOT 16",
+            "url": "resources/characters/hotspot/hs-w16.png"
+          },
+          {
+            "id": "hs-w17",
+            "name": "HOT SPOT 17",
+            "url": "resources/characters/hotspot/hs-w17.png"
+          },
+          {
+            "id": "hs-w18",
+            "name": "HOT SPOT 18",
+            "url": "resources/characters/hotspot/hs-w18.png"
+          },
+          {
+            "id": "hs-w19",
+            "name": "HOT SPOT 19",
+            "url": "resources/characters/hotspot/hs-w19.png"
+          },
+          {
+            "id": "hs-w20",
+            "name": "HOT SPOT 20",
+            "url": "resources/characters/hotspot/hs-w20.png"
+          },
+          {
+            "id": "hs-w21",
+            "name": "HOT SPOT 21",
+            "url": "resources/characters/hotspot/hs-w21.png"
+          },
+          {
+            "id": "hs-w22",
+            "name": "HOT SPOT 22",
+            "url": "resources/characters/hotspot/hs-w22.png"
+          },
+          {
+            "id": "hs-w23",
+            "name": "HOT SPOT 23",
+            "url": "resources/characters/hotspot/hs-w23.png"
+          },
+          {
+            "id": "hs-w24",
+            "name": "HOT SPOT 24",
+            "url": "resources/characters/hotspot/hs-w24.png"
+          }
+        ]
+      }
+    ]
+  },
+  "body": {
+    "collections": [
+      {
+        "name": "Piel",
+        "textures": [
+          {
+            "id": "hs-cuerpo-1",
+            "name": "Piel 1",
+            "url": "resources/characters/hotspot/hs-cuerpo-1.png"
+          },
+          {
+            "id": "hs-cuerpo-2",
+            "name": "Piel 2",
+            "url": "resources/characters/hotspot/hs-cuerpo-2.png"
+          },
+          {
+            "id": "hs-cuerpo-3",
+            "name": "Piel 3",
+            "url": "resources/characters/hotspot/hs-cuerpo-3.png"
+          },
+          {
+            "id": "hs-cuerpo-4",
+            "name": "Piel 4",
+            "url": "resources/characters/hotspot/hs-cuerpo-4.png"
+          },
+          {
+            "id": "hs-cuerpo-5",
+            "name": "Piel 5",
+            "url": "resources/characters/hotspot/hs-cuerpo-5.png"
+          }
+        ]
+      }
+    ],
+    "required": true
+  },
+  "eyes": {
+    "collections": [
+      {
+        "name": "Ojos",
+        "textures": [
+          {
+            "id": "hs-ojos",
+            "name": "Ojos",
+            "url": "resources/characters/hotspot/hs-ojos.png"
+          }
+        ]
+      }
+    ],
+    "required": true
+  },
+  "hair": {
+    "collections": [
+      {
+        "name": "Pelo",
+        "textures": [
+          {
+            "id": "hs-pelo-corto-1",
+            "name": "Corto negro",
+            "url": "resources/characters/hotspot/hs-pelo-corto-1.png"
+          },
+          {
+            "id": "hs-pelo-corto-2",
+            "name": "Corto castaño oscuro",
+            "url": "resources/characters/hotspot/hs-pelo-corto-2.png"
+          },
+          {
+            "id": "hs-pelo-corto-3",
+            "name": "Corto castaño",
+            "url": "resources/characters/hotspot/hs-pelo-corto-3.png"
+          },
+          {
+            "id": "hs-pelo-corto-4",
+            "name": "Corto rubio",
+            "url": "resources/characters/hotspot/hs-pelo-corto-4.png"
+          },
+          {
+            "id": "hs-pelo-corto-5",
+            "name": "Corto pelirrojo",
+            "url": "resources/characters/hotspot/hs-pelo-corto-5.png"
+          },
+          {
+            "id": "hs-pelo-corto-6",
+            "name": "Corto rosa",
+            "url": "resources/characters/hotspot/hs-pelo-corto-6.png"
+          },
+          {
+            "id": "hs-pelo-corto-7",
+            "name": "Corto canoso",
+            "url": "resources/characters/hotspot/hs-pelo-corto-7.png"
+          },
+          {
+            "id": "hs-pelo-largo-1",
+            "name": "Largo negro",
+            "url": "resources/characters/hotspot/hs-pelo-largo-1.png"
+          },
+          {
+            "id": "hs-pelo-largo-2",
+            "name": "Largo castaño oscuro",
+            "url": "resources/characters/hotspot/hs-pelo-largo-2.png"
+          },
+          {
+            "id": "hs-pelo-largo-3",
+            "name": "Largo castaño",
+            "url": "resources/characters/hotspot/hs-pelo-largo-3.png"
+          },
+          {
+            "id": "hs-pelo-largo-4",
+            "name": "Largo rubio",
+            "url": "resources/characters/hotspot/hs-pelo-largo-4.png"
+          },
+          {
+            "id": "hs-pelo-largo-5",
+            "name": "Largo pelirrojo",
+            "url": "resources/characters/hotspot/hs-pelo-largo-5.png"
+          },
+          {
+            "id": "hs-pelo-largo-6",
+            "name": "Largo rosa",
+            "url": "resources/characters/hotspot/hs-pelo-largo-6.png"
+          },
+          {
+            "id": "hs-pelo-largo-7",
+            "name": "Largo canoso",
+            "url": "resources/characters/hotspot/hs-pelo-largo-7.png"
+          },
+          {
+            "id": "hs-pelo-rapado-1",
+            "name": "Rapado negro",
+            "url": "resources/characters/hotspot/hs-pelo-rapado-1.png"
+          },
+          {
+            "id": "hs-pelo-rapado-2",
+            "name": "Rapado castaño oscuro",
+            "url": "resources/characters/hotspot/hs-pelo-rapado-2.png"
+          },
+          {
+            "id": "hs-pelo-rapado-3",
+            "name": "Rapado castaño",
+            "url": "resources/characters/hotspot/hs-pelo-rapado-3.png"
+          },
+          {
+            "id": "hs-pelo-rapado-4",
+            "name": "Rapado rubio",
+            "url": "resources/characters/hotspot/hs-pelo-rapado-4.png"
+          },
+          {
+            "id": "hs-pelo-rapado-5",
+            "name": "Rapado pelirrojo",
+            "url": "resources/characters/hotspot/hs-pelo-rapado-5.png"
+          },
+          {
+            "id": "hs-pelo-rapado-6",
+            "name": "Rapado rosa",
+            "url": "resources/characters/hotspot/hs-pelo-rapado-6.png"
+          },
+          {
+            "id": "hs-pelo-rapado-7",
+            "name": "Rapado canoso",
+            "url": "resources/characters/hotspot/hs-pelo-rapado-7.png"
+          },
+          {
+            "id": "hs-pelo-mono-1",
+            "name": "Moño negro",
+            "url": "resources/characters/hotspot/hs-pelo-mono-1.png"
+          },
+          {
+            "id": "hs-pelo-mono-2",
+            "name": "Moño castaño oscuro",
+            "url": "resources/characters/hotspot/hs-pelo-mono-2.png"
+          },
+          {
+            "id": "hs-pelo-mono-3",
+            "name": "Moño castaño",
+            "url": "resources/characters/hotspot/hs-pelo-mono-3.png"
+          },
+          {
+            "id": "hs-pelo-mono-4",
+            "name": "Moño rubio",
+            "url": "resources/characters/hotspot/hs-pelo-mono-4.png"
+          },
+          {
+            "id": "hs-pelo-mono-5",
+            "name": "Moño pelirrojo",
+            "url": "resources/characters/hotspot/hs-pelo-mono-5.png"
+          },
+          {
+            "id": "hs-pelo-mono-6",
+            "name": "Moño rosa",
+            "url": "resources/characters/hotspot/hs-pelo-mono-6.png"
+          },
+          {
+            "id": "hs-pelo-mono-7",
+            "name": "Moño canoso",
+            "url": "resources/characters/hotspot/hs-pelo-mono-7.png"
+          },
+          {
+            "id": "hs-pelo-rizos-1",
+            "name": "Rizos negro",
+            "url": "resources/characters/hotspot/hs-pelo-rizos-1.png"
+          },
+          {
+            "id": "hs-pelo-rizos-2",
+            "name": "Rizos castaño oscuro",
+            "url": "resources/characters/hotspot/hs-pelo-rizos-2.png"
+          },
+          {
+            "id": "hs-pelo-rizos-3",
+            "name": "Rizos castaño",
+            "url": "resources/characters/hotspot/hs-pelo-rizos-3.png"
+          },
+          {
+            "id": "hs-pelo-rizos-4",
+            "name": "Rizos rubio",
+            "url": "resources/characters/hotspot/hs-pelo-rizos-4.png"
+          },
+          {
+            "id": "hs-pelo-rizos-5",
+            "name": "Rizos pelirrojo",
+            "url": "resources/characters/hotspot/hs-pelo-rizos-5.png"
+          },
+          {
+            "id": "hs-pelo-rizos-6",
+            "name": "Rizos rosa",
+            "url": "resources/characters/hotspot/hs-pelo-rizos-6.png"
+          },
+          {
+            "id": "hs-pelo-rizos-7",
+            "name": "Rizos canoso",
+            "url": "resources/characters/hotspot/hs-pelo-rizos-7.png"
+          },
+          {
+            "id": "hs-pelo-cresta-1",
+            "name": "Cresta negro",
+            "url": "resources/characters/hotspot/hs-pelo-cresta-1.png"
+          },
+          {
+            "id": "hs-pelo-cresta-2",
+            "name": "Cresta castaño oscuro",
+            "url": "resources/characters/hotspot/hs-pelo-cresta-2.png"
+          },
+          {
+            "id": "hs-pelo-cresta-3",
+            "name": "Cresta castaño",
+            "url": "resources/characters/hotspot/hs-pelo-cresta-3.png"
+          },
+          {
+            "id": "hs-pelo-cresta-4",
+            "name": "Cresta rubio",
+            "url": "resources/characters/hotspot/hs-pelo-cresta-4.png"
+          },
+          {
+            "id": "hs-pelo-cresta-5",
+            "name": "Cresta pelirrojo",
+            "url": "resources/characters/hotspot/hs-pelo-cresta-5.png"
+          },
+          {
+            "id": "hs-pelo-cresta-6",
+            "name": "Cresta rosa",
+            "url": "resources/characters/hotspot/hs-pelo-cresta-6.png"
+          },
+          {
+            "id": "hs-pelo-cresta-7",
+            "name": "Cresta canoso",
+            "url": "resources/characters/hotspot/hs-pelo-cresta-7.png"
+          }
+        ]
+      }
+    ]
+  },
+  "clothes": {
+    "collections": [
+      {
+        "name": "Ropa",
+        "textures": [
+          {
+            "id": "hs-ropa-camiseta-1",
+            "name": "Camiseta naranja",
+            "url": "resources/characters/hotspot/hs-ropa-camiseta-1.png"
+          },
+          {
+            "id": "hs-ropa-camiseta-2",
+            "name": "Camiseta negra",
+            "url": "resources/characters/hotspot/hs-ropa-camiseta-2.png"
+          },
+          {
+            "id": "hs-ropa-camiseta-3",
+            "name": "Camiseta crema",
+            "url": "resources/characters/hotspot/hs-ropa-camiseta-3.png"
+          },
+          {
+            "id": "hs-ropa-camiseta-4",
+            "name": "Camiseta amarilla",
+            "url": "resources/characters/hotspot/hs-ropa-camiseta-4.png"
+          },
+          {
+            "id": "hs-ropa-camiseta-5",
+            "name": "Camiseta granate",
+            "url": "resources/characters/hotspot/hs-ropa-camiseta-5.png"
+          },
+          {
+            "id": "hs-ropa-camiseta-6",
+            "name": "Camiseta azul",
+            "url": "resources/characters/hotspot/hs-ropa-camiseta-6.png"
+          },
+          {
+            "id": "hs-ropa-camiseta-7",
+            "name": "Camiseta verde",
+            "url": "resources/characters/hotspot/hs-ropa-camiseta-7.png"
+          },
+          {
+            "id": "hs-ropa-sudadera-1",
+            "name": "Sudadera naranja",
+            "url": "resources/characters/hotspot/hs-ropa-sudadera-1.png"
+          },
+          {
+            "id": "hs-ropa-sudadera-2",
+            "name": "Sudadera negra",
+            "url": "resources/characters/hotspot/hs-ropa-sudadera-2.png"
+          },
+          {
+            "id": "hs-ropa-sudadera-3",
+            "name": "Sudadera crema",
+            "url": "resources/characters/hotspot/hs-ropa-sudadera-3.png"
+          },
+          {
+            "id": "hs-ropa-sudadera-4",
+            "name": "Sudadera amarilla",
+            "url": "resources/characters/hotspot/hs-ropa-sudadera-4.png"
+          },
+          {
+            "id": "hs-ropa-sudadera-5",
+            "name": "Sudadera granate",
+            "url": "resources/characters/hotspot/hs-ropa-sudadera-5.png"
+          },
+          {
+            "id": "hs-ropa-sudadera-6",
+            "name": "Sudadera azul",
+            "url": "resources/characters/hotspot/hs-ropa-sudadera-6.png"
+          },
+          {
+            "id": "hs-ropa-sudadera-7",
+            "name": "Sudadera verde",
+            "url": "resources/characters/hotspot/hs-ropa-sudadera-7.png"
+          },
+          {
+            "id": "hs-ropa-camisa-1",
+            "name": "Camisa naranja",
+            "url": "resources/characters/hotspot/hs-ropa-camisa-1.png"
+          },
+          {
+            "id": "hs-ropa-camisa-2",
+            "name": "Camisa negra",
+            "url": "resources/characters/hotspot/hs-ropa-camisa-2.png"
+          },
+          {
+            "id": "hs-ropa-camisa-3",
+            "name": "Camisa crema",
+            "url": "resources/characters/hotspot/hs-ropa-camisa-3.png"
+          },
+          {
+            "id": "hs-ropa-camisa-4",
+            "name": "Camisa amarilla",
+            "url": "resources/characters/hotspot/hs-ropa-camisa-4.png"
+          },
+          {
+            "id": "hs-ropa-camisa-5",
+            "name": "Camisa granate",
+            "url": "resources/characters/hotspot/hs-ropa-camisa-5.png"
+          },
+          {
+            "id": "hs-ropa-camisa-6",
+            "name": "Camisa azul",
+            "url": "resources/characters/hotspot/hs-ropa-camisa-6.png"
+          },
+          {
+            "id": "hs-ropa-camisa-7",
+            "name": "Camisa verde",
+            "url": "resources/characters/hotspot/hs-ropa-camisa-7.png"
+          }
+        ]
+      }
+    ]
+  },
+  "hat": {
+    "collections": [
+      {
+        "name": "Cabeza",
+        "textures": [
+          {
+            "id": "hs-gorra",
+            "name": "Gorra",
+            "url": "resources/characters/hotspot/hs-gorra.png"
+          },
+          {
+            "id": "hs-auriculares",
+            "name": "Auriculares",
+            "url": "resources/characters/hotspot/hs-auriculares.png"
+          }
+        ]
+      }
+    ]
+  },
+  "accessory": {
+    "collections": [
+      {
+        "name": "Complementos",
+        "textures": [
+          {
+            "id": "hs-nada",
+            "name": "Nada",
+            "url": "resources/characters/hotspot/hs-nada.png"
+          },
+          {
+            "id": "hs-gafas",
+            "name": "Gafas",
+            "url": "resources/characters/hotspot/hs-gafas.png"
+          },
+          {
+            "id": "hs-gafas-sol",
+            "name": "Gafas de sol",
+            "url": "resources/characters/hotspot/hs-gafas-sol.png"
+          },
+          {
+            "id": "hs-bigote",
+            "name": "Bigote",
+            "url": "resources/characters/hotspot/hs-bigote.png"
+          }
+        ]
+      }
+    ],
+    "required": true
+  }
+}

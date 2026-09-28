@@ -158,3 +158,19 @@ textarea {
     background: hsl(var(--contrast-400));
     border: 2px solid var(--hs-borde);
 }
+
+/* ---------- nombres sobre la cabeza: igual que los carteles de los personajes del mapa ---------- */
+.username-display {
+    background: rgba(10, 6, 5, 0.85) !important;
+    border-radius: 0 !important;
+}
+.username-display * {
+    border-radius: 0 !important;
+}
+.username-display > p {
+    font-family: "Silkscreen", "Pixelify Sans", monospace !important;
+    font-weight: 400 !important;
+    color: var(--hs-crema) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
