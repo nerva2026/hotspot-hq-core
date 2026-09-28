@@ -1,0 +1,160 @@
+/*
+ * HOT SPOT S.L. · estilo retro (fase 1)
+ *
+ * Se carga la última (play/src/front/style/index.css) y fuera de las capas de Tailwind,
+ * así que gana a los estilos originales sin tocar los componentes:
+ *   - colores de la marca en lugar del azul/morado de WorkAdventure,
+ *   - letras pixeladas (Silkscreen para títulos, Pixelify Sans para el resto),
+ *   - esquinas rectas, sin desenfoques, paneles con borde y relieve.
+ * Maqueta de referencia: «HOT SPOT S.L. · interfaz retro».
+ */
+
+@font-face {
+    font-family: "Silkscreen";
+    src: url("/static/fonts/hotspot/silkscreen-regular.woff") format("woff");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Silkscreen";
+    src: url("/static/fonts/hotspot/silkscreen-bold.woff") format("woff");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("/static/fonts/hotspot/pixelify-sans.woff") format("woff");
+    font-weight: 400 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ---------- colores ---------- */
+:root,
+[data-theme="default"] {
+    /* fondos oscuros: de azul marino a «tinta» (#1C1715) */
+    --contrast-100: 30 45% 90%;
+    --contrast-200: 30 30% 78%;
+    --contrast-300: 25 20% 62%;
+    --contrast-400: 18 14% 40%;
+    --contrast-500: 17 14% 32%;
+    --contrast-600: 16 14% 24%;
+    --contrast: 15 13% 10%;
+    --contrast-800: 15 13% 10%;
+    --contrast-900: 15 16% 7%;
+    --contrast-1000: 15 18% 5%;
+    --contrast-1100: 15 20% 4%;
+
+    /* acento: de azul a naranja HOT SPOT (#C4461F; al pasar por encima, #E0562A) */
+    --secondary-100: 20 80% 95%;
+    --secondary-200: 18 80% 88%;
+    --secondary-300: 17 78% 78%;
+    --secondary-400: 16 76% 68%;
+    --secondary-500: 15 75% 60%;
+    --secondary-600: 15 74% 52%;
+    --secondary: 14 73% 45%;
+    --secondary-800: 14 73% 40%;
+    --secondary-900: 13 72% 35%;
+    --secondary-1000: 12 70% 30%;
+    --secondary-1100: 12 70% 25%;
+
+    --primary-100: 14 73% 45%;
+    --primary-200: 14 73% 45%;
+    --primary-300: 14 73% 45%;
+    --primary-400: 14 73% 45%;
+    --primary-500: 14 73% 45%;
+    --primary-600: 14 73% 45%;
+    --primary: 14 73% 45%;
+    --primary-800: 14 73% 45%;
+    --primary-900: 14 73% 45%;
+    --primary-1000: 14 73% 45%;
+    --primary-1100: 14 73% 45%;
+    --primary-1200: 14 73% 45%;
+    --primary-1300: 14 73% 45%;
+
+    --color-dark-purple: #1c1715;
+    --color-medium-purple: #3a302b;
+    --color-light-purple: #5a4f49;
+    --color-lighter-purple: #cdbfae;
+    --color-light-purple-alt: #8d857e;
+    --color-dark-blue: #1c1715;
+    --color-brand-blue: #3a302b;
+    --color-pop-blue: #e0562a;
+    --color-light-blue: #ffd84a;
+    --color-dark: #1c1715;
+
+    --hs-tinta: #1c1715;
+    --hs-borde: #0b0706;
+    --hs-crema: #f3e6d8;
+    --hs-amarillo: #ffd84a;
+}
+
+/* ---------- letras ---------- */
+html,
+body,
+.font-main,
+.font-content {
+    font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+.font-title,
+h1,
+h2,
+h3 {
+    font-family: "Silkscreen", "Pixelify Sans", ui-monospace, monospace;
+    letter-spacing: 0.02em;
+}
+
+/* ---------- esquinas rectas y sin desenfoques ---------- */
+[class*="rounded"]:not([class*="rounded-full"]),
+input,
+select,
+textarea {
+    border-radius: 0 !important;
+}
+[class*="backdrop-blur"] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+/* ---------- paneles flotantes: fondo sólido, borde oscuro y relieve ---------- */
+[class*="backdrop-blur"][class*="bg-contrast"] {
+    background-color: hsl(var(--contrast)) !important;
+    box-shadow:
+        inset 2px 2px 0 hsl(var(--contrast-500)),
+        inset -2px -2px 0 var(--hs-borde),
+        0 0 0 2px var(--hs-borde),
+        4px 4px 0 rgba(0, 0, 0, 0.35) !important;
+}
+
+/* ---------- botones activos y foco ---------- */
+.bg-secondary {
+    box-shadow:
+        inset 2px 2px 0 rgba(255, 255, 255, 0.28),
+        inset -2px -2px 0 rgba(0, 0, 0, 0.35);
+}
+:focus-visible {
+    outline: 2px solid var(--hs-amarillo) !important;
+    outline-offset: 2px;
+}
+::selection {
+    background: var(--hs-amarillo);
+    color: var(--hs-tinta);
+}
+
+/* ---------- barras de desplazamiento ---------- */
+* {
+    scrollbar-color: hsl(var(--contrast-400)) hsl(var(--contrast-900));
+}
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+::-webkit-scrollbar-track {
+    background: hsl(var(--contrast-900));
+}
+::-webkit-scrollbar-thumb {
+    background: hsl(var(--contrast-400));
+    border: 2px solid var(--hs-borde);
+}

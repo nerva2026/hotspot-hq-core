@@ -23,6 +23,13 @@ El servidor usa esa imagen en lugar de la oficial para el servicio `play`. El re
 | --- | --- |
 | `01-marca-basica.patch` | Título, descripción y nombre de la aplicación: «HOT SPOT S.L.»; quita el «Powered by WorkAdventure». |
 | `02-textos-es.patch` | Textos de la interfaz en español: «WorkAdventure» pasa a «la oficina» o «HOT SPOT S.L.». |
+| `03-estilo-retro.patch` | Carga `hotspot-retro.css` (estilo retro: colores, letras pixeladas, esquinas rectas) y pone la marca y la fachada en las pantallas de carga y acceso. |
+
+## Archivos propios (`archivos/`)
+
+- `play/src/front/style/hotspot-retro.css`: el estilo retro de la interfaz.
+- `play/public/static/fonts/hotspot/`: letras Silkscreen y Pixelify Sans (licencia OFL, incluida).
+- `play/public/static/images/hotspot/`: marca provisional (mientras llega el logo) y fachada de la calle.
 
 ## Actualizar WorkAdventure
 

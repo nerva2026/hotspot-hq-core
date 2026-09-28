@@ -1,0 +1,34 @@
+diff --git a/play/src/front/style/index.css b/play/src/front/style/index.css
+index d503619..6cead95 100644
+--- a/play/src/front/style/index.css
++++ b/play/src/front/style/index.css
+@@ -18,6 +18,9 @@
+ @import "input.css";
+ @import "warning-toast.css";
+ 
++/* HOT SPOT S.L.: estilo retro (se carga el último para ganar a lo anterior) */
++@import "hotspot-retro.css";
++
+ @source "../../**/*.{html,js,svelte,ts}";
+ @source "../../../index.html";
+ @source "../../../pip-layout-test.html";
+diff --git a/play/src/pusher/services/LocalAdmin.ts b/play/src/pusher/services/LocalAdmin.ts
+index 91b716f..5cf4821 100644
+--- a/play/src/pusher/services/LocalAdmin.ts
++++ b/play/src/pusher/services/LocalAdmin.ts
+@@ -307,9 +307,12 @@ class LocalAdmin implements AdminInterface {
+             group: wamUrl ? "default" : null,
+             opidLogoutRedirectUrl: null,
+             opidUsernamePolicy: opidWokaNamePolicyCheck.success ? opidWokaNamePolicyCheck.data : null,
+-            loadingLogo: null,
+-            loginSceneLogo: null,
+-            errorSceneLogo: null,
++            loadingLogo: "/static/images/hotspot/marca.png",
++            loginSceneLogo: "/static/images/hotspot/marca.png",
++            errorSceneLogo: "/static/images/hotspot/marca.png",
++            backgroundSceneImage: "/static/images/hotspot/fachada.png",
++            backgroundColor: "#1C1715",
++            primaryColor: "#E0562A",
+             showPoweredBy: false,
+             loadingCowebsiteLogo: null,
+             enableChat: ENABLE_CHAT,
