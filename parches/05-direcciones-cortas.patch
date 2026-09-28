@@ -1,0 +1,156 @@
+diff --git a/play/src/front/Phaser/Game/GameScene.ts b/play/src/front/Phaser/Game/GameScene.ts
+index 31a967e..6ac8dcc 100644
+--- a/play/src/front/Phaser/Game/GameScene.ts
++++ b/play/src/front/Phaser/Game/GameScene.ts
+@@ -1996,6 +1996,11 @@ export class GameScene extends DirtyScene {
+ 
+                 this.createCurrentPlayer(startPosition);
+ 
++                // HOT SPOT S.L.: una vez colocado el muñeco, la dirección se queda limpia (sin «#from-…»)
++                if (window.location.hash) {
++                    history.replaceState(history.state, "", window.location.pathname + window.location.search);
++                }
++
+                 this.activatablesManager = new ActivatablesManager(this.CurrentPlayer);
+                 this.cameraManager.startFollowPlayer(this.CurrentPlayer, 0);
+ 
+diff --git a/play/src/front/Url/UrlManager.ts b/play/src/front/Url/UrlManager.ts
+index 5691f74..ea57275 100644
+--- a/play/src/front/Url/UrlManager.ts
++++ b/play/src/front/Url/UrlManager.ts
+@@ -22,6 +22,9 @@ class UrlManager {
+             return GameConnexionTypes.jwt;
+         } else if (url.includes("_/") || url.includes("*/") || url.includes("@/") || url.includes("~/")) {
+             return GameConnexionTypes.room;
++        } else if (/^\/[a-z0-9-]+\/?$/.test(url) && url !== "/login" && url !== "/jwt") {
++            // HOT SPOT S.L.: direcciones cortas de la oficina (/calle, /oficina, /terraza)
++            return GameConnexionTypes.room;
+         }
+         //@deprecated register url will be replaced by "?token=<private access token>"
+         else if (url.includes("register/")) {
+diff --git a/play/src/pusher/controllers/FrontController.ts b/play/src/pusher/controllers/FrontController.ts
+index 2d834ef..0c64202 100644
+--- a/play/src/pusher/controllers/FrontController.ts
++++ b/play/src/pusher/controllers/FrontController.ts
+@@ -1,4 +1,5 @@
+ import fs from "fs";
++import { HOTSPOT_SALAS } from "../services/HotspotSalas";
+ import type { Request, Response, Application } from "express";
+ import Mustache from "mustache";
+ import { uuid } from "stanza/Utils";
+@@ -144,6 +145,13 @@ export class FrontController extends BaseHttpController {
+             return this.displayFront(req, res, this.getFullUrl(req));
+         });
+ 
++        // HOT SPOT S.L.: direcciones cortas de la oficina (/calle, /oficina, /terraza)
++        for (const sala of Object.keys(HOTSPOT_SALAS)) {
++            this.app.get(`/${sala}`, (req: Request, res: Response) => {
++                return this.displayFront(req, res, this.getFullUrl(req));
++            });
++        }
++
+         this.app.get("/", (req: Request, res: Response) => {
+             debug(`FrontController => [${req.method}] ${req.originalUrl} — IP: ${req.ip} — Time: ${Date.now()}`);
+             return this.displayFront(req, res, this.getFullUrl(req));
+diff --git a/play/src/pusher/services/HotspotSalas.ts b/play/src/pusher/services/HotspotSalas.ts
+new file mode 100644
+index 0000000..d813a9f
+--- /dev/null
++++ b/play/src/pusher/services/HotspotSalas.ts
+@@ -0,0 +1,29 @@
++/**
++ * HOT SPOT S.L.: direcciones cortas de la oficina.
++ *
++ * oficina.hot-spot.es/calle, /oficina y /terraza abren los mapas de map-storage sin enseñar la ruta
++ * interna (/~/hotspot/…). Las direcciones largas de siempre, y las salidas de los mapas que apuntan
++ * a «hq.tmj», «calle.tmj»…, redirigen a la corta, así que todo el mundo acaba en la misma sala.
++ */
++export const HOTSPOT_SALAS: Record<string, string> = {
++    calle: "hotspot/calle.wam",
++    oficina: "hotspot/hq.wam",
++    terraza: "hotspot/terraza.wam",
++};
++
++/** Mapa de map-storage para una dirección corta («/oficina» → «hotspot/hq.wam»). */
++export function salaDesdeRuta(pathname: string): string | undefined {
++    const m = /^\/([a-z0-9-]+)\/?$/.exec(pathname);
++    return m ? HOTSPOT_SALAS[m[1]] : undefined;
++}
++
++/** Dirección corta de un mapa, si la tiene. Acepta «hotspot/hq.wam», «hotspot/hq.tmj» o solo «hq.tmj». */
++export function rutaCortaDesdeMapa(mapPath: string): string | undefined {
++    const limpio = mapPath.replace(/^\/+/, "").replace(/\.tmj$/, ".wam");
++    for (const [sala, ruta] of Object.entries(HOTSPOT_SALAS)) {
++        if (ruta === limpio || (!limpio.includes("/") && ruta.endsWith("/" + limpio))) {
++            return "/" + sala;
++        }
++    }
++    return undefined;
++}
+diff --git a/play/src/pusher/services/LocalAdmin.ts b/play/src/pusher/services/LocalAdmin.ts
+index 5cf4821..160eb88 100644
+--- a/play/src/pusher/services/LocalAdmin.ts
++++ b/play/src/pusher/services/LocalAdmin.ts
+@@ -1,4 +1,5 @@
+ import path from "path";
++import { rutaCortaDesdeMapa, salaDesdeRuta } from "./HotspotSalas";
+ import type {
+     AdminApiData,
+     CompanionDetail,
+@@ -90,7 +91,7 @@ class LocalAdmin implements AdminInterface {
+         let canEdit = false;
+         let canRecord = false;
+         const roomUrl = new URL(playUri);
+-        const match = /\/~\/(.+)/.exec(roomUrl.pathname);
++        const match = /\/~\/(.+)/.exec(roomUrl.pathname) !== null || salaDesdeRuta(roomUrl.pathname) !== undefined;
+         if (
+             match &&
+             ENABLE_MAP_EDITOR &&
+@@ -272,8 +273,27 @@ class LocalAdmin implements AdminInterface {
+         let wamUrl = undefined;
+         let canEdit = false;
+ 
+-        let match = /\/~\/(.+)/.exec(roomUrl.pathname);
+-        if (match) {
++        // HOT SPOT S.L.: direcciones cortas (/calle, /oficina, /terraza) y redirección de las largas
++        const salaCorta = salaDesdeRuta(roomUrl.pathname);
++        const mapaSuelto = /^\/([^/]+\.(?:tmj|wam))$/.exec(roomUrl.pathname);
++        const cortaDeMapaSuelto = mapaSuelto ? rutaCortaDesdeMapa(mapaSuelto[1]) : undefined;
++        if (cortaDeMapaSuelto) {
++            const destino = new URL(roomUrl.toString());
++            destino.pathname = cortaDeMapaSuelto;
++            return Promise.resolve({ redirectUrl: destino.toString() });
++        }
++
++        let match = salaCorta ? null : /\/~\/(.+)/.exec(roomUrl.pathname);
++        if (salaCorta) {
++            wamUrl = `${PUBLIC_MAP_STORAGE_URL}/${salaCorta}`;
++            canEdit = ENABLE_MAP_EDITOR;
++        } else if (match) {
++            const corta = rutaCortaDesdeMapa(match[1]);
++            if (corta) {
++                const destino = new URL(roomUrl.toString());
++                destino.pathname = corta;
++                return Promise.resolve({ redirectUrl: destino.toString() });
++            }
+             if (path.extname(roomUrl.pathname) === ".tmj") {
+                 return Promise.resolve({
+                     redirectUrl: roomUrl.toString().replace(".tmj", ".wam"),
+@@ -381,7 +401,7 @@ class LocalAdmin implements AdminInterface {
+ 
+     async getUrlRoomsFromSameWorld(roomUrl: string, locale?: string): Promise<ShortMapDescriptionList> {
+         const url = new URL(roomUrl);
+-        const match = /\/~\/(.+)/.exec(url.pathname);
++        const match = /\/~\/(.+)/.exec(url.pathname) !== null || salaDesdeRuta(url.pathname) !== undefined;
+         if (match) {
+             //let wamUrl = `${PUBLIC_MAP_STORAGE_URL}/${match[1]}`;
+             const response = await axios.get(`${INTERNAL_MAP_STORAGE_URL}/maps`);
+@@ -397,7 +417,7 @@ class LocalAdmin implements AdminInterface {
+                 const name = value?.metadata?.name ?? path;
+                 mapDescriptions.push({
+                     name,
+-                    roomUrl: "/~/" + path,
++                    roomUrl: rutaCortaDesdeMapa(path) ?? "/~/" + path,
+                     wamUrl,
+                     ...value?.metadata,
+                 });
