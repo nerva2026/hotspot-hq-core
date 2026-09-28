@@ -53,14 +53,22 @@ jobs:
           mkdir -p /tmp/oidc && (cd /tmp/oidc && npm init -y >/dev/null && npm install --silent openid-client@5.7.1)
           node pruebas/google-falso.mjs > /tmp/google.log 2>&1 &
           mkdir -p /tmp/datos-oidc
-          TAREAS_DATOS=/tmp/datos-oidc TAREAS_PUERTO=3999 TAREAS_URL=http://localhost:3999/tareas/ \
+          TAREAS_DATOS=/tmp/datos-oidc TAREAS_PUERTO=3998 TAREAS_URL=http://localhost:3998/tareas/ \
           GOOGLE_CLIENT_ID=cliente-google GOOGLE_CLIENT_SECRET=secreto-google \
           GOOGLE_AUTH_URL=http://localhost:8412/auth GOOGLE_TOKEN_URL=http://localhost:8412/token \
-          OIDC_SECRETO=secreto-oficina OIDC_EMISOR=http://127.0.0.1:3999/cuentas OIDC_REDIRECCIONES=http://localhost:9999/openid-callback \
+          OIDC_SECRETO=secreto-oficina OIDC_EMISOR=http://127.0.0.1:3998/cuentas OIDC_REDIRECCIONES=http://localhost:9999/openid-callback \
           CREW_ADMIN=admin@example.com node servidor/principal.js > /tmp/tablon-oidc.log 2>&1 &
-          for i in $(seq 1 20); do curl -fs http://127.0.0.1:3999/tareas/salud && break; sleep 0.5; done
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:3998/tareas/salud && break; sleep 0.5; done
           cp pruebas/oficina-oidc.mjs /tmp/oidc/
-          (cd /tmp/oidc && node oficina-oidc.mjs) || (cat /tmp/tablon-oidc.log; exit 1)
+          # (el servidor del paso anterior sigue en el 3999; este usa el 3998)
+          if ! (cd /tmp/oidc && node oficina-oidc.mjs > /tmp/prueba-oidc.log 2>&1); then
+            cat /tmp/prueba-oidc.log /tmp/tablon-oidc.log
+            # Los errores también como anotaciones, para poder leerlos sin entrar en GitHub
+            tail -n 15 /tmp/prueba-oidc.log | sed 's/%/%25/g' | while IFS= read -r linea; do echo "::error::prueba: $linea"; done
+            tail -n 10 /tmp/tablon-oidc.log | sed 's/%/%25/g' | while IFS= read -r linea; do echo "::error::servidor: $linea"; done
+            exit 1
+          fi
+          cat /tmp/prueba-oidc.log
 
       - name: Preparar Docker
         uses: docker/setup-buildx-action@v3

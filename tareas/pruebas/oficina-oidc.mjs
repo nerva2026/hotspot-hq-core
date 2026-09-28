@@ -1,9 +1,9 @@
 // Prueba de conformidad: la oficina (WorkAdventure) entra por /cuentas usando la misma librería que
 // usa WorkAdventure (openid-client 5) y de la misma forma (PKCE, parámetros extra, userinfo, revocar).
-// Uso: node pruebas/oficina-oidc.mjs   (con el servidor en :3999 y el Google falso en :8412)
+// Uso: node pruebas/oficina-oidc.mjs   (con el servidor en :3998 y el Google falso en :8412)
 import { Issuer, generators } from "openid-client";
 
-const EMISOR = "http://127.0.0.1:3999/cuentas";
+const EMISOR = process.env.EMISOR || "http://127.0.0.1:3998/cuentas";
 const RED = "http://localhost:9999/openid-callback";
 const falla = (m) => {
     console.error("FALLO:", m);

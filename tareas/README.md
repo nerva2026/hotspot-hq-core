@@ -50,7 +50,7 @@ Node 22 sin dependencias:
 | `servidor/principal.js` | Servidor HTTP: portada, tablón (API, tiempo real, Excel) y panel del crew. |
 | `servidor/crew.js` | Entrar con Google, sesión común y proveedor OpenID Connect para la oficina. |
 | `servidor/almacen.js` | Los datos: un JSON (`tablon.json`) en la carpeta de datos, con copia diaria en `copias/` (se guardan 30). |
-| `servidor/cuentas.js` | Contraseñas (scrypt), sesiones (cookie `hs_tablon`) e invitaciones. |
+| `servidor/cuentas.js` | Contraseñas (scrypt, plan B), sesiones e invitaciones de emergencia. |
 | `servidor/tareas.js` | Campos de las tareas y sus reglas. |
 | `servidor/excel.js` | Lectura y escritura de `.xlsx` sin librerías. |
 | `publico/` | La interfaz del tablón: HTML, CSS y módulos de JavaScript sin compilar. |
