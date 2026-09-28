@@ -41,6 +41,8 @@ let pintarAlSoltarFoco = false;
 const ctx = {
     E,
     usuario: (id) => E.usuarios.find((u) => u.id === id) || null,
+    // Las personas que siguen en el crew (las que se fueron siguen saliendo en sus tareas antiguas).
+    activos: () => E.usuarios.filter((u) => !u.baja),
     todasEtiquetas() {
         const cuenta = new Map();
         for (const t of E.tareas.values()) for (const e of t.etiquetas) cuenta.set(e, (cuenta.get(e) || 0) + 1);
@@ -416,7 +418,7 @@ function menuFiltroPersona(ancla) {
             { contenido: "Todos", marcado: E.filtros.persona === "todos", accion: elegir("todos") },
             { contenido: "Mis tareas", marcado: E.filtros.persona === "yo", accion: elegir("yo") },
             "-",
-            ...E.usuarios.filter((u) => u.id !== E.yo.id).map((u) => ({ contenido: [avatar(u), u.nombre], marcado: E.filtros.persona === u.id, accion: elegir(u.id) })),
+            ...ctx.activos().filter((u) => u.id !== E.yo.id).map((u) => ({ contenido: [avatar(u), u.nombre], marcado: E.filtros.persona === u.id, accion: elegir(u.id) })),
             { contenido: [avatar(null), "Sin asignar"], marcado: E.filtros.persona === "nadie", accion: elegir("nadie") },
         ]),
     );
@@ -474,9 +476,8 @@ function menuYo(ancla) {
                 { contenido: "Descargar en Excel", href: "api/excel", download: "" },
                 { contenido: "Importar desde Excel…", accion: importarExcel },
                 "-",
-                E.yo.admin ? { contenido: "Invitar a alguien…", accion: invitar } : null,
-                E.yo.admin && E.usuarios.length > 1 ? { contenido: "Contraseña olvidada de…", accion: () => recuperar(ancla) } : null,
-                { contenido: "Mi color y contraseña…", accion: ajustesYo },
+                E.yo.admin ? { contenido: "Crew: quién puede entrar…", accion: panelCrew } : null,
+                { contenido: "Mi cuenta…", accion: ajustesYo },
                 { contenido: "Atajos de teclado", accion: atajos },
                 "-",
                 { contenido: "Salir", accion: salir },
@@ -485,76 +486,150 @@ function menuYo(ancla) {
     );
 }
 
-function copiable(texto) {
-    const entrada = h("input", { class: "campo", readonly: true, value: texto, onfocus: (e) => e.target.select() });
-    const boton = h(
-        "button",
+// ---------- el crew: quién puede entrar con Google ----------
+
+async function panelCrew() {
+    let info;
+    try {
+        info = await api.crew();
+    } catch (err) {
+        aviso(err.message, { tipo: "malo" });
+        return;
+    }
+    const lista = h("div", { class: "crew-lista" });
+    const recargarCrew = async () => {
+        info = await api.crew();
+        pintarCrew();
+    };
+    const accion = async (fn) => {
+        try {
+            await fn();
+            await recargarCrew();
+        } catch (err) {
+            aviso(err.message, { tipo: "malo" });
+        }
+    };
+    function editar(ancla, persona) {
+        const nombre = h("input", { class: "campo", value: persona.nombre, maxlength: 24 });
+        const correo = h("input", { class: "campo", type: "email", value: persona.email || "", placeholder: "correo@gmail.com", maxlength: 120 });
+        const error = h("p", { class: "error" });
+        abrirMenu(
+            ancla,
+            h(
+                "form",
+                {
+                    class: "menu-fecha",
+                    onsubmit: async (e) => {
+                        e.preventDefault();
+                        try {
+                            await api.cambiarCrew(persona.id, { nombre: nombre.value, email: correo.value });
+                            cerrarMenu();
+                            await recargarCrew();
+                        } catch (err) {
+                            error.textContent = err.message;
+                        }
+                    },
+                },
+                h("div", { class: "menu-titulo" }, "Nombre"),
+                nombre,
+                h("div", { class: "menu-titulo" }, "Correo de Google"),
+                correo,
+                error,
+                h("button", { class: "btn primario pequeno", type: "submit" }, "Guardar"),
+            ),
+            { ancho: 280 },
+        );
+    }
+    function pintarCrew() {
+        const personas = [...info.crew].sort((a, b) => Number(a.baja) - Number(b.baja) || a.nombre.localeCompare(b.nombre));
+        lista.replaceChildren(
+            ...personas.map((p) => {
+                const estado = p.baja ? ["fuera", "Fuera del crew"] : p.entradoEl ? ["dentro", "Ha entrado"] : p.email ? ["espera", "Aún no ha entrado"] : ["sin", "Sin correo: no puede entrar con Google"];
+                let confirmando = false;
+                const sacar = h(
+                    "button",
+                    {
+                        type: "button",
+                        class: "btn pequeno peligro",
+                        onclick: () => {
+                            if (!confirmando) {
+                                confirmando = true;
+                                sacar.textContent = "¿Seguro?";
+                                setTimeout(() => {
+                                    confirmando = false;
+                                    if (sacar.isConnected) sacar.textContent = "Sacar";
+                                }, 3000);
+                                return;
+                            }
+                            accion(() => api.cambiarCrew(p.id, { baja: true }));
+                        },
+                    },
+                    "Sacar",
+                );
+                return h(
+                    "div",
+                    { class: ["crew-fila", p.baja && "baja"] },
+                    avatar(p),
+                    h("div", { class: "crew-datos" }, h("strong", null, p.nombre, p.admin ? h("span", { class: "chip crew-admin" }, "ADMIN") : null), h("span", { class: "tenue" }, p.email || "sin correo"), h("span", { class: ["crew-estado", estado[0]] }, estado[1])),
+                    h(
+                        "div",
+                        { class: "crew-botones" },
+                        p.baja
+                            ? h("button", { type: "button", class: "btn pequeno", onclick: () => accion(() => api.cambiarCrew(p.id, { baja: false })) }, "Readmitir")
+                            : [
+                                  h("button", { type: "button", class: "btn pequeno", onclick: (e) => editar(e.currentTarget, p) }, "Editar"),
+                                  h(
+                                      "button",
+                                      { type: "button", class: "btn pequeno", title: p.admin ? "Quitar permisos de administración" : "Dar permisos de administración (puede cambiar el crew)", onclick: () => accion(() => api.cambiarCrew(p.id, { admin: !p.admin })) },
+                                      p.admin ? "Quitar admin" : "Hacer admin",
+                                  ),
+                                  p.id === E.yo.id ? null : sacar,
+                              ],
+                    ),
+                );
+            }),
+        );
+    }
+    pintarCrew();
+    const correo = h("input", { class: "campo", type: "email", placeholder: "correo@gmail.com", required: true, maxlength: 120, "aria-label": "Correo de Google" });
+    const nombre = h("input", { class: "campo", placeholder: "Nombre (opcional)", maxlength: 24, "aria-label": "Nombre" });
+    const error = h("p", { class: "error", role: "alert" });
+    const form = h(
+        "form",
         {
-            type: "button",
-            class: "btn",
-            onclick: async () => {
-                entrada.select();
+            class: "crew-nuevo",
+            onsubmit: async (e) => {
+                e.preventDefault();
+                error.textContent = "";
                 try {
-                    await navigator.clipboard.writeText(texto);
-                    boton.textContent = "¡Copiado!";
-                } catch {
-                    document.execCommand?.("copy");
-                    boton.textContent = "Copiado";
+                    await api.anadirCrew({ email: correo.value, nombre: nombre.value });
+                    correo.value = "";
+                    nombre.value = "";
+                    await recargarCrew();
+                    aviso("Añadido al crew. Ya puede entrar con Google.");
+                } catch (err) {
+                    error.textContent = err.message;
                 }
             },
         },
-        "Copiar",
+        correo,
+        nombre,
+        h("button", { class: "btn primario", type: "submit" }, "Añadir"),
     );
-    return h("div", { class: "copiable" }, entrada, boton);
-}
-
-const enlaceCon = (codigo) => `${location.origin}${location.pathname}#alta=${codigo}`;
-
-async function invitar() {
-    try {
-        const { codigo } = await api.invitar({ tipo: "alta" });
-        ventana(
-            "Invitar a alguien",
-            h(
-                "div",
-                { class: "pila" },
-                h("p", null, "Mándale este enlace. Con él se crea su cuenta y ya puede entrar. Sirve una sola vez y caduca en 7 días."),
-                copiable(enlaceCon(codigo)),
-                h("p", { class: "nota" }, "Tendrá los mismos permisos que tú: podrá ver y cambiar todas las tareas e invitar a más gente."),
-            ),
-            { ancho: 480 },
-        );
-    } catch (err) {
-        aviso(err.message, { tipo: "malo" });
-    }
-}
-
-function recuperar(ancla) {
-    abrirMenu(ancla, () =>
+    ventana(
+        "Crew",
         h(
             "div",
-            null,
-            h("div", { class: "menu-titulo" }, "¿Quién ha olvidado su contraseña?"),
-            opcionesMenu(
-                E.usuarios
-                    .filter((u) => u.id !== E.yo.id)
-                    .map((u) => ({
-                        contenido: [avatar(u), u.nombre],
-                        accion: async () => {
-                            try {
-                                const { codigo } = await api.invitar({ tipo: "clave", persona: u.id });
-                                ventana(
-                                    `Contraseña nueva para ${u.nombre}`,
-                                    h("div", { class: "pila" }, h("p", null, `Mándale este enlace a ${u.nombre}: con él elige una contraseña nueva. Sirve una vez y caduca en 7 días.`), copiable(enlaceCon(codigo))),
-                                    { ancho: 480 },
-                                );
-                            } catch (err) {
-                                aviso(err.message, { tipo: "malo" });
-                            }
-                        },
-                    })),
-            ),
+            { class: "pila" },
+            h("p", null, "Solo los correos de esta lista pueden entrar con Google a la oficina, la terraza y el tablón. Si sacas a alguien, pierde el acceso al momento; sus tareas se quedan."),
+            info.google ? null : h("p", { class: "error" }, "El acceso con Google aún no está configurado en el servidor."),
+            lista,
+            h("h3", null, "Añadir a alguien"),
+            form,
+            error,
+            h("p", { class: "nota" }, "Si no pones nombre, se usará el de su cuenta de Google la primera vez que entre."),
         ),
+        { ancho: 640 },
     );
 }
 
@@ -592,8 +667,9 @@ function ajustesYo() {
         h(
             "div",
             { class: "pila" },
+            E.yo.email ? h("p", null, "Entras con tu cuenta de Google ", h("strong", null, E.yo.email), ".") : null,
             h("div", { class: "etiqueta-campo" }, h("span", null, "Mi color"), muestras),
-            h(
+            !E.yo.tieneClave ? null : h(
                 "form",
                 {
                     class: "pila",
@@ -684,7 +760,7 @@ function nuevaTarea(base = {}) {
         maxlength: 300,
         "aria-label": "Título de la tarea",
     });
-    const interpretado = () => interpretar(entrada.value, E.usuarios);
+    const interpretado = () => interpretar(entrada.value, ctx.activos());
     const pintarPiezas = () => {
         const r = interpretado();
         const piezas = [];
@@ -762,7 +838,7 @@ function actualizarUsuario(u) {
     const i = E.usuarios.findIndex((x) => x.id === u.id);
     if (i >= 0) E.usuarios[i] = u;
     else E.usuarios.push(u);
-    if (E.yo.id === u.id) E.yo = u;
+    if (E.yo.id === u.id) E.yo = { ...E.yo, ...u };
     pintar();
 }
 
@@ -782,7 +858,7 @@ function alRecibir(ev) {
     } else if (ev.tipo === "usuarios") {
         E.usuarios = ev.usuarios;
         const yo = ev.usuarios.find((u) => u.id === E.yo.id);
-        if (yo) E.yo = yo;
+        if (yo) E.yo = { ...E.yo, ...yo };
         pintar();
     }
 }

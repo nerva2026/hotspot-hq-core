@@ -50,6 +50,10 @@ export const api = {
     invitacion: (codigo) => llamar("GET", `invitacion?codigo=${encodeURIComponent(codigo)}`),
     alta: (datos) => llamar("POST", "alta", datos),
     invitar: (datos) => llamar("POST", "invitar", datos),
+    acceso: () => llamar("GET", "acceso"),
+    crew: () => llamar("GET", "crew"),
+    anadirCrew: (datos) => llamar("POST", "crew", datos),
+    cambiarCrew: (id, datos) => llamar("PATCH", `crew/${id}`, datos),
     cambiarYo: (datos) => llamar("PATCH", "yo", datos),
     crear: (tarea) => llamar("POST", "tareas", tarea),
     cambiar: (id, cambios) => llamar("PATCH", `tareas/${id}`, cambios),
@@ -87,8 +91,8 @@ export function escuchar(alRecibir, alReconectar) {
                 setTimeout(async () => {
                     if (parado) return;
                     await alReconectar();
-                    abrir();
-                }, 5000);
+                    setTimeout(abrir, 2000);
+                }, 1000);
             }
         };
     }

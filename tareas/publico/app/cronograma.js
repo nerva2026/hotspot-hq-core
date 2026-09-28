@@ -154,7 +154,7 @@ export function pintarCronograma(cont, ctx, ev) {
     if (ev.agrupar === "estado") grupos = ESTADOS.map((e) => ({ nombre: e.nombre, color: e.color, tareas: conFechas.filter((t) => t.estado === e.id) }));
     else if (ev.agrupar === "persona")
         grupos = [
-            ...ctx.E.usuarios.map((u) => ({ nombre: u.nombre, color: u.color, tareas: conFechas.filter((t) => t.responsables.includes(u.id)) })),
+            ...ctx.activos().map((u) => ({ nombre: u.nombre, color: u.color, tareas: conFechas.filter((t) => t.responsables.includes(u.id)) })),
             { nombre: "Sin asignar", color: "#d8cabb", tareas: conFechas.filter((t) => !t.responsables.length) },
         ];
     else grupos = [{ nombre: null, tareas: conFechas }];

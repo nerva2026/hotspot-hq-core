@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#1c1715">
+<title>HOT SPOT S.L.</title>
+<meta name="description" content="La oficina virtual de HOT SPOT S.L.">
+<link rel="icon" href="/tareas/icono.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/cuentas/r/portada.css">
+<script src="/cuentas/r/portada.js" defer></script>
+</head>
+<body>
+<main class="escena">
+  <div class="panel">
+    <img class="marca" src="/cuentas/r/marca.png" alt="HOT SPOT S.L." width="390" height="120">
+    <p id="saludo">Bienvenido a la oficina virtual de HOT SPOT S.L. ¿Cómo entras?</p>
+    <div id="aviso" class="aviso" role="status" hidden></div>
+    <div class="elegir">
+      <a class="puerta crew" id="crew" href="/cuentas/entrar?vuelta=/oficina">
+        <span class="titulo">CREW</span>
+        <span class="texto" id="crew-texto">Entra con tu cuenta de Google. Tendrás la oficina, la terraza y el tablón de tareas.</span>
+        <span class="accion" id="crew-accion">Entrar con Google ▸</span>
+      </a>
+      <a class="puerta invitado" id="invitado" href="/calle">
+        <span class="titulo">INVITADO</span>
+        <span class="texto">Pasa a la calle sin cuenta. No se guarda nada tuyo en el servidor.</span>
+        <span class="accion">Ir a la calle ▸</span>
+      </a>
+    </div>
+    <p class="pie" id="pie"></p>
+  </div>
+</main>
+</body>
+</html>

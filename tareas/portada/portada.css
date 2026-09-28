@@ -1,0 +1,217 @@
+/* Portada de HOT SPOT S.L. y pantallas de acceso del crew. */
+
+@font-face {
+    font-family: "Silkscreen";
+    src: url("/tareas/fuentes/silkscreen-regular.woff") format("woff");
+    font-weight: 400;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Silkscreen";
+    src: url("/tareas/fuentes/silkscreen-bold.woff") format("woff");
+    font-weight: 700;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("/tareas/fuentes/pixelify-sans.woff") format("woff");
+    font-weight: 400 700;
+    font-display: swap;
+}
+
+:root {
+    color-scheme: dark;
+    --tinta: #1c1715;
+    --crema: #f3e6d8;
+    --papel: #fffaf3;
+    --naranja: #e0562a;
+    --naranja-osc: #b8431f;
+    --amarillo: #ffd84a;
+    --titulo: "Silkscreen", "Pixelify Sans", ui-monospace, monospace;
+    --texto: "Pixelify Sans", ui-monospace, monospace;
+}
+* {
+    box-sizing: border-box;
+    /* Pixelify Sans dibuja «fi» como una A: sin ligaduras. */
+    font-variant-ligatures: none !important;
+    font-feature-settings: "liga" 0, "clig" 0 !important;
+}
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+    background: #0e0b0a;
+    color: var(--crema);
+    font: 16px/1.45 var(--texto);
+}
+a {
+    color: var(--amarillo);
+}
+:focus-visible {
+    outline: 3px solid var(--amarillo);
+    outline-offset: 2px;
+}
+
+.escena {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: 24px 16px;
+    background:
+        linear-gradient(180deg, rgba(14, 11, 10, 0.2) 0%, rgba(14, 11, 10, 0.55) 55%, rgba(14, 11, 10, 0.92) 100%),
+        url("/cuentas/r/fachada.png") center 30% / cover no-repeat;
+    image-rendering: pixelated;
+}
+.panel {
+    width: 100%;
+    max-width: 640px;
+    background: rgba(28, 23, 21, 0.92);
+    border: 3px solid var(--crema);
+    box-shadow:
+        6px 6px 0 #000,
+        inset 0 0 0 3px #000;
+    padding: 24px 24px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    image-rendering: auto;
+}
+.marca {
+    display: block;
+    width: min(390px, 100%);
+    height: auto;
+    margin: 0 auto 4px;
+    image-rendering: pixelated;
+}
+h1 {
+    margin: 0;
+    font: 700 18px/1.2 var(--titulo);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--amarillo);
+    text-align: center;
+}
+p {
+    margin: 0;
+    text-align: center;
+}
+.nota {
+    font-size: 14px;
+    color: rgba(243, 230, 216, 0.7);
+}
+.aviso {
+    background: var(--amarillo);
+    color: var(--tinta);
+    border: 2px solid #000;
+    padding: 8px 12px;
+    text-align: center;
+    font-size: 15px;
+}
+
+/* Botones de las pantallas de acceso */
+.botones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 4px;
+}
+.boton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font: 400 13px/1 var(--titulo);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--tinta);
+    background: var(--papel);
+    border: 3px solid #000;
+    box-shadow: 3px 3px 0 #000;
+    padding: 12px 16px 11px;
+}
+.boton.principal {
+    background: var(--naranja);
+    color: #fff;
+}
+.boton:hover {
+    filter: brightness(1.08);
+}
+.boton:active {
+    transform: translate(3px, 3px);
+    box-shadow: none;
+}
+
+/* Portada: CREW o INVITADO */
+.elegir {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+.puerta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: left;
+    text-decoration: none;
+    border: 3px solid #000;
+    box-shadow: 4px 4px 0 #000;
+    padding: 16px 16px 14px;
+    min-height: 150px;
+    cursor: pointer;
+    font: inherit;
+}
+.puerta:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 5px 5px 0 #000;
+}
+.puerta:active {
+    transform: translate(4px, 4px);
+    box-shadow: none;
+}
+.puerta .titulo {
+    font: 700 22px/1 var(--titulo);
+    letter-spacing: 0.06em;
+}
+.puerta .texto {
+    font-size: 15px;
+    line-height: 1.35;
+}
+.puerta .accion {
+    margin-top: auto;
+    font: 400 12px/1 var(--titulo);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.puerta.crew {
+    background: var(--naranja);
+    color: #fff;
+}
+.puerta.invitado {
+    background: var(--papel);
+    color: var(--tinta);
+}
+.pie {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    justify-content: center;
+    font-size: 14px;
+    min-height: 20px;
+}
+.pie a {
+    color: var(--crema);
+}
+
+@media (max-width: 560px) {
+    .panel {
+        padding: 18px 14px;
+    }
+    .elegir {
+        grid-template-columns: 1fr;
+    }
+    .puerta {
+        min-height: 0;
+    }
+}

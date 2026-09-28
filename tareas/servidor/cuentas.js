@@ -57,7 +57,7 @@ export function validarNombre(nombre, usuarios, excepto = null) {
     return { nombre: limpio };
 }
 
-export const usuarioPublico = (u) => ({ id: u.id, nombre: u.nombre, color: u.color, admin: Boolean(u.admin) });
+export const usuarioPublico = (u) => ({ id: u.id, nombre: u.nombre, color: u.color, admin: Boolean(u.admin), baja: Boolean(u.baja) });
 
 export function crearSesion(datos, usuario) {
     const codigo = crypto.randomBytes(32).toString("base64url");
@@ -72,7 +72,7 @@ export function buscarSesion(datos, codigo) {
     const sesion = datos.sesiones.find((s) => s.id === id);
     if (!sesion || sesion.caduca < Date.now()) return null;
     const usuario = datos.usuarios.find((u) => u.id === sesion.usuario);
-    return usuario ? { sesion, usuario } : null;
+    return usuario && !usuario.baja ? { sesion, usuario } : null;
 }
 
 export function cerrarSesion(datos, codigo) {

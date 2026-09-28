@@ -1885,3 +1885,92 @@ table.lista {
         padding: 14px 14px 30px;
     }
 }
+
+/* ---------- panel del crew ---------- */
+.crew-lista {
+    display: flex;
+    flex-direction: column;
+    border: 2px solid var(--tinta);
+    background: #fff;
+}
+.crew-fila {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--crema-osc);
+}
+.crew-fila:last-child {
+    border-bottom: 0;
+}
+.crew-fila.baja {
+    background: #f4eee7;
+}
+.crew-fila.baja .crew-datos strong {
+    text-decoration: line-through;
+    color: var(--tenue);
+}
+.crew-fila .avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+}
+.crew-datos {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 14px;
+}
+.crew-datos strong {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15px;
+}
+.crew-datos .tenue {
+    overflow-wrap: anywhere;
+}
+.chip.crew-admin {
+    font: 400 9px/1 var(--titulo);
+    background: var(--tinta);
+    color: var(--crema);
+    padding: 3px 4px 2px;
+}
+.crew-estado {
+    font-size: 12px;
+}
+.crew-estado.dentro {
+    color: var(--verde);
+}
+.crew-estado.espera {
+    color: #b07a00;
+}
+.crew-estado.fuera,
+.crew-estado.sin {
+    color: var(--tenue);
+}
+.crew-botones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end;
+}
+.crew-nuevo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.crew-nuevo .campo {
+    flex: 1 1 180px;
+}
+@media (max-width: 560px) {
+    .crew-fila {
+        flex-wrap: wrap;
+    }
+    .crew-botones {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

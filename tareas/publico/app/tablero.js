@@ -132,7 +132,7 @@ function cajaAlta(estado, ctx, ev) {
         ctx.pintar();
     };
     async function crear() {
-        const r = interpretar(area.value, ctx.E.usuarios);
+        const r = interpretar(area.value, ctx.activos());
         if (!r.titulo) return cerrar();
         area.value = "";
         const datos = { titulo: r.titulo, estado, responsables: r.responsables, etiquetas: r.etiquetas };

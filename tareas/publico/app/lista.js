@@ -49,7 +49,7 @@ function grupos(tareas, agrupar, ctx) {
         return [...PRIORIDADES, SIN_PRIORIDAD].map((p) => ({ clave: p.id || "ninguna", nombre: p.nombre, color: p.color, base: { prioridad: p.id }, tareas: tareas.filter((t) => (t.prioridad || null) === p.id) }));
     if (agrupar === "persona")
         return [
-            ...ctx.E.usuarios.map((u) => ({ clave: u.id, nombre: u.nombre, color: u.color, base: { responsables: [u.id] }, tareas: tareas.filter((t) => t.responsables.includes(u.id)) })),
+            ...ctx.activos().map((u) => ({ clave: u.id, nombre: u.nombre, color: u.color, base: { responsables: [u.id] }, tareas: tareas.filter((t) => t.responsables.includes(u.id)) })),
             { clave: "nadie", nombre: "Sin asignar", color: "#d8cabb", base: {}, tareas: tareas.filter((t) => !t.responsables.length) },
         ];
     return [{ clave: "todo", nombre: null, base: {}, tareas }];
@@ -228,12 +228,12 @@ function fila(t, ctx) {
         celda(
             "col-responsables",
             responsables.length ? (responsables.length === 1 ? h("span", { class: "persona" }, avatar(responsables[0]), responsables[0].nombre) : h("span", { class: "avatares" }, responsables.map((u) => avatar(u)))) : h("span", { class: "tenue" }, "—"),
-            (a) => menuPersonas(a, ctx.E.usuarios, t.responsables, (v) => ctx.cambiar(t.id, { responsables: v })),
+            (a) => menuPersonas(a, ctx.activos(), t.responsables, (v) => ctx.cambiar(t.id, { responsables: v })),
         ),
         celda("col-fin", p ? h("span", { class: ["chip", "plazo", p.clase] }, p.texto) : h("span", { class: "tenue" }, "—"), (a) => menuFecha(a, t.fin, (v) => ctx.cambiar(t.id, { fin: v })), t.fin || ""),
         celda("col-inicio", t.inicio ? fechaCorta(t.inicio) : h("span", { class: "tenue" }, "—"), (a) => menuFecha(a, t.inicio, (v) => ctx.cambiar(t.id, { inicio: v }), { titulo: "Empieza el" })),
         celda("col-etiquetas", t.etiquetas.length ? t.etiquetas.map((e) => chipEtiqueta(e)) : h("span", { class: "tenue" }, "—"), (a) => menuEtiquetas(a, t.etiquetas, ctx.todasEtiquetas(), (v) => ctx.cambiar(t.id, { etiquetas: v }))),
-        celda("col-pedidoPor", pedido ? h("span", { class: "persona" }, avatar(pedido), pedido.nombre) : h("span", { class: "tenue" }, "—"), (a) => menuPersona(a, ctx.E.usuarios, t.pedidoPor, (v) => ctx.cambiar(t.id, { pedidoPor: v }))),
+        celda("col-pedidoPor", pedido ? h("span", { class: "persona" }, avatar(pedido), pedido.nombre) : h("span", { class: "tenue" }, "—"), (a) => menuPersona(a, ctx.activos(), t.pedidoPor, (v) => ctx.cambiar(t.id, { pedidoPor: v }))),
     );
 }
 
@@ -251,7 +251,7 @@ function filaNueva(base, ctx, clave) {
                 return;
             }
             if (e.key !== "Enter") return;
-            const r = interpretar(e.target.value, ctx.E.usuarios);
+            const r = interpretar(e.target.value, ctx.activos());
             if (!r.titulo) return;
             e.target.value = "";
             const datos = { ...base, titulo: r.titulo, responsables: [...new Set([...(base.responsables || []), ...r.responsables])], etiquetas: r.etiquetas };

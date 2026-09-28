@@ -238,7 +238,7 @@ function altaEnDia(ancla, dia, ctx) {
     entrada.addEventListener("keydown", async (e) => {
         if (e.key !== "Enter") return;
         e.preventDefault();
-        const r = interpretar(entrada.value, ctx.E.usuarios);
+        const r = interpretar(entrada.value, ctx.activos());
         if (!r.titulo) return;
         cerrarMenu();
         const datos = { titulo: r.titulo, fin: r.fin || dia, responsables: r.responsables, etiquetas: r.etiquetas };

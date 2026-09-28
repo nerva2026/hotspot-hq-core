@@ -1,0 +1,101 @@
+diff --git a/play/src/pusher/controllers/IoSocketController.ts b/play/src/pusher/controllers/IoSocketController.ts
+index e675f47..290f4fb 100644
+--- a/play/src/pusher/controllers/IoSocketController.ts
++++ b/play/src/pusher/controllers/IoSocketController.ts
+@@ -12,9 +12,11 @@ import type { FetchMemberDataByUuidResponse } from "../services/AdminApi";
+ import type { AdminSocketTokenData } from "../services/JWTTokenManager";
+ import { jwtTokenManager, tokenInvalidException } from "../services/JWTTokenManager";
+ import { socketManager } from "../services/SocketManager";
++import { salaSoloCrew } from "../services/HotspotSalas";
+ import {
+     ADMIN_SOCKETS_TOKEN,
+     DISABLE_ANONYMOUS,
++    OPID_CLIENT_ID,
+     PUSHER_ADMIN_WS_MAX_BACKPRESSURE_BYTES,
+     SOCKET_IDLE_TIMER,
+ } from "../enums/EnvironmentVariable";
+@@ -336,6 +338,23 @@ export class IoSocketController {
+                     const userIdentifier = tokenData ? tokenData.identifier : "";
+                     const isLogged = !!tokenData?.accessToken;
+ 
++                    // HOT SPOT S.L.: la oficina y la terraza son solo para el crew; los invitados, a la portada.
++                    if (OPID_CLIENT_ID && !isLogged && salaSoloCrew(roomId)) {
++                        if (isAborted()) {
++                            return;
++                        }
++                        reject({
++                            rejected: true,
++                            reason: "error",
++                            error: {
++                                status: "error",
++                                type: "redirect",
++                                urlToRedirect: "/?solo-crew",
++                            },
++                        } satisfies UpgradeFailedData);
++                        return;
++                    }
++
+                     let memberTags: string[] = [];
+                     let memberVisitCardUrl: string | null = null;
+                     let memberUserRoomToken: string | undefined;
+diff --git a/play/src/pusher/services/HotspotSalas.ts b/play/src/pusher/services/HotspotSalas.ts
+index 81f7a38..aae5e90 100644
+--- a/play/src/pusher/services/HotspotSalas.ts
++++ b/play/src/pusher/services/HotspotSalas.ts
+@@ -30,3 +30,23 @@ export function salaDesdeMapaSuelto(pathname: string): string | undefined {
+     }
+     return undefined;
+ }
++
++/**
++ * HOT SPOT S.L.: salas solo para el crew (gente que ha entrado con su cuenta a través de /cuentas).
++ * Los invitados (sin cuenta) se quedan en la calle. Solo se aplica si el acceso con cuenta está
++ * configurado (OPENID_CLIENT_ID); si no, la oficina funciona como antes.
++ */
++export const HOTSPOT_SALAS_CREW = ["hotspot/hq.wam", "hotspot/terraza.wam"];
++
++export function salaSoloCrew(roomUrl: string): boolean {
++    let ruta: string;
++    try {
++        ruta = new URL(roomUrl, "http://x").pathname;
++    } catch {
++        return false;
++    }
++    const interna = salaDesdeRuta(ruta) ?? salaDesdeMapaSuelto(ruta) ?? ruta;
++    const m = /^\/~\/(.+?)(?:\.tmj|\.wam)?$/.exec(interna);
++    if (!m) return false;
++    return HOTSPOT_SALAS_CREW.includes(m[1] + ".wam");
++}
+diff --git a/play/src/pusher/services/LocalAdmin.ts b/play/src/pusher/services/LocalAdmin.ts
+index 3c6c672..dd59132 100644
+--- a/play/src/pusher/services/LocalAdmin.ts
++++ b/play/src/pusher/services/LocalAdmin.ts
+@@ -1,5 +1,5 @@
+ import path from "path";
+-import { salaDesdeMapaSuelto, salaDesdeRuta } from "./HotspotSalas";
++import { salaDesdeMapaSuelto, salaDesdeRuta, salaSoloCrew } from "./HotspotSalas";
+ import type {
+     AdminApiData,
+     CompanionDetail,
+@@ -17,6 +17,7 @@ import { MapsCacheFileFormat } from "@workadventure/map-editor";
+ import {
+     CARDS_ENABLED,
+     DISABLE_ANONYMOUS,
++    OPID_CLIENT_ID,
+     ENABLE_CHAT,
+     ENABLE_CHAT_DISCONNECTED_LIST,
+     ENABLE_CHAT_ONLINE_LIST,
+@@ -311,10 +312,11 @@ class LocalAdmin implements AdminInterface {
+             mapUrl,
+             wamUrl,
+             canEdit,
+-            authenticationMandatory: DISABLE_ANONYMOUS,
++            // HOT SPOT S.L.: la oficina y la terraza son solo para el crew; al salir, se cierra también /cuentas.
++            authenticationMandatory: DISABLE_ANONYMOUS || (!!OPID_CLIENT_ID && salaSoloCrew(roomUrl.toString())),
+             contactPage: null,
+             group: wamUrl ? "default" : null,
+-            opidLogoutRedirectUrl: null,
++            opidLogoutRedirectUrl: OPID_CLIENT_ID ? "/cuentas/salir" : null,
+             opidUsernamePolicy: opidWokaNamePolicyCheck.success ? opidWokaNamePolicyCheck.data : null,
+             loadingLogo: "/static/images/hotspot/marca.png",
+             loginSceneLogo: "/static/images/hotspot/marca.png",

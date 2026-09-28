@@ -21,7 +21,13 @@ function campo(etiqueta, props) {
     return { el: h("label", { class: "etiqueta-campo" }, h("span", null, etiqueta), input), input };
 }
 
-export function pantallaEntrar(raiz, alEntrar) {
+export async function pantallaEntrar(raiz, alEntrar) {
+    let google = false;
+    try {
+        google = (await api.acceso()).google;
+    } catch {
+        /* sin conexión: se ofrece la contraseña */
+    }
     const nombre = campo("Nombre", { autocomplete: "username", required: true, autocapitalize: "words" });
     const clave = campo("Contraseña", { type: "password", autocomplete: "current-password", required: true });
     const error = h("p", { class: "error", role: "alert" });
@@ -30,6 +36,7 @@ export function pantallaEntrar(raiz, alEntrar) {
         "form",
         {
             class: "acceso-form",
+            hidden: google,
             onsubmit: async (e) => {
                 e.preventDefault();
                 error.textContent = "";
@@ -48,10 +55,71 @@ export function pantallaEntrar(raiz, alEntrar) {
         clave.el,
         error,
         boton,
-        h("p", { class: "nota" }, "¿No tienes cuenta o has olvidado la contraseña? Pide un enlace a quien administra el tablón."),
+        google ? null : h("p", { class: "nota" }, "¿No tienes cuenta o has olvidado la contraseña? Pide un enlace a quien administra el tablón."),
     );
-    vaciar(raiz).appendChild(marco(form));
-    nombre.input.focus();
+    if (!google) {
+        vaciar(raiz).appendChild(marco(form));
+        nombre.input.focus();
+        return;
+    }
+    // Con Google. Dentro de la oficina el tablón va en un marco, y Google no deja entrar desde un marco:
+    // se abre una pestaña y, cuando termina, el tablón se recarga solo.
+    let enMarco = false;
+    try {
+        enMarco = window.top !== window;
+    } catch {
+        enMarco = true;
+    }
+    const vuelta = location.pathname + location.search;
+    const esperando = h("p", { class: "nota", hidden: true }, "Termina de entrar en la pestaña nueva; esto se actualizará solo.");
+    const entrarGoogle = h(
+        "a",
+        {
+            class: "btn primario ancho",
+            href: `/cuentas/entrar?vuelta=${encodeURIComponent(enMarco ? "/tareas/" : vuelta)}`,
+            target: enMarco ? "_blank" : null,
+            rel: enMarco ? "noopener" : null,
+            onclick: () => {
+                if (!enMarco) return;
+                esperando.hidden = false;
+                const vigilar = setInterval(async () => {
+                    try {
+                        const r = await fetch("/cuentas/yo", { cache: "no-store", credentials: "same-origin" });
+                        if (r.ok) {
+                            clearInterval(vigilar);
+                            location.reload();
+                        }
+                    } catch {
+                        /* se sigue esperando */
+                    }
+                }, 2000);
+                setTimeout(() => clearInterval(vigilar), 10 * 60 * 1000);
+            },
+        },
+        "Entrar con Google",
+    );
+    const conClave = h(
+        "button",
+        {
+            type: "button",
+            class: "enlace",
+            onclick: () => {
+                form.hidden = !form.hidden;
+                if (!form.hidden) nombre.input.focus();
+            },
+        },
+        "Entrar con contraseña",
+    );
+    vaciar(raiz).appendChild(
+        marco(
+            h("p", null, "El tablón es del crew de HOT SPOT S.L. Entra con tu cuenta de Google."),
+            entrarGoogle,
+            esperando,
+            h("p", { class: "nota" }, "Solo pueden entrar los correos que estén en el crew. ", conClave),
+            form,
+        ),
+    );
+    entrarGoogle.focus();
 }
 
 export async function pantallaAlta(raiz, codigo, alEntrar) {

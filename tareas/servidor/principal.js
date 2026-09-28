@@ -1,12 +1,19 @@
-// Tablón de tareas de HOT SPOT S.L. · servidor
+// HOT SPOT S.L. · servidor propio de la oficina: portada, cuentas del crew y tablón de tareas.
 //
-// Sirve la aplicación (carpeta publico/) y su API bajo /tareas. Sin dependencias: solo Node.
+//   /            portada (CREW o INVITADO)                          → carpeta portada/
+//   /cuentas/    entrar con Google y proveedor de identidad         → servidor/crew.js
+//   /tareas/     tablón de tareas (aplicación y API)                → carpeta publico/
+//
+// Sin dependencias: solo Node.
 //
 // Variables de entorno:
 //   TAREAS_PUERTO   puerto (3000)
 //   TAREAS_DATOS    carpeta de datos (/datos)
-//   TAREAS_URL      dirección pública, para los enlaces de alta (https://oficina.hot-spot.es/tareas/)
-//   TAREAS_BASE     ruta bajo la que se sirve (/tareas)
+//   TAREAS_URL      dirección pública del tablón (https://oficina.hot-spot.es/tareas/)
+//   TAREAS_BASE     ruta bajo la que se sirve el tablón (/tareas)
+//   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET     cliente OAuth de Google (entrar con Google)
+//   OIDC_SECRETO, OIDC_CLIENTE, OIDC_EMISOR    acceso de la oficina (WorkAdventure) a /cuentas
+//   CREW_ADMIN      correo de Google del primer administrador
 //
 // Órdenes (dentro del contenedor):
 //   node servidor/principal.js enlace   → imprime un enlace nuevo para dar de alta a alguien (con permisos
@@ -21,14 +28,15 @@ import { abrirAlmacen } from "./almacen.js";
 import * as cuentas from "./cuentas.js";
 import { aplicarCambios, crearTarea, publica, ErrorDeDatos, ESTADOS, NOMBRES_ESTADO, NOMBRES_PRIORIDAD, PRIORIDADES } from "./tareas.js";
 import { crearExcel, leerExcel, fechaDeCelda } from "./excel.js";
+import { crearCrew, correoValido, limpiarCorreo } from "./crew.js";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PUBLICO = path.join(RAIZ, "publico");
+const PORTADA = path.join(RAIZ, "portada");
 const PUERTO = Number(process.env.TAREAS_PUERTO || 3000);
 const CARPETA_DATOS = process.env.TAREAS_DATOS || "/datos";
 const BASE = (process.env.TAREAS_BASE || "/tareas").replace(/\/$/, "");
 const URL_PUBLICA = process.env.TAREAS_URL || `http://localhost:${PUERTO}${BASE}/`;
-const COOKIE = "hs_tablon";
 const ARCHIVO_INTERNO = path.join(CARPETA_DATOS, ".interno");
 
 // ---------- orden «enlace» (se ejecuta junto al servidor que ya está en marcha) ----------
@@ -49,6 +57,14 @@ if (process.argv[2] === "enlace") {
 
 const almacen = abrirAlmacen(CARPETA_DATOS);
 const datos = () => almacen.datos;
+const crew = crearCrew({
+    almacen,
+    cuentas,
+    carpetaDatos: CARPETA_DATOS,
+    carpetaPortada: PORTADA,
+    urlPublica: URL_PUBLICA,
+    alCambiarUsuarios: () => emitir({ tipo: "usuarios", usuarios: datos().usuarios.map(cuentas.usuarioPublico) }),
+});
 
 const claveInterna = crypto.randomBytes(24).toString("hex");
 const CLAVE_FALSA = await cuentas.cifrarClave(crypto.randomBytes(12).toString("hex"));
@@ -58,7 +74,7 @@ function enlaceAlta(codigo) {
     return `${URL_PUBLICA}#alta=${codigo}`;
 }
 
-if (datos().usuarios.length === 0) {
+if (datos().usuarios.length === 0 && !crew.googleListo) {
     const codigo = cuentas.crearInvitacion(datos(), { tipo: "alta", admin: true });
     almacen.guardarYa();
     console.log("\n=============================================================");
@@ -72,14 +88,38 @@ if (datos().usuarios.length === 0) {
 
 const oyentes = new Set(); // { res, usuario, sesion }
 
-function emitir(evento, origen = null) {
-    const linea = `data: ${JSON.stringify({ ...evento, origen })}\n\n`;
-    for (const o of oyentes) o.res.write(linea);
+// Escribe a todos los que escuchan; si alguna conexión ya se cerró, se quita sin tumbar el servidor.
+function escribirATodos(linea) {
+    for (const o of [...oyentes]) {
+        if (o.res.writableEnded || o.res.destroyed) {
+            oyentes.delete(o);
+            continue;
+        }
+        try {
+            o.res.write(linea);
+        } catch {
+            oyentes.delete(o);
+        }
+    }
 }
 
-setInterval(() => {
-    for (const o of oyentes) o.res.write(": sigo aquí\n\n");
-}, 25000).unref();
+function emitir(evento, origen = null) {
+    escribirATodos(`data: ${JSON.stringify({ ...evento, origen })}\n\n`);
+}
+
+function cerrarOyentes(condicion) {
+    for (const o of [...oyentes]) {
+        if (!condicion(o)) continue;
+        oyentes.delete(o);
+        try {
+            o.res.end();
+        } catch {
+            /* ya estaba cerrada */
+        }
+    }
+}
+
+setInterval(() => escribirATodos(": sigo aquí\n\n"), 25000).unref();
 
 setInterval(() => {
     if (cuentas.limpiarCaducadas(datos())) almacen.guardar();
@@ -150,22 +190,8 @@ async function leerJson(req) {
     }
 }
 
-function leerCookies(req) {
-    const salida = {};
-    for (const trozo of (req.headers.cookie || "").split(";")) {
-        const i = trozo.indexOf("=");
-        if (i > 0) salida[trozo.slice(0, i).trim()] = decodeURIComponent(trozo.slice(i + 1).trim());
-    }
-    return salida;
-}
 
-const seguro = (req) => (req.headers["x-forwarded-proto"] || "").includes("https") || URL_PUBLICA.startsWith("https:");
 
-function ponerCookie(req, res, valor, maxAge) {
-    const partes = [`${COOKIE}=${valor}`, `Path=${BASE}/`, "HttpOnly", "SameSite=Lax", `Max-Age=${maxAge}`];
-    if (seguro(req)) partes.push("Secure");
-    res.setHeader("Set-Cookie", partes.join("; "));
-}
 
 const ipDe = (req) => String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
 
@@ -198,11 +224,24 @@ function servirArchivo(req, res, ruta) {
     fs.createReadStream(archivo).pipe(res);
 }
 
+function servirPortada(req, res) {
+    const archivo = path.join(PORTADA, "index.html");
+    const contenido = fs.readFileSync(archivo);
+    res.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; font-src 'self'; frame-ancestors 'self'; base-uri 'none'",
+        "Content-Length": contenido.length,
+    });
+    if (req.method === "HEAD") return res.end();
+    res.end(contenido);
+}
+
 // ---------- API ----------
 
 function datosPara(usuario) {
     return {
-        yo: cuentas.usuarioPublico(usuario),
+        yo: { ...cuentas.usuarioPublico(usuario), tieneClave: Boolean(usuario.clave), email: usuario.email || null },
         usuarios: datos().usuarios.map(cuentas.usuarioPublico),
         tareas: datos().tareas.filter((t) => !t.borrada).map(publica),
     };
@@ -376,8 +415,7 @@ function importar(buf, usuario) {
 
 async function api(req, res, ruta) {
     const metodo = req.method;
-    const cookies = leerCookies(req);
-    const encontrada = cuentas.buscarSesion(datos(), cookies[COOKIE]);
+    const encontrada = crew.sesionDe(req);
     const usuario = encontrada?.usuario || null;
     const origen = typeof req.headers["x-cliente"] === "string" ? req.headers["x-cliente"].slice(0, 40) : null;
 
@@ -398,6 +436,8 @@ async function api(req, res, ruta) {
         return json(res, 200, { enlace: enlaceAlta(codigo) });
     }
 
+    if (ruta === "/api/acceso" && metodo === "GET") return json(res, 200, { google: crew.googleListo });
+
     if (ruta === "/api/entrar" && metodo === "POST") {
         const ip = ipDe(req);
         if (cuentas.demasiadosFallos(ip)) return fallo(res, 429, "Demasiados intentos. Prueba otra vez dentro de un rato.");
@@ -410,9 +450,8 @@ async function api(req, res, ruta) {
             return fallo(res, 401, "Nombre o contraseña incorrectos.");
         }
         cuentas.olvidarFallos(ip);
-        const codigo = cuentas.crearSesion(datos(), quien);
+        crew.abrirSesion(res, quien);
         almacen.guardar();
-        ponerCookie(req, res, codigo, cuentas.DURACION_SESION / 1000);
         return json(res, 200, datosPara(quien));
     }
 
@@ -459,9 +498,8 @@ async function api(req, res, ruta) {
             emitir({ tipo: "usuarios", usuarios: datos().usuarios.map(cuentas.usuarioPublico) });
         }
         cuentas.gastarInvitacion(datos(), inv);
-        const sesion = cuentas.crearSesion(datos(), persona);
+        crew.abrirSesion(res, persona);
         almacen.guardar();
-        ponerCookie(req, res, sesion, cuentas.DURACION_SESION / 1000);
         return json(res, 200, datosPara(persona));
     }
 
@@ -469,10 +507,85 @@ async function api(req, res, ruta) {
     if (!usuario) return fallo(res, 401, "Tienes que entrar con tu cuenta.");
 
     if (ruta === "/api/salir" && metodo === "POST") {
-        cuentas.cerrarSesion(datos(), cookies[COOKIE]);
+        crew.cerrarSesion(req, res);
         almacen.guardar();
-        ponerCookie(req, res, "", 0);
-        for (const o of oyentes) if (o.sesion === encontrada.sesion) o.res.end();
+        cerrarOyentes((o) => o.sesion === encontrada.sesion);
+        return json(res, 200, { ok: true });
+    }
+
+    // --- el crew: quién puede entrar con Google (solo administración) ---
+    if (ruta === "/api/crew" && metodo === "GET") {
+        if (!usuario.admin) return fallo(res, 403, "Solo quien administra puede ver el crew.");
+        return json(res, 200, {
+            google: crew.googleListo,
+            crew: datos().usuarios.map((u) => ({
+                ...cuentas.usuarioPublico(u),
+                email: u.email || null,
+                entradoEl: u.entradoEl || null,
+                tieneClave: Boolean(u.clave),
+            })),
+        });
+    }
+    if (ruta === "/api/crew" && metodo === "POST") {
+        if (!usuario.admin) return fallo(res, 403, "Solo quien administra puede añadir gente al crew.");
+        const { nombre, email, admin } = await leerJson(req);
+        const correo = limpiarCorreo(email);
+        if (!correoValido(correo)) return fallo(res, 400, "Ese correo no parece válido.");
+        const existente = datos().usuarios.find((u) => u.email === correo);
+        if (existente && !existente.baja) return fallo(res, 400, `Ese correo ya es de ${existente.nombre}.`);
+        let persona = existente;
+        if (persona) {
+            persona.baja = false; // vuelve al crew
+        } else {
+            const provisional = !String(nombre || "").trim();
+            const base = provisional ? correo.split("@")[0].replace(/[._-]+/g, " ").replace(/^./, (c) => c.toUpperCase()) : nombre;
+            const v = cuentas.validarNombre(base, datos().usuarios);
+            if (v.error) return fallo(res, 400, provisional ? "Ponle un nombre (el que sale del correo ya existe)." : v.error);
+            persona = cuentas.nuevoUsuario(datos(), { nombre: v.nombre, admin: Boolean(admin), clave: null });
+            persona.email = correo;
+            persona.nombreProvisional = provisional;
+        }
+        if (admin !== undefined) persona.admin = Boolean(admin);
+        almacen.guardar();
+        emitir({ tipo: "usuarios", usuarios: datos().usuarios.map(cuentas.usuarioPublico) });
+        return json(res, 201, { id: persona.id });
+    }
+    const mc = /^\/api\/crew\/([\w-]+)$/.exec(ruta);
+    if (mc && metodo === "PATCH") {
+        if (!usuario.admin) return fallo(res, 403, "Solo quien administra puede cambiar el crew.");
+        const persona = datos().usuarios.find((u) => u.id === mc[1]);
+        if (!persona) return fallo(res, 404, "No existe esa persona.");
+        const cambios = await leerJson(req);
+        const adminsActivos = datos().usuarios.filter((u) => u.admin && !u.baja && u.id !== persona.id).length;
+        if ("email" in cambios) {
+            const correo = limpiarCorreo(cambios.email);
+            if (correo && !correoValido(correo)) return fallo(res, 400, "Ese correo no parece válido.");
+            const otro = correo && datos().usuarios.find((u) => u.email === correo && u.id !== persona.id);
+            if (otro) return fallo(res, 400, `Ese correo ya es de ${otro.nombre}.`);
+            persona.email = correo || null;
+        }
+        if ("nombre" in cambios) {
+            const v = cuentas.validarNombre(cambios.nombre, datos().usuarios, persona.id);
+            if (v.error) return fallo(res, 400, v.error);
+            persona.nombre = v.nombre;
+            persona.nombreProvisional = false;
+        }
+        if ("admin" in cambios) {
+            if (!cambios.admin && !adminsActivos) return fallo(res, 400, "Tiene que quedar al menos una persona que administre.");
+            persona.admin = Boolean(cambios.admin);
+        }
+        if ("baja" in cambios) {
+            if (cambios.baja && persona.id === usuario.id) return fallo(res, 400, "No puedes sacarte a ti del crew.");
+            if (cambios.baja && persona.admin && !adminsActivos) return fallo(res, 400, "Tiene que quedar al menos una persona que administre.");
+            persona.baja = Boolean(cambios.baja);
+            if (persona.baja) {
+                // Fuera del crew: se le cierran la oficina y el tablón al momento.
+                crew.revocarTodo(persona.id);
+                cerrarOyentes((o) => o.usuario.id === persona.id);
+            }
+        }
+        almacen.guardar();
+        emitir({ tipo: "usuarios", usuarios: datos().usuarios.map(cuentas.usuarioPublico) });
         return json(res, 200, { ok: true });
     }
 
@@ -489,6 +602,8 @@ async function api(req, res, ruta) {
         const oyente = { res, usuario, sesion: encontrada.sesion };
         oyentes.add(oyente);
         req.on("close", () => oyentes.delete(oyente));
+        res.on("close", () => oyentes.delete(oyente));
+        res.on("error", () => oyentes.delete(oyente));
         return;
     }
 
@@ -610,6 +725,16 @@ const servidor = http.createServer(async (req, res) => {
         res.writeHead(301, { Location: `${BASE}/` });
         return res.end();
     }
+    try {
+        // Portada
+        if (ruta === "/" && (req.method === "GET" || req.method === "HEAD")) return servirPortada(req, res);
+        // Cuentas del crew
+        if (ruta.startsWith("/cuentas/")) return await crew.manejar(req, res, ruta.slice("/cuentas".length));
+    } catch (error) {
+        console.error("[cuentas]", error);
+        if (!res.headersSent) return fallo(res, 500, "Algo ha fallado en el servidor.");
+        return res.end();
+    }
     if (!ruta.startsWith(`${BASE}/`)) return fallo(res, 404, "No existe");
     ruta = ruta.slice(BASE.length);
     try {
@@ -634,9 +759,18 @@ function apagar() {
     } catch (error) {
         console.error("[tablón] Error al guardar antes de salir:", error);
     }
-    for (const o of oyentes) o.res.end();
+    cerrarOyentes(() => true);
     servidor.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 3000).unref();
 }
 process.on("SIGTERM", apagar);
 process.on("SIGINT", apagar);
+// Si algo inesperado revienta, al menos se guarda lo último antes de que Docker lo vuelva a arrancar.
+process.on("uncaughtException", (error) => {
+    console.error("[tablón] Error inesperado:", error);
+    try {
+        if (almacen.pendiente()) almacen.guardarYa();
+    } finally {
+        process.exit(1);
+    }
+});

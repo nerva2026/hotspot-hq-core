@@ -1,10 +1,11 @@
-# Tablón de tareas de HOT SPOT S.L. — solo Node, sin dependencias.
+# HOT SPOT S.L.: portada, cuentas del crew y tablón de tareas — solo Node, sin dependencias.
 FROM node:22-alpine
 
 WORKDIR /app
 COPY package.json ./
 COPY servidor ./servidor
 COPY publico ./publico
+COPY portada ./portada
 
 ENV NODE_ENV=production \
     TAREAS_PUERTO=3000 \

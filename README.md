@@ -27,6 +27,7 @@ El servidor usa esa imagen en lugar de la oficial para el servicio `play`. El re
 | `04-munecos.patch` | Los muñecos propios (texturas `hs-…`) se ven al doble y apoyados en los pies, con el nombre más alto, para que sean iguales que los personajes del mapa. |
 | `05-direcciones-cortas.patch` | Direcciones cortas: `oficina.hot-spot.es/calle`, `/oficina` y `/terraza` (lista en `play/src/pusher/services/HotspotSalas.ts` y `play/src/front/Url/HotspotSalas.ts`). Son alias: por dentro la sala sigue siendo `/~/hotspot/…` (la que entiende el servidor «back», que es el oficial); el navegador enseña la corta y quita el `#from-…` al entrar. |
 | `06-version.patch` | Número de versión discreto abajo a la izquierda (`v0.2.0-alpha`; se cambia en `play/index.html` dentro del parche). |
+| `07-solo-crew.patch` | La oficina y la terraza son solo para el crew: exigen haber entrado con cuenta (y el servidor rechaza a quien se lo salte, mandándolo a la portada). Al cerrar sesión se pasa por `/cuentas/salir`. Solo se activa si `OPENID_CLIENT_ID` está configurado. |
 
 ## Archivos propios (`archivos/`)
 
@@ -35,10 +36,15 @@ El servidor usa esa imagen en lugar de la oficial para el servicio `play`. El re
 - `play/public/static/images/hotspot/`: marca provisional (mientras llega el logo) y fachada de la calle.
 - `play/public/resources/characters/hotspot/` y `play/src/pusher/data/woka.json`: los muñecos de HOT SPOT (24 ya hechos y piezas para personalizar: piel, pelo, ropa, cabeza y complementos). Se generan con `herramientas/wokas_hs.py` del repositorio del mapa.
 
-## Tablón de tareas (`tareas/`)
+## Portada, cuentas del crew y tablón de tareas (`tareas/`)
 
-Aplicación aparte, con su propia imagen (`ghcr.io/nerva2026/hotspot-hq-tareas`), que se sirve en
-`oficina.hot-spot.es/tareas/`. Detalles en [`tareas/README.md`](tareas/README.md).
+Aplicación aparte, con su propia imagen (`ghcr.io/nerva2026/hotspot-hq-tareas`):
+
+- `oficina.hot-spot.es/` — portada: CREW (entrar con Google) o INVITADO (solo la calle).
+- `oficina.hot-spot.es/cuentas/` — entrar con Google y proveedor de identidad (OpenID Connect) de la oficina.
+- `oficina.hot-spot.es/tareas/` — tablón de tareas, con el panel «Crew» para decidir quién puede entrar.
+
+Detalles en [`tareas/README.md`](tareas/README.md).
 
 ## Actualizar WorkAdventure
 
