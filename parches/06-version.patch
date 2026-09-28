@@ -1,0 +1,13 @@
+diff --git a/play/index.html b/play/index.html
+index 0ab3ce9..fbf3020 100644
+--- a/play/index.html
++++ b/play/index.html
+@@ -221,6 +221,8 @@
+         <input type="hidden" id="authToken" value="{{ authToken }}" name="authToken">
+         <input type="hidden" id="matrixLoginToken" value="{{ matrixLoginToken }}" name="matrixLoginToken">
+         <div id="app"></div>
++        <!-- HOT SPOT S.L.: número de versión (estilo en hotspot-retro.css) -->
++        <div id="hotspot-version" aria-hidden="true">v0.2.0-alpha</div>
+         <script type="module" src="/src/svelte.ts"></script>
+     </body>
+     {{{cssVariablesOverride}}}

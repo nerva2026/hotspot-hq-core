@@ -26,6 +26,7 @@ El servidor usa esa imagen en lugar de la oficial para el servicio `play`. El re
 | `03-estilo-retro.patch` | Carga `hotspot-retro.css` (estilo retro: colores, letras pixeladas, esquinas rectas) y pone la marca y la fachada en las pantallas de carga y acceso. |
 | `04-munecos.patch` | Los muñecos propios (texturas `hs-…`) se ven al doble y apoyados en los pies, con el nombre más alto, para que sean iguales que los personajes del mapa. |
 | `05-direcciones-cortas.patch` | Direcciones cortas: `oficina.hot-spot.es/calle`, `/oficina` y `/terraza` (lista en `play/src/pusher/services/HotspotSalas.ts` y `play/src/front/Url/HotspotSalas.ts`). Son alias: por dentro la sala sigue siendo `/~/hotspot/…` (la que entiende el servidor «back», que es el oficial); el navegador enseña la corta y quita el `#from-…` al entrar. |
+| `06-version.patch` | Número de versión discreto abajo a la izquierda (`v0.2.0-alpha`; se cambia en `play/index.html` dentro del parche). |
 
 ## Archivos propios (`archivos/`)
 
