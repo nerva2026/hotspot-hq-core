@@ -1,5 +1,7 @@
 # HOT-SPOT HQ · versión propia de la oficina
 
+Para los usuarios, la oficina se llama **HOT SPOT S.L.**; «HOT-SPOT HQ» es solo el nombre interno del proyecto.
+
 Esta rama (`hotspot`) contiene **solo la personalización** de la oficina virtual de HOT SPOT
 (https://oficina.hot-spot.es), que funciona sobre [WorkAdventure](https://github.com/workadventure/workadventure).
 
@@ -19,7 +21,8 @@ El servidor usa esa imagen en lugar de la oficial para el servicio `play`. El re
 
 | Parche | Qué cambia |
 | --- | --- |
-| `01-marca-basica.patch` | Título, descripción y nombre de la aplicación «HOT-SPOT HQ»; quita el «Powered by WorkAdventure». |
+| `01-marca-basica.patch` | Título, descripción y nombre de la aplicación: «HOT SPOT S.L.»; quita el «Powered by WorkAdventure». |
+| `02-textos-es.patch` | Textos de la interfaz en español: «WorkAdventure» pasa a «la oficina» o «HOT SPOT S.L.». |
 
 ## Actualizar WorkAdventure
 

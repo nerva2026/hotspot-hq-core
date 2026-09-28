@@ -1,5 +1,5 @@
 diff --git a/play/src/pusher/controllers/FrontController.ts b/play/src/pusher/controllers/FrontController.ts
-index dfdc55c..b6b5cfa 100644
+index dfdc55c..2d834ef 100644
 --- a/play/src/pusher/controllers/FrontController.ts
 +++ b/play/src/pusher/controllers/FrontController.ts
 @@ -209,7 +209,7 @@ export class FrontController extends BaseHttpController {
@@ -7,7 +7,7 @@ index dfdc55c..b6b5cfa 100644
              res.json({
                  domain: process.env.PUSHER_URL,
 -                name: process.env.SERVER_NAME || "WorkAdventure Server",
-+                name: process.env.SERVER_NAME || "HOT-SPOT HQ",
++                name: process.env.SERVER_NAME || "HOT SPOT S.L.",
                  motd: process.env.SERVER_MOTD || "A WorkAdventure Server",
                  icon: process.env.SERVER_ICON || process.env.PUSHER_URL + "/static/images/favicons/icon-512x512.png",
                  version: version + (process.env.NODE_ENV !== "production" ? "-dev" : ""),
@@ -25,7 +25,7 @@ index 21bdc15..91b716f 100644
              enableChat: ENABLE_CHAT,
              enableChatUpload: ENABLE_CHAT_UPLOAD,
 diff --git a/play/src/pusher/services/MetaTagsBuilder.ts b/play/src/pusher/services/MetaTagsBuilder.ts
-index 444b6f8..48c8491 100644
+index 444b6f8..004e170 100644
 --- a/play/src/pusher/services/MetaTagsBuilder.ts
 +++ b/play/src/pusher/services/MetaTagsBuilder.ts
 @@ -13,11 +13,10 @@ import { ADMIN_API_URL } from "../enums/EnvironmentVariable";
@@ -37,8 +37,8 @@ index 444b6f8..48c8491 100644
 -        "Organize your online event in WorkAdventure to recreate spontaneous social interactions. Connect, collaborate and have fun with your teammates and attendees.",
 -    author: "WorkAdventure team",
 -    provider: "WorkAdventure",
-+    title: "HOT-SPOT HQ",
-+    description: "La oficina de HOT SPOT.",
++    title: "HOT SPOT S.L.",
++    description: "La oficina de HOT SPOT S.L.",
 +    author: "HOT SPOT",
 +    provider: "HOT SPOT",
      favIcons: [
@@ -52,8 +52,8 @@ index 444b6f8..48c8491 100644
 -    shortAppName: "WA",
 -    themeColor: "#1B2A41",
 -    cardImage: "https://workadventu.re/images/general/logo-og.png",
-+    appName: "HOT-SPOT HQ",
-+    shortAppName: "HQ",
++    appName: "HOT SPOT S.L.",
++    shortAppName: "HOT SPOT",
 +    themeColor: "#1C1715",
 +    cardImage: "/static/images/favicons/icon-512x512.png",
  };

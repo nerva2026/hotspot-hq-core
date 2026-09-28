@@ -1,0 +1,217 @@
+diff --git a/play/src/i18n/es-ES/actionbar.ts b/play/src/i18n/es-ES/actionbar.ts
+index 3b2a5df..5209a86 100644
+--- a/play/src/i18n/es-ES/actionbar.ts
++++ b/play/src/i18n/es-ES/actionbar.ts
+@@ -165,7 +165,7 @@ const actionbar: DeepPartial<Translation["actionbar"]> = {
+         },
+         calendar: {
+             title: "Calendario",
+-            desc: "Consulta tus reuniones próximas y únete a ellas directamente desde WorkAdventure.",
++            desc: "Consulta tus reuniones próximas y únete a ellas directamente desde la oficina.",
+         },
+         todolist: {
+             title: "Lista de tareas",
+diff --git a/play/src/i18n/es-ES/externalModule.ts b/play/src/i18n/es-ES/externalModule.ts
+index e907ab3..d7ca0bd 100644
+--- a/play/src/i18n/es-ES/externalModule.ts
++++ b/play/src/i18n/es-ES/externalModule.ts
+@@ -34,7 +34,7 @@ const externalModule: DeepPartial<Translation["externalModule"]> = {
+     discord: {
+         integration: "INTEGRACIÓN",
+         explainText:
+-            "Al conectar tu cuenta de Discord aquí, podrás recibir tus mensajes directamente en el chat de WorkAdventure. Después de sincronizar un servidor, crearemos las salas que contiene, solo tendrás que unirte a ellas en el chat de WorkAdventure.",
++            "Al conectar tu cuenta de Discord aquí, podrás recibir tus mensajes directamente en el chat de la oficina. Después de sincronizar un servidor, crearemos las salas que contiene, solo tendrás que unirte a ellas en el chat de la oficina.",
+         login: "Conectar con Discord",
+         fetchingServer: "Obteniendo tus servidores de Discord... 👀",
+         qrCodeTitle: "Escanea el código QR con tu aplicación de Discord para iniciar sesión.",
+@@ -55,13 +55,13 @@ const externalModule: DeepPartial<Translation["externalModule"]> = {
+         tokenPlaceholder: "Tu token de Discord",
+         loginWithQrCode: "Iniciar sesión con código QR",
+         guilds: "Servidores de Discord",
+-        guildExplain: "Selecciona los canales que deseas agregar a la interfaz de chat de WorkAdventure.\n",
++        guildExplain: "Selecciona los canales que deseas agregar al chat de la oficina.\n",
+     },
+     outlook: {
+         signIn: "Iniciar sesión con Outlook",
+         popupScopeToSync: "Conectar mi cuenta de Outlook",
+         popupScopeToSyncExplainText:
+-            "Necesitamos conectarnos a tu cuenta de Outlook para sincronizar tu calendario y/o tus tareas. Esto te permitirá ver tus reuniones y tareas en WorkAdventure y unirte a ellas directamente desde el mapa.",
++            "Necesitamos conectarnos a tu cuenta de Outlook para sincronizar tu calendario y/o tus tareas. Esto te permitirá ver tus reuniones y tareas en la oficina y unirte a ellas directamente desde el mapa.",
+         popupScopeToSyncCalendar: "Sincronizar mi calendario",
+         popupScopeToSyncTask: "Sincronizar mis tareas",
+         popupCancel: "Cancelar",
+@@ -83,7 +83,7 @@ const externalModule: DeepPartial<Translation["externalModule"]> = {
+         signIn: "Iniciar sesión con Google",
+         popupScopeToSync: "Conectar mi cuenta de Google",
+         popupScopeToSyncExplainText:
+-            "Necesitamos conectarnos a tu cuenta de Google para sincronizar tu calendario y/o tus tareas. Esto te permitirá ver tus reuniones y tareas en WorkAdventure y unirte a ellas directamente desde el mapa.",
++            "Necesitamos conectarnos a tu cuenta de Google para sincronizar tu calendario y/o tus tareas. Esto te permitirá ver tus reuniones y tareas en la oficina y unirte a ellas directamente desde el mapa.",
+         popupScopeToSyncCalendar: "Sincronizar mi calendario",
+         popupScopeToSyncTask: "Sincronizar mis tareas",
+         popupCancel: "Cancelar",
+diff --git a/play/src/i18n/es-ES/mapEditor.ts b/play/src/i18n/es-ES/mapEditor.ts
+index b402fca..63084e1 100644
+--- a/play/src/i18n/es-ES/mapEditor.ts
++++ b/play/src/i18n/es-ES/mapEditor.ts
+@@ -90,7 +90,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
+         },
+         openWebsite: {
+             label: "Abrir enlace",
+-            description: "Abrir sitio web dentro de WorkAdventure o en una nueva pestaña.",
++            description: "Abrir sitio web dentro de la oficina o en una nueva pestaña.",
+             linkLabel: "URL del enlace",
+             newTabLabel: "Abrir en nueva pestaña",
+             trigger: "Interacción",
+@@ -160,35 +160,35 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
+         },
+         youtube: {
+             label: "Abrir vídeo de YouTube",
+-            description: "Abrir vídeo de YouTube dentro de WorkAdventure o en una nueva pestaña.",
++            description: "Abrir vídeo de YouTube dentro de la oficina o en una nueva pestaña.",
+             error: "Introduzca una URL de YouTube válida",
+             disabled: "La integración de YouTube está desactivada.",
+             actionButtonLabel: "Abrir vídeo de YouTube",
+         },
+         googleDocs: {
+             label: "Abrir Google Docs",
+-            description: "Abrir Google Docs dentro de WorkAdventure o en una nueva pestaña.",
++            description: "Abrir Google Docs dentro de la oficina o en una nueva pestaña.",
+             error: "Introduzca una URL de Google Docs válida",
+             disabled: "La integración de Google Docs está desactivada.",
+             actionButtonLabel: "Abrir Google Docs",
+         },
+         klaxoon: {
+             label: "Abrir Klaxoon",
+-            description: "Abrir Klaxoon dentro de WorkAdventure o en una nueva pestaña.",
++            description: "Abrir Klaxoon dentro de la oficina o en una nueva pestaña.",
+             error: "Introduzca una URL de Klaxoon válida",
+             disabled: "La integración de Klaxoon está desactivada.",
+             actionButtonLabel: "Abrir Klaxoon",
+         },
+         googleSheets: {
+             label: "Abrir Google Sheets",
+-            description: "Abrir Google Sheets dentro de WorkAdventure o en una nueva pestaña.",
++            description: "Abrir Google Sheets dentro de la oficina o en una nueva pestaña.",
+             error: "Introduzca una URL de Google Sheets válida",
+             disabled: "La integración de Google Sheets está desactivada.",
+             actionButtonLabel: "Abrir Google Sheets",
+         },
+         googleSlides: {
+             label: "Abrir Google Slides",
+-            description: "Abrir Google Slides dentro de WorkAdventure o en una nueva pestaña.",
++            description: "Abrir Google Slides dentro de la oficina o en una nueva pestaña.",
+             error: "Introduzca una URL de Google Slides válida",
+             disabled: "La integración de Google Slides está desactivada.",
+             actionButtonLabel: "Abrir Google Slides",
+@@ -203,7 +203,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
+         },
+         googleDrive: {
+             label: "Abrir Google Drive",
+-            description: "Abrir Google Drive dentro de WorkAdventure o en una nueva pestaña.",
++            description: "Abrir Google Drive dentro de la oficina o en una nueva pestaña.",
+             error: "Introduzca una URL de Google Drive válida",
+             disabled: "La integración de Google Drive está desactivada.",
+             actionButtonLabel: "Abrir Google Drive",
+@@ -279,7 +279,7 @@ const mapEditor: DeepPartial<Translation["mapEditor"]> = {
+         },
+         openFile: {
+             label: "Abrir archivo",
+-            description: "Abrir archivo dentro de WorkAdventure.",
++            description: "Abrir archivo dentro de la oficina.",
+             error: "Introduzca un archivo válido",
+             disabled: "La integración de archivos está desactivada.",
+             fileUrlLabel: "URL del archivo",
+diff --git a/play/src/i18n/es-ES/menu.ts b/play/src/i18n/es-ES/menu.ts
+index 63c12fc..2a00526 100644
+--- a/play/src/i18n/es-ES/menu.ts
++++ b/play/src/i18n/es-ES/menu.ts
+@@ -57,9 +57,9 @@ const menu: DeepPartial<Translation["menu"]> = {
+             echoCancellation: "Cancelación de eco",
+             enableAdvancedNoiseReduction: "Activar reducción de ruido avanzada",
+             noiseSuppressionMode: "Modo de supresión de ruido:",
+-            workAdventureNoiseSuppression: "Supresión de ruido de WorkAdventure",
++            workAdventureNoiseSuppression: "Supresión de ruido",
+             workAdventureNoiseSuppressionDescription:
+-                "Procesa tu micrófono con la supresión de ruido de WorkAdventure.",
++                "Procesa tu micrófono con la supresión de ruido de la oficina.",
+             recommended: "Recomendado",
+             browserNoiseSuppression: "Supresión de ruido del navegador",
+             browserNoiseSuppressionDescription: "Usa la supresión de ruido integrada en tu navegador.",
+@@ -73,7 +73,7 @@ const menu: DeepPartial<Translation["menu"]> = {
+         privacySettings: {
+             title: "Modo no presente",
+             explanation:
+-                'Cuando la pestaña de WorkAdventure en su navegador no es visible, WorkAdventure cambia a "modo no presente"',
++                'Cuando la pestaña de la oficina en su navegador no es visible, la oficina cambia a "modo no presente"',
+             cameraToggle: 'Mantener la cámara activa en "modo no presente"',
+             microphoneToggle: 'Mantener el micrófono activa en "modo no presente"',
+         },
+@@ -122,7 +122,7 @@ const menu: DeepPartial<Translation["menu"]> = {
+         gettingStarted: {
+             title: "Empezar",
+             description:
+-                "WorkAdventure le permite crear un espacio en línea para comunicarse espontáneamente con otros. Y todo empieza creando su propio espacio. Escoja de una gran selección de mapas prefabricados por nuestro equipo.",
++                "La oficina le permite crear un espacio en línea para comunicarse espontáneamente con otros. Y todo empieza creando su propio espacio. Escoja de una gran selección de mapas prefabricados por nuestro equipo.",
+         },
+         createMap: {
+             title: "Crear su mapa",
+diff --git a/play/src/i18n/es-ES/notification.ts b/play/src/i18n/es-ES/notification.ts
+index b67a45c..6a9c39f 100644
+--- a/play/src/i18n/es-ES/notification.ts
++++ b/play/src/i18n/es-ES/notification.ts
+@@ -17,7 +17,7 @@ const notification: DeepPartial<Translation["notification"]> = {
+         title: "Acceso a las notificaciones denegado",
+         permissionDenied: "Permiso denegado",
+         content:
+-            "No te pierdas ninguna discusión. Activa las notificaciones para ser notificado cuando alguien quiera hablar contigo, incluso si no estás en la pestaña de WorkAdventure.",
++            "No te pierdas ninguna discusión. Activa las notificaciones para ser notificado cuando alguien quiera hablar contigo, incluso si no estás en la pestaña de la oficina.",
+         firefoxContent:
+             'Por favor, marca la casilla "Recordar esta decisión" si no quieres que Firefox siga pidiéndote la autorización.',
+         refresh: "Actualizar",
+diff --git a/play/src/i18n/es-ES/warning.ts b/play/src/i18n/es-ES/warning.ts
+index 6c8510a..0a330b7 100644
+--- a/play/src/i18n/es-ES/warning.ts
++++ b/play/src/i18n/es-ES/warning.ts
+@@ -37,33 +37,33 @@ const warning: DeepPartial<Translation["warning"]> = {
+     },
+     browserNotSupported: {
+         title: "😢 Navegador no compatible",
+-        message: "Su navegador ({browserName}) ya no es compatible con WorkAdventure.",
++        message: "Su navegador ({browserName}) ya no es compatible con la oficina.",
+         description:
+-            "Su navegador es demasiado antiguo para ejecutar WorkAdventure. Por favor, actualícelo a la última versión para continuar.",
++            "Su navegador es demasiado antiguo para abrir la oficina. Por favor, actualícelo a la última versión para continuar.",
+         whatToDo: "¿Qué puede hacer?",
+         option1: "Actualizar {browserName} a la última versión",
+-        option2: "Salir de WorkAdventure y usar un navegador diferente",
++        option2: "Salir de la oficina y usar un navegador diferente",
+         updateBrowser: "Actualizar navegador",
+         leave: "Salir",
+     },
+     pwaInstall: {
+-        title: "Instalar WorkAdventure",
++        title: "Instalar HOT SPOT S.L.",
+         description:
+             "Instala la app para disfrutar de una mejor experiencia: acceso rápido, inicio automático y una experiencia similar a la de una aplicación.",
+         descriptionIos:
+-            "Añade WorkAdventure a tu pantalla de inicio para disfrutar de una mejor experiencia y un acceso rápido.",
++            "Añade HOT SPOT S.L. a tu pantalla de inicio para disfrutar de una mejor experiencia y un acceso rápido.",
+         feature1Title: "Acceso rápido",
+-        feature1Description: "Abre WorkAdventure desde tu menú Inicio, Dock o escritorio.",
++        feature1Description: "Abre HOT SPOT S.L. desde tu menú Inicio, Dock o escritorio.",
+         feature2Title: "Ventana de aplicación dedicada",
+         feature2Description:
+-            "Mantén WorkAdventure separado de las pestañas del navegador y encuéntralo de un vistazo en la barra de tareas.",
++            "Mantén HOT SPOT S.L. separado de las pestañas del navegador y encuéntralo de un vistazo en la barra de tareas.",
+         feature3Title: "Iniciar con el ordenador",
+-        feature3Description: "Abre WorkAdventure cuando se inicie tu dispositivo.",
++        feature3Description: "Abre HOT SPOT S.L. cuando se inicie tu dispositivo.",
+         iosStepsTitle: "Cómo instalar",
+         iosStep1: "Toque el botón Compartir (cuadrado con flecha) en la parte inferior de Safari.",
+         iosStep2: "Desplácese hacia abajo y toque «Añadir a la pantalla de inicio».",
+         iosStep3: "Toque «Añadir» para confirmar.",
+-        install: "Instalar la app WorkAdventure",
++        install: "Instalar la app de HOT SPOT S.L.",
+         installing: "Instalando…",
+         skip: "Continuar en el navegador",
+         continue: "Continuar en el navegador",
