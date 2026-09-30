@@ -47,6 +47,18 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3999/tareas/api/datos)" = 401
           echo "Servidor del tablón: bien"
 
+      - name: Probar el libro de cuentas
+        working-directory: tareas
+        run: |
+          # Usa el servidor del paso anterior (puerto 3999) y su enlace de alta, que aún no ha usado nadie.
+          CODIGO=$(grep -o '#alta=[A-Za-z0-9_-]*' /tmp/tablon.log | head -1 | cut -d= -f2)
+          if ! node pruebas/libro.mjs http://127.0.0.1:3999/tareas "$CODIGO" > /tmp/prueba-libro.log 2>&1; then
+            cat /tmp/prueba-libro.log /tmp/tablon.log
+            tail -n 15 /tmp/prueba-libro.log | sed 's/%/%25/g' | while IFS= read -r linea; do echo "::error::libro: $linea"; done
+            exit 1
+          fi
+          cat /tmp/prueba-libro.log
+
       - name: Probar el acceso de la oficina (openid-client, como WorkAdventure)
         working-directory: tareas
         run: |

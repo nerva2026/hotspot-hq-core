@@ -1,8 +1,9 @@
 // Excel sin dependencias: escribe y lee archivos .xlsx (que por dentro son un zip de XML).
 //
-// - exportarExcel(): el tablón entero en una hoja «Tareas», lista para abrir en Excel o Google Sheets.
-// - leerExcel(): lee la primera hoja con una columna «Tarea» (o «Título»), para importar lo que
-//   hubiera en la hoja de Pendiente de Drive o en una exportación anterior.
+// - crearExcel(): una o varias hojas con columnas de texto, fechas, euros o porcentajes; con él salen la
+//   descarga del tablón (hoja «Tareas») y la del libro de cuentas (Movimientos, Balance, Por categoría).
+// - leerExcel(): lee todas las hojas, para importar lo que hubiera en las hojas de Drive (Pendiente, Libro de
+//   cuentas) o en una descarga anterior.
 
 import zlib from "node:zlib";
 
@@ -133,51 +134,65 @@ const serieExcel = (iso) => {
     return Date.UTC(a, m - 1, d) / 86400000 + 25569;
 };
 
-// columnas: [{ titulo, ancho, tipo: "texto" | "fecha" | "largo" }]; filas: arrays de valores (texto o "AAAA-MM-DD").
-export function crearExcel({ hoja, columnas, filas }) {
-    const estilo = { cabecera: 1, fecha: 2, largo: 3, texto: 4 };
-    const celdas = (fila, r) =>
-        fila
-            .map((v, c) => {
-                const ref = `${letra(c)}${r}`;
-                const col = columnas[c];
-                if (v === null || v === undefined || v === "") return "";
-                if (col.tipo === "fecha" && /^\d{4}-\d{2}-\d{2}/.test(v)) return `<c r="${ref}" s="${estilo.fecha}"><v>${serieExcel(v)}</v></c>`;
-                return `<c r="${ref}" s="${col.tipo === "largo" ? estilo.largo : estilo.texto}" t="inlineStr"><is><t xml:space="preserve">${xml(v)}</t></is></c>`;
-            })
-            .join("");
-    const ultima = letra(columnas.length - 1);
-    const cabecera = `<row r="1">${columnas
-        .map((c, i) => `<c r="${letra(i)}1" s="${estilo.cabecera}" t="inlineStr"><is><t>${xml(c.titulo)}</t></is></c>`)
-        .join("")}</row>`;
-    const cuerpo = filas.map((f, i) => `<row r="${i + 2}">${celdas(f, i + 2)}</row>`).join("");
-    const hojaXml =
-        `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
-        `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
-        `<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` +
-        `<sheetFormatPr defaultRowHeight="15"/>` +
-        `<cols>${columnas.map((c, i) => `<col min="${i + 1}" max="${i + 1}" width="${c.ancho || 14}" customWidth="1"/>`).join("")}</cols>` +
-        `<sheetData>${cabecera}${cuerpo}</sheetData>` +
-        `<autoFilter ref="A1:${ultima}${Math.max(1, filas.length + 1)}"/>` +
-        `</worksheet>`;
+// Una hoja: columnas [{ titulo, ancho, tipo: "texto" | "fecha" | "largo" | "euros" | "porcentaje" }] y filas (arrays
+// de valores: texto, «AAAA-MM-DD» o números). «euros» y «porcentaje» se guardan como números con su formato
+// (12,5 → «12,50 €»; 50 → «50 %»), para que se pueda sumar en Excel.
+// crearExcel({ hoja, columnas, filas }) hace un libro de una hoja; crearExcel({ hojas: [{ nombre, columnas, filas }] }), de varias.
+export function crearExcel(opciones) {
+    const hojas = opciones.hojas || [{ nombre: opciones.hoja, columnas: opciones.columnas, filas: opciones.filas }];
+    const estilo = { cabecera: 1, fecha: 2, largo: 3, texto: 4, euros: 5, porcentaje: 6 };
+    const hojaXml = ({ columnas, filas }) => {
+        const celdas = (fila, r) =>
+            fila
+                .map((v, c) => {
+                    const ref = `${letra(c)}${r}`;
+                    const col = columnas[c] || {};
+                    if (v === null || v === undefined || v === "") return "";
+                    if (col.tipo === "fecha" && /^\d{4}-\d{2}-\d{2}/.test(v)) return `<c r="${ref}" s="${estilo.fecha}"><v>${serieExcel(v)}</v></c>`;
+                    if ((col.tipo === "euros" || col.tipo === "porcentaje") && typeof v === "number" && Number.isFinite(v)) {
+                        return `<c r="${ref}" s="${estilo[col.tipo]}"><v>${col.tipo === "porcentaje" ? v / 100 : v}</v></c>`;
+                    }
+                    return `<c r="${ref}" s="${col.tipo === "largo" ? estilo.largo : estilo.texto}" t="inlineStr"><is><t xml:space="preserve">${xml(v)}</t></is></c>`;
+                })
+                .join("");
+        const ultima = letra(columnas.length - 1);
+        const cabecera = `<row r="1">${columnas
+            .map((c, i) => `<c r="${letra(i)}1" s="${estilo.cabecera}" t="inlineStr"><is><t>${xml(c.titulo)}</t></is></c>`)
+            .join("")}</row>`;
+        const cuerpo = filas.map((f, i) => `<row r="${i + 2}">${celdas(f, i + 2)}</row>`).join("");
+        return (
+            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+            `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
+            `<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` +
+            `<sheetFormatPr defaultRowHeight="15"/>` +
+            `<cols>${columnas.map((c, i) => `<col min="${i + 1}" max="${i + 1}" width="${c.ancho || 14}" customWidth="1"/>`).join("")}</cols>` +
+            `<sheetData>${cabecera}${cuerpo}</sheetData>` +
+            `<autoFilter ref="A1:${ultima}${Math.max(1, filas.length + 1)}"/>` +
+            `</worksheet>`
+        );
+    };
     const estilos =
         `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
         `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
-        `<numFmts count="1"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/></numFmts>` +
+        `<numFmts count="3"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/><numFmt numFmtId="165" formatCode="#,##0.00\ &quot;€&quot;"/><numFmt numFmtId="166" formatCode="0.##\ %"/></numFmts>` +
         `<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFF3E6D8"/><name val="Calibri"/></font></fonts>` +
         `<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>` +
         `<fill><patternFill patternType="solid"><fgColor rgb="FF1C1715"/><bgColor indexed="64"/></patternFill></fill></fills>` +
         `<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>` +
         `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
-        `<cellXfs count="5">` +
+        `<cellXfs count="7">` +
         `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
         `<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>` +
         `<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment vertical="top"/></xf>` +
         `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf>` +
         `<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top"/></xf>` +
+        `<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment vertical="top"/></xf>` +
+        `<xf numFmtId="166" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment vertical="top"/></xf>` +
         `</cellXfs>` +
         `<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>` +
         `</styleSheet>`;
+    const n = hojas.length;
+    const indices = hojas.map((_, i) => i + 1);
     return crearZip([
         {
             nombre: "[Content_Types].xml",
@@ -187,7 +202,7 @@ export function crearExcel({ hoja, columnas, filas }) {
                 `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
                 `<Default Extension="xml" ContentType="application/xml"/>` +
                 `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>` +
-                `<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>` +
+                indices.map((i) => `<Override PartName="/xl/worksheets/sheet${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("") +
                 `<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>` +
                 `</Types>`,
         },
@@ -204,8 +219,10 @@ export function crearExcel({ hoja, columnas, filas }) {
             contenido:
                 `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
                 `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
-                `<sheets><sheet name="${xml(hoja)}" sheetId="1" r:id="rId1"/></sheets>` +
-                `<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'${xml(hoja)}'!$A$1:$${ultima}$${Math.max(1, filas.length + 1)}</definedName></definedNames>` +
+                `<sheets>${hojas.map((h, i) => `<sheet name="${xml(h.nombre)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets>` +
+                `<definedNames>${hojas
+                    .map((h, i) => `<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${xml(h.nombre)}'!$A$1:$${letra(h.columnas.length - 1)}$${Math.max(1, h.filas.length + 1)}</definedName>`)
+                    .join("")}</definedNames>` +
                 `</workbook>`,
         },
         {
@@ -213,12 +230,12 @@ export function crearExcel({ hoja, columnas, filas }) {
             contenido:
                 `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
                 `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
-                `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>` +
-                `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>` +
+                indices.map((i) => `<Relationship Id="rId${i}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i}.xml"/>`).join("") +
+                `<Relationship Id="rId${n + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>` +
                 `</Relationships>`,
         },
         { nombre: "xl/styles.xml", contenido: estilos },
-        { nombre: "xl/worksheets/sheet1.xml", contenido: hojaXml },
+        ...hojas.map((h, i) => ({ nombre: `xl/worksheets/sheet${i + 1}.xml`, contenido: hojaXml(h) })),
     ]);
 }
 

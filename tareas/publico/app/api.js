@@ -1,4 +1,7 @@
-// Conversación con el servidor del tablón.
+// Conversación con el servidor del tablón (y del libro de cuentas, que usa la misma API).
+
+// La API está en /tareas/api/ vista desde cualquier página (el tablón en /tareas/, el libro en /tareas/libro/…).
+export const BASE_API = new URL("../api/", import.meta.url);
 
 export const CLIENTE = Math.random().toString(36).slice(2, 12);
 
@@ -14,11 +17,12 @@ export const cuandoSePierdaLaSesion = (fn) => {
     alPerderSesion = fn;
 };
 
-async function llamar(metodo, ruta, cuerpo, { binario = false } = {}) {
+async function llamar(metodo, ruta, cuerpo, { binario = false, nombre } = {}) {
     const cabeceras = { "x-tablon": "1", "x-cliente": CLIENTE };
     let body;
     if (binario) {
-        cabeceras["content-type"] = "application/octet-stream";
+        cabeceras["content-type"] = cuerpo?.type || "application/octet-stream";
+        if (nombre) cabeceras["x-nombre"] = encodeURIComponent(nombre);
         body = cuerpo;
     } else if (cuerpo !== undefined) {
         cabeceras["content-type"] = "application/json";
@@ -26,7 +30,7 @@ async function llamar(metodo, ruta, cuerpo, { binario = false } = {}) {
     }
     let r;
     try {
-        r = await fetch(`api/${ruta}`, { method: metodo, headers: cabeceras, body, credentials: "same-origin", cache: "no-store" });
+        r = await fetch(new URL(ruta, BASE_API), { method: metodo, headers: cabeceras, body, credentials: "same-origin", cache: "no-store" });
     } catch {
         throw new ErrorApi("No hay conexión con el servidor.", 0);
     }
@@ -60,7 +64,20 @@ export const api = {
     borrar: (id) => llamar("DELETE", `tareas/${id}`),
     restaurar: (id) => llamar("POST", `tareas/${id}/restaurar`),
     importar: (archivo) => llamar("POST", "importar", archivo, { binario: true }),
+    // libro de cuentas
+    libro: () => llamar("GET", "libro"),
+    apuntar: (movimiento) => llamar("POST", "libro/movimientos", movimiento),
+    cambiarMovimiento: (id, cambios) => llamar("PATCH", `libro/movimientos/${id}`, cambios),
+    borrarMovimiento: (id) => llamar("DELETE", `libro/movimientos/${id}`),
+    restaurarMovimiento: (id) => llamar("POST", `libro/movimientos/${id}/restaurar`),
+    subirTique: (id, archivo, nombre) => llamar("POST", `libro/movimientos/${id}/tique`, archivo, { binario: true, nombre }),
+    quitarTique: (id) => llamar("DELETE", `libro/movimientos/${id}/tique`),
+    ajustesLibro: (cambios) => llamar("PATCH", "libro/ajustes", cambios),
+    importarLibro: (archivo) => llamar("POST", "libro/importar", archivo, { binario: true }),
 };
+
+// Direcciones para descargar (enlaces normales, con la sesión del navegador).
+export const direccionApi = (ruta) => new URL(ruta, BASE_API).href;
 
 // Cambios en directo: el servidor avisa de todo lo que hacen los demás.
 export function escuchar(alRecibir, alReconectar) {
@@ -69,7 +86,7 @@ export function escuchar(alRecibir, alReconectar) {
     let parado = false;
     function abrir() {
         if (parado) return;
-        fuente = new EventSource("api/eventos");
+        fuente = new EventSource(new URL("eventos", BASE_API));
         fuente.onopen = () => {
             if (cayo) alReconectar();
             cayo = false;

@@ -3,6 +3,14 @@
 import { h, vaciar } from "./util.js";
 import { api } from "./api.js";
 
+// Nombre de la aplicación en la cabecera de la caja: «TAREAS» en el tablón, «CUENTAS» en el libro…
+let nombreApp = "TAREAS";
+let presentacion = "El tablón es del crew de HOT SPOT S.L. Entra con tu cuenta de Google.";
+export function aplicacion(nombre, texto) {
+    nombreApp = nombre;
+    presentacion = texto;
+}
+
 function marco(...contenido) {
     return h(
         "main",
@@ -10,7 +18,7 @@ function marco(...contenido) {
         h(
             "div",
             { class: "acceso-caja" },
-            h("div", { class: "acceso-marca" }, h("span", { class: "logo" }, "HS"), h("div", null, h("strong", null, "TAREAS"), h("small", null, "HOT SPOT S.L."))),
+            h("div", { class: "acceso-marca" }, h("span", { class: "logo" }, "HS"), h("div", null, h("strong", null, nombreApp), h("small", null, "HOT SPOT S.L."))),
             ...contenido,
         ),
     );
@@ -76,7 +84,7 @@ export async function pantallaEntrar(raiz, alEntrar) {
         "a",
         {
             class: "btn primario ancho",
-            href: `/cuentas/entrar?vuelta=${encodeURIComponent(enMarco ? "/tareas/" : vuelta)}`,
+            href: `/cuentas/entrar?vuelta=${encodeURIComponent(enMarco ? location.pathname : vuelta)}`,
             target: enMarco ? "_blank" : null,
             rel: enMarco ? "noopener" : null,
             onclick: () => {
@@ -112,7 +120,7 @@ export async function pantallaEntrar(raiz, alEntrar) {
     );
     vaciar(raiz).appendChild(
         marco(
-            h("p", null, "El tablón es del crew de HOT SPOT S.L. Entra con tu cuenta de Google."),
+            h("p", null, presentacion),
             entrarGoogle,
             esperando,
             h("p", { class: "nota" }, "Solo pueden entrar los correos que estén en el crew. ", conClave),

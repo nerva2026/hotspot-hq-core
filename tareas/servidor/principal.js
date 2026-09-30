@@ -3,6 +3,7 @@
 //   /            portada (CREW o INVITADO)                          → carpeta portada/
 //   /cuentas/    entrar con Google y proveedor de identidad         → servidor/crew.js
 //   /tareas/     tablón de tareas (aplicación y API)                → carpeta publico/
+//   /tareas/libro/   libro de cuentas de Don Balance (misma API)    → publico/libro/, servidor/libro.js
 //
 // Sin dependencias: solo Node.
 //
@@ -29,6 +30,7 @@ import * as cuentas from "./cuentas.js";
 import { aplicarCambios, crearTarea, publica, ErrorDeDatos, ESTADOS, NOMBRES_ESTADO, NOMBRES_PRIORIDAD, PRIORIDADES } from "./tareas.js";
 import { crearExcel, leerExcel, fechaDeCelda } from "./excel.js";
 import { crearCrew, correoValido, limpiarCorreo } from "./crew.js";
+import * as libro from "./libro.js";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PUBLICO = path.join(RAIZ, "publico");
@@ -38,6 +40,7 @@ const CARPETA_DATOS = process.env.TAREAS_DATOS || "/datos";
 const BASE = (process.env.TAREAS_BASE || "/tareas").replace(/\/$/, "");
 const URL_PUBLICA = process.env.TAREAS_URL || `http://localhost:${PUERTO}${BASE}/`;
 const ARCHIVO_INTERNO = path.join(CARPETA_DATOS, ".interno");
+const CARPETA_TIQUES = path.join(CARPETA_DATOS, "tiques");
 
 // ---------- orden «enlace» (se ejecuta junto al servidor que ya está en marcha) ----------
 
@@ -128,6 +131,16 @@ setInterval(() => {
     const antes = datos().tareas.length;
     datos().tareas = datos().tareas.filter((t) => !t.borrada || Date.parse(t.borrada) > limite);
     if (datos().tareas.length !== antes) almacen.guardar();
+    // Lo mismo con los movimientos del libro de cuentas (y la foto de su tique).
+    if (datos().libro) {
+        const l = libro.libroDe(datos());
+        const caducados = l.movimientos.filter((m) => m.borrado && Date.parse(m.borrado) <= limite);
+        if (caducados.length) {
+            for (const m of caducados) if (m.tique) borrarTique(m.tique.archivo);
+            l.movimientos = l.movimientos.filter((m) => !caducados.includes(m));
+            almacen.guardar();
+        }
+    }
 }, 3600 * 1000).unref();
 
 // ---------- utilidades HTTP ----------
@@ -198,7 +211,8 @@ const ipDe = (req) => String(req.headers["x-forwarded-for"] || req.socket.remote
 // ---------- archivos de la aplicación ----------
 
 function servirArchivo(req, res, ruta) {
-    const relativa = ruta === "/" ? "/index.html" : ruta;
+    // Cada aplicación es una carpeta con su index.html: /tareas/ (el tablón), /tareas/libro/…
+    const relativa = ruta.endsWith("/") ? `${ruta}index.html` : ruta;
     const archivo = path.normalize(path.join(PUBLICO, relativa));
     if (!archivo.startsWith(PUBLICO + path.sep)) return fallo(res, 404, "No existe");
     let info;
@@ -206,6 +220,10 @@ function servirArchivo(req, res, ruta) {
         info = fs.statSync(archivo);
     } catch {
         return fallo(res, 404, "No existe");
+    }
+    if (info.isDirectory() && fs.existsSync(path.join(archivo, "index.html"))) {
+        res.writeHead(301, { Location: `${BASE}${ruta}/` });
+        return res.end();
     }
     if (!info.isFile()) return fallo(res, 404, "No existe");
     const etag = `"${info.size.toString(36)}-${Math.floor(info.mtimeMs).toString(36)}"`;
@@ -241,7 +259,7 @@ function servirPortada(req, res) {
 
 function datosPara(usuario) {
     return {
-        yo: { ...cuentas.usuarioPublico(usuario), tieneClave: Boolean(usuario.clave), email: usuario.email || null },
+        yo: { ...cuentas.usuarioPublico(usuario), tieneClave: Boolean(usuario.clave), email: usuario.email || null, libro: puedeVerLibro(usuario) },
         usuarios: datos().usuarios.map(cuentas.usuarioPublico),
         tareas: datos().tareas.filter((t) => !t.borrada).map(publica),
     };
@@ -411,6 +429,106 @@ function importar(buf, usuario) {
         }
     }
     return { importadas, repetidas, hoja: hoja.nombre, nuevas };
+}
+
+// ---------- libro de cuentas ----------
+
+// Fotos o PDF del tique de un gasto: se guardan en datos/tiques/ y solo se sirven al crew.
+const TIPOS_TIQUE = [
+    { tipo: "image/jpeg", ext: "jpg", firma: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+    { tipo: "image/png", ext: "png", firma: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
+    { tipo: "image/webp", ext: "webp", firma: (b) => b.subarray(0, 4).toString("latin1") === "RIFF" && b.subarray(8, 12).toString("latin1") === "WEBP" },
+    { tipo: "application/pdf", ext: "pdf", firma: (b) => b.subarray(0, 5).toString("latin1") === "%PDF-" },
+];
+const MAXIMO_TIQUE = 12 * 1024 * 1024;
+
+function borrarTique(archivo) {
+    if (!/^[\w-]+\.(jpg|png|webp|pdf)$/.test(archivo || "")) return;
+    fs.rm(path.join(CARPETA_TIQUES, archivo), { force: true }, () => {});
+}
+
+function puedeVerLibro(usuario) {
+    if (!usuario || usuario.baja) return false;
+    return Boolean(usuario.admin) || (libro.partesDe(datos())[usuario.id] || 0) > 0;
+}
+
+function datosLibro(usuario) {
+    const l = libro.libroDe(datos());
+    return {
+        yo: { ...cuentas.usuarioPublico(usuario), tieneClave: Boolean(usuario.clave), email: usuario.email || null },
+        usuarios: datos().usuarios.map(cuentas.usuarioPublico),
+        partes: libro.partesDe(datos()),
+        partesFijas: Boolean(l.partes),
+        categorias: l.categorias,
+        movimientos: libro.ordenar(l.movimientos.filter((m) => !m.borrado)).map(libro.publico),
+        resumen: libro.resumen(l, datos().usuarios),
+    };
+}
+
+function excelLibro() {
+    const l = libro.libroDe(datos());
+    const nombre = (id) => datos().usuarios.find((u) => u.id === id)?.nombre || "";
+    const r = libro.resumen(l, datos().usuarios);
+    const e = (c) => c / 100;
+    return crearExcel({
+        hojas: [
+            {
+                nombre: "Movimientos",
+                columnas: [
+                    { titulo: "Fecha", ancho: 12, tipo: "fecha" },
+                    { titulo: "Tipo", ancho: 10 },
+                    { titulo: "Concepto", ancho: 40, tipo: "largo" },
+                    { titulo: "Categoría", ancho: 20 },
+                    { titulo: "Quién", ancho: 14 },
+                    { titulo: "Para quién", ancho: 14 },
+                    { titulo: "Importe (€)", ancho: 14, tipo: "euros" },
+                    { titulo: "Notas", ancho: 40, tipo: "largo" },
+                    { titulo: "Tique", ancho: 8 },
+                ],
+                filas: libro.ordenar(l.movimientos.filter((m) => !m.borrado)).map((m) => [
+                    m.fecha,
+                    libro.NOMBRES_TIPO[m.tipo],
+                    m.tipo === "pago" ? m.concepto || "Pago" : m.concepto,
+                    m.categoria,
+                    nombre(m.persona),
+                    nombre(m.para),
+                    e(m.importe),
+                    m.notas,
+                    m.tique ? "Sí" : "",
+                ]),
+            },
+            {
+                nombre: "Balance",
+                columnas: [
+                    { titulo: "Persona", ancho: 16 },
+                    { titulo: "Parte", ancho: 9, tipo: "porcentaje" },
+                    { titulo: "Ha pagado", ancho: 13, tipo: "euros" },
+                    { titulo: "Le toca pagar", ancho: 14, tipo: "euros" },
+                    { titulo: "Ha cobrado", ancho: 13, tipo: "euros" },
+                    { titulo: "Le corresponde", ancho: 15, tipo: "euros" },
+                    { titulo: "Pagos hechos", ancho: 13, tipo: "euros" },
+                    { titulo: "Pagos recibidos", ancho: 15, tipo: "euros" },
+                    { titulo: "Balance", ancho: 13, tipo: "euros" },
+                ],
+                filas: [
+                    ...r.personas.map((p) => [nombre(p.id), p.parte, e(p.haPagado), e(p.leToca), e(p.haCobrado), e(p.leCorresponde), e(p.pagosHechos), e(p.pagosRecibidos), e(p.balance)]),
+                    [],
+                    ["Total gastado", null, e(r.totalGastos)],
+                    ["Total ingresado", null, e(r.totalIngresos)],
+                    ["Balance: positivo = se le debe dinero; negativo = debe dinero."],
+                    ...r.deudas.map((d) => [`${nombre(d.de)} le debe ${(d.importe / 100).toFixed(2).replace(".", ",")} € a ${nombre(d.a)}.`]),
+                ],
+            },
+            {
+                nombre: "Por categoría",
+                columnas: [
+                    { titulo: "Categoría", ancho: 24 },
+                    { titulo: "Gastado", ancho: 14, tipo: "euros" },
+                ],
+                filas: r.porCategoria.map((c) => [c.categoria, e(c.total)]),
+            },
+        ],
+    });
 }
 
 async function api(req, res, ruta) {
@@ -706,6 +824,141 @@ async function api(req, res, ruta) {
             emitir({ tipo: "borrada", id: tarea.id, autor: usuario.id }, origen);
             return json(res, 200, { ok: true });
         }
+    }
+
+    // --- libro de cuentas (Don Balance) ---
+    // Son las cuentas de los socios: solo las ven quienes tienen parte en el reparto y quien administra.
+    if (ruta.startsWith("/api/libro") && !puedeVerLibro(usuario)) {
+        return fallo(res, 403, "El libro de cuentas solo lo ven quienes tienen parte en el reparto. Si te hace falta, pídeselo a quien administra el tablón.");
+    }
+    if (ruta === "/api/libro" && metodo === "GET") return json(res, 200, datosLibro(usuario));
+
+    if (ruta === "/api/libro/movimientos" && metodo === "POST") {
+        const m = libro.crearMovimiento(await leerJson(req), usuario, datos());
+        libro.fijarPartes(datos());
+        libro.libroDe(datos()).movimientos.push(m);
+        almacen.guardar();
+        emitir({ tipo: "libro", autor: usuario.id }, origen);
+        return json(res, 201, libro.publico(m));
+    }
+
+    const ml = /^\/api\/libro\/movimientos\/([\w-]+)(\/restaurar|\/tique)?$/.exec(ruta);
+    if (ml) {
+        const m = libro.libroDe(datos()).movimientos.find((x) => x.id === ml[1]);
+        if (!m) return fallo(res, 404, "Ese movimiento no existe.");
+        const tocarMovimiento = () => {
+            m.actualizado = new Date().toISOString();
+            m.actualizadoPor = usuario.id;
+            almacen.guardar();
+            emitir({ tipo: "libro", autor: usuario.id }, origen);
+        };
+        if (ml[2] === "/restaurar" && metodo === "POST") {
+            m.borrado = null;
+            tocarMovimiento();
+            return json(res, 200, libro.publico(m));
+        }
+        if (m.borrado) return fallo(res, 404, "Ese movimiento está borrado.");
+        if (ml[2] === "/tique" && metodo === "POST") {
+            const buf = await leerCuerpo(req, MAXIMO_TIQUE);
+            const tipo = TIPOS_TIQUE.find((t) => buf.length > 12 && t.firma(buf));
+            if (!tipo) throw new ErrorDeDatos("El tique tiene que ser una foto (JPG, PNG o WebP) o un PDF.");
+            fs.mkdirSync(CARPETA_TIQUES, { recursive: true });
+            const archivo = `${m.id}-${crypto.randomBytes(4).toString("hex")}.${tipo.ext}`;
+            fs.writeFileSync(path.join(CARPETA_TIQUES, archivo), buf);
+            if (m.tique) borrarTique(m.tique.archivo);
+            let nombreOriginal = "";
+            try {
+                nombreOriginal = decodeURIComponent(String(req.headers["x-nombre"] || "")).slice(0, 120);
+            } catch {
+                /* nombre mal escrito: se queda sin nombre */
+            }
+            m.tique = { archivo, tipo: tipo.tipo, tamano: buf.length, nombre: nombreOriginal };
+            tocarMovimiento();
+            return json(res, 200, libro.publico(m));
+        }
+        if (ml[2] === "/tique" && metodo === "DELETE") {
+            if (m.tique) borrarTique(m.tique.archivo);
+            m.tique = null;
+            tocarMovimiento();
+            return json(res, 200, libro.publico(m));
+        }
+        if (!ml[2] && metodo === "PATCH") {
+            const cambiados = libro.aplicarCambios(m, await leerJson(req), datos());
+            if (cambiados.length) tocarMovimiento();
+            return json(res, 200, libro.publico(m));
+        }
+        if (!ml[2] && metodo === "DELETE") {
+            m.borrado = new Date().toISOString();
+            tocarMovimiento();
+            return json(res, 200, { ok: true });
+        }
+    }
+
+    const mt = /^\/api\/libro\/tiques\/([\w-]+\.(jpg|png|webp|pdf))$/.exec(ruta);
+    if (mt && (metodo === "GET" || metodo === "HEAD")) {
+        const m = libro.libroDe(datos()).movimientos.find((x) => x.tique?.archivo === mt[1]);
+        if (!m) return fallo(res, 404, "Ese tique no existe.");
+        let info;
+        try {
+            info = fs.statSync(path.join(CARPETA_TIQUES, mt[1]));
+        } catch {
+            return fallo(res, 404, "Ese tique no existe.");
+        }
+        const cabeceras = { "Content-Type": m.tique.tipo, "Content-Length": info.size, "Cache-Control": "private, max-age=3600", "Content-Disposition": "inline" };
+        // Una foto no necesita ejecutar nada: si alguien sube algo raro, el navegador no lo ejecuta en nuestra web.
+        if (m.tique.tipo !== "application/pdf") cabeceras["Content-Security-Policy"] = "sandbox; default-src 'none'; img-src 'self'";
+        res.writeHead(200, cabeceras);
+        if (metodo === "HEAD") return res.end();
+        return fs.createReadStream(path.join(CARPETA_TIQUES, mt[1])).pipe(res);
+    }
+
+    if (ruta === "/api/libro/ajustes" && metodo === "PATCH") {
+        if (!usuario.admin) return fallo(res, 403, "Solo quien administra puede cambiar las partes y las categorías.");
+        const { partes, categorias } = await leerJson(req);
+        const l = libro.libroDe(datos());
+        if (partes !== undefined) l.partes = libro.partesValidas(partes, datos().usuarios);
+        if (categorias !== undefined) l.categorias = libro.categoriasValidas(categorias);
+        almacen.guardar();
+        emitir({ tipo: "libro", autor: usuario.id }, origen);
+        return json(res, 200, datosLibro(usuario));
+    }
+
+    if (ruta === "/api/libro/csv" && metodo === "GET") {
+        const hoy = new Date().toISOString().slice(0, 10);
+        const texto = Buffer.from(libro.csv(libro.libroDe(datos()), datos().usuarios), "utf8");
+        res.writeHead(200, {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": `attachment; filename="Cuentas HOT SPOT ${hoy}.csv"; filename*=UTF-8''Cuentas%20HOT%20SPOT%20${hoy}.csv`,
+            "Content-Length": texto.length,
+            "Cache-Control": "no-store",
+        });
+        return res.end(texto);
+    }
+
+    if (ruta === "/api/libro/excel" && metodo === "GET") {
+        const hoy = new Date().toISOString().slice(0, 10);
+        const buf = excelLibro();
+        res.writeHead(200, {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename="Cuentas HOT SPOT ${hoy}.xlsx"; filename*=UTF-8''Cuentas%20HOT%20SPOT%20${hoy}.xlsx`,
+            "Content-Length": buf.length,
+            "Cache-Control": "no-store",
+        });
+        return res.end(buf);
+    }
+
+    if (ruta === "/api/libro/importar" && metodo === "POST") {
+        const buf = await leerCuerpo(req, 15 * 1024 * 1024);
+        let hojas;
+        try {
+            hojas = leerExcel(buf);
+        } catch (error) {
+            throw new ErrorDeDatos(`No he podido leer ese Excel (${error.message}).`);
+        }
+        const r = libro.importar(hojas, usuario, datos(), cuentas.normalizar, fechaDeCelda);
+        almacen.guardar();
+        if (r.importados) emitir({ tipo: "libro", autor: usuario.id }, origen);
+        return json(res, 200, { importados: r.importados, repetidos: r.repetidos, sinPersona: r.sinPersona, hoja: r.hoja });
     }
 
     return fallo(res, 404, "No existe");

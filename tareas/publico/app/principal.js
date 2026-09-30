@@ -476,6 +476,7 @@ function menuYo(ancla) {
                 { contenido: "Descargar en Excel", href: "api/excel", download: "" },
                 { contenido: "Importar desde Excel…", accion: importarExcel },
                 "-",
+                E.yo.libro ? { contenido: "Libro de cuentas", href: "libro/" } : null,
                 E.yo.admin ? { contenido: "Crew: quién puede entrar…", accion: panelCrew } : null,
                 { contenido: "Mi cuenta…", accion: ajustesYo },
                 { contenido: "Atajos de teclado", accion: atajos },
