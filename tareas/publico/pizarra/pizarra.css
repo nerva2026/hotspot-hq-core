@@ -1,0 +1,491 @@
+/* Pizarra de HOT SPOT S.L. · encima de estilo.css (mismas letras, colores y piezas que el tablón y el libro). */
+
+a.pestana {
+    text-decoration: none;
+}
+
+/* ---------- herramientas ---------- */
+.herramientas-pizarra {
+    flex: none;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 8px 12px;
+    background: var(--crema-osc);
+    border-bottom: 2px solid var(--tinta);
+}
+.grupo-herramientas {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.grupo-herramientas.derecha {
+    margin-left: auto;
+}
+.icono-pixel {
+    display: block;
+    width: 24px;
+    height: 24px;
+    flex: none;
+}
+.herramienta,
+.boton-icono,
+.grosor {
+    color: var(--tinta);
+    background: var(--papel);
+    border: 2px solid var(--tinta);
+    box-shadow: var(--sombra-p);
+}
+.herramienta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 10px 0 5px;
+    font: 400 11px/1 var(--titulo);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+.herramienta:hover,
+.boton-icono:hover,
+.grosor:hover {
+    background: #fff;
+}
+.herramienta.activa {
+    background: var(--tinta);
+    color: var(--amarillo);
+    box-shadow: 2px 2px 0 var(--naranja);
+}
+.herramienta:active,
+.boton-icono:active,
+.grosor:active,
+.color-trazo:active {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+}
+.boton-icono {
+    display: inline-grid;
+    place-items: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 4px;
+    font: 400 16px/1 var(--titulo);
+}
+.boton-icono.peligro:hover {
+    background: var(--rojo);
+    color: #fff;
+}
+.boton-icono.texto-zoom {
+    min-width: 62px;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+}
+.zoom {
+    display: flex;
+    gap: 4px;
+}
+.separador-herramientas {
+    width: 2px;
+    height: 26px;
+    margin: 0 4px;
+    background: var(--crema-mas);
+}
+.colores-pizarra {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+.color-trazo {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 2px solid var(--tinta);
+    box-shadow: var(--sombra-p);
+}
+.color-trazo.activo {
+    outline: 2px solid var(--tinta);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+.grosores-pizarra {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.grosor {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+}
+.grosor span {
+    display: block;
+    background: var(--color-lapiz, var(--tinta));
+    box-shadow: 0 0 0 1px rgba(28, 23, 21, 0.35);
+}
+.grosor.activo {
+    background: var(--amarillo);
+}
+
+/* ---------- la pizarra ---------- */
+.zona-pizarra {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    overflow: auto;
+    padding: 16px;
+    background:
+        repeating-linear-gradient(45deg, transparent 0 10px, rgba(28, 23, 21, 0.035) 10px 20px),
+        var(--crema-mas);
+}
+.mundo-marco {
+    position: relative;
+    flex: none;
+    margin: auto;
+    overflow: hidden;
+    background: #fffaf3;
+    box-shadow:
+        0 0 0 3px var(--tinta),
+        7px 7px 0 3px rgba(28, 23, 21, 0.3);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+}
+.mundo-marco.soltando {
+    box-shadow:
+        0 0 0 3px var(--naranja),
+        7px 7px 0 3px rgba(28, 23, 21, 0.3);
+}
+.mundo {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1920px;
+    height: 1200px;
+    transform-origin: 0 0;
+    background-color: #fffaf3;
+    background-image: radial-gradient(rgba(28, 23, 21, 0.2) 2.5px, transparent 3px);
+    background-size: 48px 48px;
+    background-position: 24px 24px;
+}
+.capa {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+.lienzo {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+body[data-herramienta="lapiz"] .mundo-marco {
+    cursor: crosshair;
+}
+body[data-herramienta="goma"] .mundo-marco {
+    cursor: none;
+}
+body[data-herramienta="nota"] .mundo-marco {
+    cursor: copy;
+}
+body[data-herramienta="mover"] .mundo-marco {
+    /* con el dedo, arrastrar el fondo recorre la pizarra acercada; las fotos y notas se mueven igual */
+    touch-action: pan-x pan-y;
+}
+body[data-herramienta="mover"].acercada .mundo-marco {
+    cursor: grab;
+}
+body.arrastrando-vista .mundo-marco,
+body.moviendo .mundo-marco,
+body.moviendo .mundo-marco * {
+    cursor: grabbing !important;
+}
+
+/* fotos y notas: se tocan solo con «Mover» (con el lápiz se pinta encima) */
+.foto-pizarra,
+.nota-pizarra {
+    position: absolute;
+    pointer-events: none;
+    touch-action: none;
+}
+body[data-herramienta="mover"] .foto-pizarra,
+body[data-herramienta="mover"] .nota-pizarra {
+    pointer-events: auto;
+    cursor: grab;
+}
+.foto-pizarra img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: var(--crema-osc);
+    box-shadow: 6px 6px 0 rgba(28, 23, 21, 0.3);
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+.foto-pizarra.subiendo img {
+    opacity: 0.55;
+}
+.foto-pizarra.subiendo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.4) 0 24px, transparent 24px 48px);
+    background-size: 68px 68px;
+    animation: subiendo 0.8s steps(4) infinite;
+}
+@keyframes subiendo {
+    to {
+        background-position: 68px 0;
+    }
+}
+.nota-pizarra {
+    display: flex;
+    flex-direction: column;
+    border: 2px solid rgba(28, 23, 21, 0.5);
+    box-shadow: 6px 7px 0 rgba(28, 23, 21, 0.28);
+}
+.texto-nota {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    margin: 0;
+    padding: 16px 18px;
+    resize: none;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--tinta);
+    font: 26px/1.25 var(--texto);
+    overflow: hidden;
+    cursor: inherit;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.texto-nota::placeholder {
+    color: rgba(28, 23, 21, 0.45);
+}
+.nota-pizarra.editando,
+body[data-herramienta="mover"] .nota-pizarra.editando {
+    cursor: auto;
+}
+.nota-pizarra.editando .texto-nota {
+    cursor: text;
+    overflow: auto;
+    user-select: text;
+    -webkit-user-select: text;
+}
+/* Lo elegido: marco y asa a tamaño de pantalla (--inversa deshace la escala de la pizarra). */
+.elegida {
+    outline: calc(3px * var(--inversa, 1)) solid var(--naranja);
+    outline-offset: calc(4px * var(--inversa, 1));
+}
+.redimensionar {
+    position: absolute;
+    right: calc(-10px * var(--inversa, 1));
+    bottom: calc(-10px * var(--inversa, 1));
+    width: calc(16px * var(--inversa, 1));
+    height: calc(16px * var(--inversa, 1));
+    display: none;
+    background: var(--naranja);
+    border: calc(2px * var(--inversa, 1)) solid var(--tinta);
+    cursor: nwse-resize;
+    pointer-events: auto;
+    touch-action: none;
+}
+.redimensionar::before {
+    /* más sitio para el dedo */
+    content: "";
+    position: absolute;
+    inset: calc(-10px * var(--inversa, 1));
+}
+body[data-herramienta="mover"] .elegida .redimensionar {
+    display: block;
+}
+
+/* los lápices de los demás */
+.cursor-pizarra {
+    position: absolute;
+    transform: scale(var(--inversa, 1));
+    transform-origin: 0 0;
+    pointer-events: none;
+    transition:
+        left 0.1s linear,
+        top 0.1s linear;
+}
+.cursor-pizarra .icono-pixel {
+    color: var(--color);
+    filter: drop-shadow(1px 0 0 #1c1715) drop-shadow(-1px 0 0 #1c1715) drop-shadow(0 1px 0 #1c1715) drop-shadow(0 -1px 0 #1c1715);
+}
+.cursor-pizarra .quien {
+    position: absolute;
+    left: 16px;
+    top: 20px;
+    padding: 3px 6px 2px;
+    background: var(--color);
+    border: 2px solid var(--tinta);
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
+    font: 400 11px/1 var(--titulo);
+    white-space: nowrap;
+}
+
+/* a tamaño de pantalla, encima de la pizarra */
+.goma {
+    position: absolute;
+    border: 2px solid var(--tinta);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: 0 0 0 1px #fff;
+    pointer-events: none;
+}
+.aviso-vacia {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 12px;
+    padding: 24px;
+    text-align: center;
+    color: var(--tinta-suave);
+    font-size: 15px;
+    pointer-events: none;
+}
+.aviso-vacia span {
+    max-width: 38ch;
+}
+.aviso-vacia button {
+    pointer-events: auto;
+}
+.barra-eleccion {
+    position: absolute;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    background: var(--tinta);
+    color: var(--crema);
+    border: 2px solid #000;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+    cursor: default;
+}
+.barra-eleccion .color-nota {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 2px solid var(--crema);
+}
+.barra-eleccion .color-nota.activo {
+    outline: 2px solid var(--amarillo);
+    outline-offset: 2px;
+}
+.barra-eleccion .accion {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 8px;
+    background: transparent;
+    color: var(--crema);
+    border: 2px solid transparent;
+    font: 400 11px/1 var(--titulo);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    text-decoration: none;
+}
+.barra-eleccion .accion:hover {
+    border-color: var(--tinta-suave);
+}
+.barra-eleccion .accion.apagada {
+    color: var(--tenue);
+}
+.barra-eleccion .separador {
+    width: 2px;
+    align-self: stretch;
+    margin: 0 3px;
+    background: var(--tinta-suave);
+}
+
+/* ---------- cabecera y ayuda ---------- */
+.presentes {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.presentes .nota {
+    color: var(--crema-mas);
+    font-size: 12px;
+}
+.presentes .avatar {
+    border-color: #000;
+}
+.ayuda-pizarra ul {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* ---------- pantallas estrechas (panel de la oficina, móvil) ---------- */
+@media (max-width: 1180px) {
+    .nombre-herramienta {
+        display: none;
+    }
+    .herramienta {
+        padding: 0 4px;
+    }
+}
+@media (max-width: 720px) {
+    .herramientas-pizarra {
+        gap: 6px 10px;
+        padding: 6px 8px;
+    }
+    .grupo-herramientas.derecha {
+        margin-left: 0;
+    }
+    .zona-pizarra {
+        padding: 8px;
+    }
+    .presentes .nota {
+        display: none;
+    }
+}
+@media (max-width: 480px) {
+    .separador-herramientas {
+        display: none;
+    }
+    .color-trazo {
+        width: 24px;
+        height: 24px;
+    }
+    .boton-icono.texto-zoom {
+        min-width: 54px;
+    }
+}
+@media (pointer: coarse) {
+    .color-trazo {
+        width: 30px;
+        height: 30px;
+    }
+    .herramienta,
+    .boton-icono {
+        height: 40px;
+    }
+    .grosor {
+        width: 38px;
+        height: 38px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cursor-pizarra {
+        transition: none;
+    }
+    .foto-pizarra.subiendo::after {
+        animation: none;
+    }
+}

@@ -17,8 +17,8 @@ export const cuandoSePierdaLaSesion = (fn) => {
     alPerderSesion = fn;
 };
 
-async function llamar(metodo, ruta, cuerpo, { binario = false, nombre } = {}) {
-    const cabeceras = { "x-tablon": "1", "x-cliente": CLIENTE };
+async function llamar(metodo, ruta, cuerpo, { binario = false, nombre, extra } = {}) {
+    const cabeceras = { "x-tablon": "1", "x-cliente": CLIENTE, ...extra };
     let body;
     if (binario) {
         cabeceras["content-type"] = cuerpo?.type || "application/octet-stream";
@@ -74,19 +74,32 @@ export const api = {
     quitarTique: (id) => llamar("DELETE", `libro/movimientos/${id}/tique`),
     ajustesLibro: (cambios) => llamar("PATCH", "libro/ajustes", cambios),
     importarLibro: (archivo) => llamar("POST", "libro/importar", archivo, { binario: true }),
+    // pizarras
+    pizarra: (id) => llamar("GET", `pizarras/${id}`),
+    ponerEnPizarra: (id, elemento) => llamar("POST", `pizarras/${id}/elementos`, elemento),
+    cambiarEnPizarra: (id, idElemento, cambios) => llamar("PATCH", `pizarras/${id}/elementos/${idElemento}`, cambios),
+    quitarDePizarra: (id, ids) => llamar("POST", `pizarras/${id}/quitar`, { ids }),
+    restaurarEnPizarra: (id, ids) => llamar("POST", `pizarras/${id}/restaurar`, { ids }),
+    vaciarPizarra: (id) => llamar("POST", `pizarras/${id}/vaciar`),
+    recuperarPizarra: (id) => llamar("POST", `pizarras/${id}/recuperar`),
+    fotoEnPizarra: (id, archivo, { id: idElemento, x, y, ancho, alto }) =>
+        llamar("POST", `pizarras/${id}/imagenes`, archivo, { binario: true, extra: { "x-id": idElemento, "x-x": String(x), "x-y": String(y), "x-ancho": String(ancho), "x-alto": String(alto) } }),
+    vivoEnPizarra: (id, datos) => llamar("POST", `pizarras/${id}/vivo`, datos),
 };
 
 // Direcciones para descargar (enlaces normales, con la sesión del navegador).
 export const direccionApi = (ruta) => new URL(ruta, BASE_API).href;
 
-// Cambios en directo: el servidor avisa de todo lo que hacen los demás.
-export function escuchar(alRecibir, alReconectar) {
+// Cambios en directo: el servidor avisa de todo lo que hacen los demás (y, con «pizarra», de lo que pasa en ella).
+export function escuchar(alRecibir, alReconectar, { pizarra } = {}) {
     let fuente = null;
     let cayo = false;
     let parado = false;
     function abrir() {
         if (parado) return;
-        fuente = new EventSource(new URL("eventos", BASE_API));
+        const direccion = new URL("eventos", BASE_API);
+        if (pizarra) direccion.searchParams.set("pizarra", pizarra);
+        fuente = new EventSource(direccion);
         fuente.onopen = () => {
             if (cayo) alReconectar();
             cayo = false;

@@ -59,6 +59,21 @@ jobs:
           fi
           cat /tmp/prueba-libro.log
 
+      - name: Probar la pizarra
+        working-directory: tareas
+        run: |
+          # Un servidor aparte (puerto 3997), con su propio enlace de alta.
+          mkdir -p /tmp/datos-pizarra
+          TAREAS_DATOS=/tmp/datos-pizarra TAREAS_PUERTO=3997 node servidor/principal.js > /tmp/tablon-pizarra.log 2>&1 &
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:3997/tareas/salud && break; sleep 0.5; done
+          CODIGO=$(grep -o '#alta=[A-Za-z0-9_-]*' /tmp/tablon-pizarra.log | head -1 | cut -d= -f2)
+          if ! node pruebas/pizarra.mjs http://127.0.0.1:3997/tareas "$CODIGO" > /tmp/prueba-pizarra.log 2>&1; then
+            cat /tmp/prueba-pizarra.log /tmp/tablon-pizarra.log
+            tail -n 15 /tmp/prueba-pizarra.log | sed 's/%/%25/g' | while IFS= read -r linea; do echo "::error::pizarra: $linea"; done
+            exit 1
+          fi
+          cat /tmp/prueba-pizarra.log
+
       - name: Probar el acceso de la oficina (openid-client, como WorkAdventure)
         working-directory: tareas
         run: |

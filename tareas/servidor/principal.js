@@ -4,6 +4,7 @@
 //   /cuentas/    entrar con Google y proveedor de identidad         → servidor/crew.js
 //   /tareas/     tablón de tareas (aplicación y API)                → carpeta publico/
 //   /tareas/libro/   libro de cuentas de Don Balance (misma API)    → publico/libro/, servidor/libro.js
+//   /tareas/pizarra/ pizarras compartidas (reuniones…)              → publico/pizarra/, servidor/pizarra.js
 //
 // Sin dependencias: solo Node.
 //
@@ -31,6 +32,7 @@ import { aplicarCambios, crearTarea, publica, ErrorDeDatos, ESTADOS, NOMBRES_EST
 import { crearExcel, leerExcel, fechaDeCelda } from "./excel.js";
 import { crearCrew, correoValido, limpiarCorreo } from "./crew.js";
 import * as libro from "./libro.js";
+import { abrirPizarras, idValido as pizarraValida, COLORES_TRAZO, GROSORES, ANCHO as ANCHO_PIZARRA, ALTO as ALTO_PIZARRA } from "./pizarra.js";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PUBLICO = path.join(RAIZ, "publico");
@@ -60,6 +62,7 @@ if (process.argv[2] === "enlace") {
 
 const almacen = abrirAlmacen(CARPETA_DATOS);
 const datos = () => almacen.datos;
+const pizarras = abrirPizarras(CARPETA_DATOS);
 const crew = crearCrew({
     almacen,
     cuentas,
@@ -110,6 +113,25 @@ function emitir(evento, origen = null) {
     escribirATodos(`data: ${JSON.stringify({ ...evento, origen })}\n\n`);
 }
 
+// Lo de una pizarra (trazos, fotos, dónde está el lápiz de cada uno) solo a quien la tiene abierta.
+function emitirPizarra(id, evento, origen = null) {
+    const linea = `data: ${JSON.stringify({ ...evento, pizarra: id, origen })}\n\n`;
+    for (const o of [...oyentes]) {
+        if (o.pizarra !== id) continue;
+        try {
+            o.res.write(linea);
+        } catch {
+            oyentes.delete(o);
+        }
+    }
+}
+
+function avisarPresentes(id) {
+    if (!id) return;
+    const usuarios = [...new Set([...oyentes].filter((o) => o.pizarra === id).map((o) => o.usuario.id))];
+    emitirPizarra(id, { tipo: "pizarra-presentes", usuarios });
+}
+
 function cerrarOyentes(condicion) {
     for (const o of [...oyentes]) {
         if (!condicion(o)) continue;
@@ -131,6 +153,9 @@ setInterval(() => {
     const antes = datos().tareas.length;
     datos().tareas = datos().tareas.filter((t) => !t.borrada || Date.parse(t.borrada) > limite);
     if (datos().tareas.length !== antes) almacen.guardar();
+    // Las pizarras: papelera y lo vaciado, 30 días; las fotos que ya no usa nadie, fuera.
+    pizarras.limpiarViejo(limite);
+    for (const archivo of pizarras.fotosHuerfanas()) fs.rm(path.join(pizarras.carpetaImagenes, archivo), { force: true }, () => {});
     // Lo mismo con los movimientos del libro de cuentas (y la foto de su tique).
     if (datos().libro) {
         const l = libro.libroDe(datos());
@@ -158,7 +183,7 @@ const TIPOS = {
 };
 
 const CSP =
-    "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; " +
+    "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; " +
     "font-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; object-src 'none'";
 
 function cabecerasComunes(res) {
@@ -442,6 +467,13 @@ const TIPOS_TIQUE = [
 ];
 const MAXIMO_TIQUE = 12 * 1024 * 1024;
 
+const TIPOS_FOTO_PIZARRA = [
+    ...TIPOS_TIQUE.filter((t) => t.tipo !== "application/pdf"),
+    { tipo: "image/gif", ext: "gif", firma: (b) => b.subarray(0, 4).toString("latin1") === "GIF8" },
+];
+const MAXIMO_FOTO_PIZARRA = 10 * 1024 * 1024;
+const vivoPorUsuario = new Map();
+
 function borrarTique(archivo) {
     if (!/^[\w-]+\.(jpg|png|webp|pdf)$/.test(archivo || "")) return;
     fs.rm(path.join(CARPETA_TIQUES, archivo), { force: true }, () => {});
@@ -717,11 +749,20 @@ async function api(req, res, ruta) {
             "X-Accel-Buffering": "no",
         });
         res.write("retry: 3000\n\n");
-        const oyente = { res, usuario, sesion: encontrada.sesion };
+        const pizarra = new URL(req.url, "http://x").searchParams.get("pizarra");
+        const oyente = { res, usuario, sesion: encontrada.sesion, pizarra: pizarraValida(pizarra) ? pizarra : null };
         oyentes.add(oyente);
-        req.on("close", () => oyentes.delete(oyente));
-        res.on("close", () => oyentes.delete(oyente));
-        res.on("error", () => oyentes.delete(oyente));
+        let fuera = false;
+        const quitar = () => {
+            if (fuera) return;
+            fuera = true;
+            oyentes.delete(oyente);
+            avisarPresentes(oyente.pizarra);
+        };
+        req.on("close", quitar);
+        res.on("close", quitar);
+        res.on("error", quitar);
+        avisarPresentes(oyente.pizarra);
         return;
     }
 
@@ -961,6 +1002,115 @@ async function api(req, res, ruta) {
         return json(res, 200, { importados: r.importados, repetidos: r.repetidos, sinPersona: r.sinPersona, hoja: r.hoja });
     }
 
+    // --- pizarras ---
+    if (ruta === "/api/pizarras" && metodo === "GET") return json(res, 200, { pizarras: pizarras.lista() });
+
+    const mf = /^\/api\/pizarras\/imagenes\/([\w-]+\.(jpg|png|webp|gif))$/.exec(ruta);
+    if (mf && (metodo === "GET" || metodo === "HEAD")) {
+        if (!pizarras.tieneImagen(mf[1])) return fallo(res, 404, "Esa foto no está en ninguna pizarra.");
+        const archivo = path.join(pizarras.carpetaImagenes, mf[1]);
+        let info;
+        try {
+            info = fs.statSync(archivo);
+        } catch {
+            return fallo(res, 404, "Esa foto no existe.");
+        }
+        const tipo = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif" }[mf[2]];
+        res.writeHead(200, { "Content-Type": tipo, "Content-Length": info.size, "Cache-Control": "private, max-age=86400, immutable", "Content-Security-Policy": "sandbox; default-src 'none'" });
+        if (metodo === "HEAD") return res.end();
+        return fs.createReadStream(archivo).pipe(res);
+    }
+
+    const mp = /^\/api\/pizarras\/([a-z0-9-]{1,30})(?:\/(elementos|quitar|restaurar|vaciar|recuperar|imagenes|vivo)(?:\/([\w-]{8,24}))?)?$/.exec(ruta);
+    if (mp) {
+        const [, id, accion, idElemento] = mp;
+        const avisar = (evento) => emitirPizarra(id, { ...evento, autor: usuario.id }, origen);
+        if (!accion && metodo === "GET") {
+            return json(res, 200, {
+                pizarra: pizarras.ver(id),
+                yo: { ...cuentas.usuarioPublico(usuario), libro: puedeVerLibro(usuario) },
+                usuarios: datos().usuarios.map(cuentas.usuarioPublico),
+                presentes: [...new Set([...oyentes].filter((o) => o.pizarra === id).map((o) => o.usuario.id))],
+            });
+        }
+        if (accion === "elementos" && !idElemento && metodo === "POST") {
+            const e = pizarras.anadir(id, await leerJson(req), usuario);
+            avisar({ tipo: "pizarra", accion: "poner", elementos: [e] });
+            return json(res, 201, e);
+        }
+        if (accion === "elementos" && idElemento && metodo === "PATCH") {
+            const e = pizarras.cambiar(id, idElemento, await leerJson(req), usuario);
+            avisar({ tipo: "pizarra", accion: "cambiar", elementos: [e] });
+            return json(res, 200, e);
+        }
+        if (accion === "quitar" && metodo === "POST") {
+            const { ids } = await leerJson(req);
+            const quitados = pizarras.quitar(id, Array.isArray(ids) ? ids.slice(0, 500) : [], usuario);
+            if (quitados.length) avisar({ tipo: "pizarra", accion: "quitar", ids: quitados });
+            return json(res, 200, { ids: quitados });
+        }
+        if (accion === "restaurar" && metodo === "POST") {
+            const { ids } = await leerJson(req);
+            const vueltos = pizarras.restaurar(id, Array.isArray(ids) ? ids.slice(0, 500) : [], usuario);
+            if (vueltos.length) avisar({ tipo: "pizarra", accion: "poner", elementos: vueltos });
+            return json(res, 200, { elementos: vueltos });
+        }
+        if (accion === "vaciar" && metodo === "POST") {
+            if (pizarras.vaciar(id, usuario)) avisar({ tipo: "pizarra", accion: "vaciar" });
+            return json(res, 200, { ok: true });
+        }
+        if (accion === "recuperar" && metodo === "POST") {
+            const elementos = pizarras.recuperar(id, usuario);
+            avisar({ tipo: "pizarra", accion: "todo", elementos });
+            return json(res, 200, { elementos });
+        }
+        if (accion === "imagenes" && metodo === "POST") {
+            const buf = await leerCuerpo(req, MAXIMO_FOTO_PIZARRA);
+            const tipo = TIPOS_FOTO_PIZARRA.find((t) => buf.length > 12 && t.firma(buf));
+            if (!tipo) throw new ErrorDeDatos("Solo se pueden pegar fotos (JPG, PNG, WebP o GIF).");
+            const cabecera = (n) => req.headers[`x-${n}`];
+            const idNuevo = String(cabecera("id") || "");
+            fs.mkdirSync(pizarras.carpetaImagenes, { recursive: true });
+            const archivo = `${/^[\w-]{8,24}$/.test(idNuevo) ? idNuevo : crypto.randomBytes(6).toString("hex")}-${crypto.randomBytes(4).toString("hex")}.${tipo.ext}`;
+            fs.writeFileSync(path.join(pizarras.carpetaImagenes, archivo), buf);
+            let e;
+            try {
+                e = pizarras.anadirImagen(id, { archivo, x: cabecera("x"), y: cabecera("y"), ancho: cabecera("ancho"), alto: cabecera("alto"), idElemento: idNuevo }, usuario);
+            } catch (error) {
+                fs.rm(path.join(pizarras.carpetaImagenes, archivo), { force: true }, () => {});
+                throw error;
+            }
+            avisar({ tipo: "pizarra", accion: "poner", elementos: [e] });
+            return json(res, 201, e);
+        }
+        if (accion === "vivo" && metodo === "POST") {
+            // Lo que se está pintando ahora mismo y dónde está el lápiz: no se guarda, solo se reparte.
+            const ahora = Date.now();
+            const cuenta = vivoPorUsuario.get(usuario.id) || { desde: ahora, n: 0 };
+            if (ahora - cuenta.desde > 1000) Object.assign(cuenta, { desde: ahora, n: 0 });
+            cuenta.n += 1;
+            vivoPorUsuario.set(usuario.id, cuenta);
+            if (cuenta.n > 30) return json(res, 200, { ok: false });
+            const { cursor, trazo } = await leerJson(req);
+            const evento = { tipo: "pizarra-vivo" };
+            const dentro = (v, i) => Math.min((i % 2 ? ALTO_PIZARRA : ANCHO_PIZARRA) + 100, Math.max(-100, Math.round(Number(v)) || 0));
+            if (Array.isArray(cursor) && cursor.length === 2 && cursor.every(Number.isFinite)) evento.cursor = cursor.map(dentro);
+            if (cursor === null) evento.cursor = null; // ha sacado el ratón de la pizarra
+            if (trazo && typeof trazo === "object" && typeof trazo.id === "string" && Array.isArray(trazo.puntos)) {
+                evento.trazo = {
+                    id: trazo.id.slice(0, 24),
+                    color: COLORES_TRAZO.includes(trazo.color) ? trazo.color : COLORES_TRAZO[0],
+                    grosor: GROSORES.includes(Number(trazo.grosor)) ? Number(trazo.grosor) : GROSORES[1],
+                    puntos: trazo.puntos.slice(0, Math.min(400, trazo.puntos.length) & ~1).map(dentro),
+                    desde: Math.max(0, Math.round(Number(trazo.desde)) || 0),
+                };
+            }
+            if (trazo === null) evento.trazo = null;
+            avisar(evento);
+            return json(res, 200, { ok: true });
+        }
+    }
+
     return fallo(res, 404, "No existe");
 }
 
@@ -1009,6 +1159,7 @@ servidor.listen(PUERTO, () => console.log(`[tablón] En marcha en el puerto ${PU
 function apagar() {
     try {
         if (almacen.pendiente()) almacen.guardarYa();
+        if (pizarras.pendiente()) pizarras.guardarYa();
     } catch (error) {
         console.error("[tablón] Error al guardar antes de salir:", error);
     }
@@ -1023,6 +1174,7 @@ process.on("uncaughtException", (error) => {
     console.error("[tablón] Error inesperado:", error);
     try {
         if (almacen.pendiente()) almacen.guardarYa();
+        if (pizarras.pendiente()) pizarras.guardarYa();
     } finally {
         process.exit(1);
     }

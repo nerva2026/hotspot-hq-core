@@ -1,12 +1,14 @@
-# Portada, cuentas del crew y tablón de tareas · HOT SPOT S.L.
+# Portada, cuentas del crew, tablón, cuentas y pizarra · HOT SPOT S.L.
 
-Aplicación propia (Node, sin dependencias) con tres partes:
+Aplicación propia (Node, sin dependencias) con estas partes:
 
 | Dirección | Qué es |
 | --- | --- |
 | `https://oficina.hot-spot.es/` | Portada: **CREW** (entrar con Google) o **INVITADO** (solo la calle, sin cuenta). |
 | `https://oficina.hot-spot.es/cuentas/` | Entrar con Google y proveedor de identidad (OpenID Connect) de la oficina. |
 | `https://oficina.hot-spot.es/tareas/` | Tablón de tareas. |
+| `https://oficina.hot-spot.es/tareas/libro/` | Libro de cuentas de los socios. |
+| `https://oficina.hot-spot.es/tareas/pizarra/` | Pizarra compartida (la de la sala de reuniones). |
 
 ## Crew e invitados
 
@@ -53,10 +55,37 @@ Node 22 sin dependencias:
 | `servidor/cuentas.js` | Contraseñas (scrypt, plan B), sesiones e invitaciones de emergencia. |
 | `servidor/tareas.js` | Campos de las tareas y sus reglas. |
 | `servidor/excel.js` | Lectura y escritura de `.xlsx` sin librerías. |
-| `publico/` | La interfaz del tablón: HTML, CSS y módulos de JavaScript sin compilar. |
+| `servidor/libro.js` | Libro de cuentas: movimientos, reparto, quién debe a quién, CSV. |
+| `servidor/pizarra.js` | Pizarras: trazos, notas y fotos (en su propio `pizarras.json`). |
+| `publico/` | Las pantallas (tablón, `libro/`, `pizarra/`): HTML, CSS y módulos de JavaScript sin compilar. |
+| `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar (libro, pizarra y acceso de la oficina). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
 
 Las tareas borradas pasan 30 días en una papelera interna (el aviso «Deshacer» las recupera).
+
+## Libro de cuentas
+
+Una pantalla propia para las cuentas, sin tener que manejar una hoja de cálculo. Usa las mismas cuentas y la
+misma sesión que el tablón.
+
+- **Quién lo ve:** los administradores y quien tiene parte en el reparto. A los demás, la API les contesta 403.
+- **Apuntar:** gasto, ingreso o pago entre socios, con categoría, notas y la foto del tique (o un PDF).
+- **Quién debe a quién:** cada gasto e ingreso se reparte según las partes. Las partes se fijan con el primer
+  movimiento, a partes iguales entre los administradores, y se cambian en «Reparto».
+- **Excel y CSV:** descarga del libro entero, e importación de la hoja de cuentas de Drive.
+- Los importes se guardan en céntimos. Lo borrado pasa 30 días en la papelera.
+
+## Pizarra
+
+`/tareas/pizarra/?p=reuniones` es la de la sala de reuniones; con otro `?p=` sale otra (hasta 20).
+
+- **Herramientas:** lápiz (8 colores y 4 grosores; con Mayúsculas, línea recta), goma (borra trazos enteros),
+  notas, fotos (elegir, pegar con Ctrl+V o arrastrar; JPG, PNG, WebP o GIF de hasta 10 MB), mover y cambiar
+  el tamaño, lupa, deshacer y rehacer, y descargar como imagen.
+- **En directo:** cada uno ve el lápiz de los demás y lo que pintan mientras lo pintan, y quién tiene la
+  pizarra abierta.
+- **Vaciar:** quita todo para todos; se puede recuperar durante 30 días.
+- Se guarda en `pizarras.json` y las fotos en `pizarra/`, dentro de la carpeta de datos.
 
 ## En el servidor
 
