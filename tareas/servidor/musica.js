@@ -75,7 +75,7 @@ export function leerSonando(j) {
     const artistas = episodio
         ? [{ nombre: texto(item.show?.name), enlace: enlaceSpotify(item.show?.external_urls?.spotify) }]
         : (Array.isArray(item.artists) ? item.artists : []).slice(0, 8).map((a) => ({ nombre: texto(a?.name), enlace: enlaceSpotify(a?.external_urls?.spotify) }));
-    const id = typeof item.id === "string" && /^\w{1,64}$/.test(item.id) ? item.id : null;
+    const id = typeof item.id === "string" && /^[\w-]{1,64}$/.test(item.id) ? item.id : null;
     const duracion = Math.max(0, Math.round(Number(item.duration_ms) || 0));
     return {
         uri: item.uri.slice(0, 200),

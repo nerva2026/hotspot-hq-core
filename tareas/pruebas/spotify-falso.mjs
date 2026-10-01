@@ -227,15 +227,21 @@ http
 
             if (ruta === "/v1/me/player/currently-playing" && req.method === "GET") {
                 const cuenta = cuentaDelToken(req);
-                E.llamadas.sonando.push({ cuenta, cuando: Date.now(), tipos: q.get("additional_types") });
+                const llamada = { cuenta, cuando: Date.now(), tipos: q.get("additional_types"), respuesta: 200 };
+                E.llamadas.sonando.push(llamada);
                 if (E.limite.veces > 0) {
                     E.limite.veces -= 1;
                     E.llamadas.respuestas429 += 1;
+                    llamada.respuesta = 429;
                     return json(res, 429, { error: { status: 429, message: "API rate limit exceeded" } }, { "Retry-After": String(E.limite.espera) });
                 }
-                if (!cuenta) return json(res, 401, { error: { status: 401, message: "The access token expired" } });
+                if (!cuenta) {
+                    llamada.respuesta = 401;
+                    return json(res, 401, { error: { status: 401, message: "The access token expired" } });
+                }
                 const r = respuestaSonando(cuenta);
                 if (!r) {
+                    llamada.respuesta = 204;
                     res.writeHead(204);
                     return res.end();
                 }
