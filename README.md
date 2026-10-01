@@ -29,6 +29,7 @@ El servidor usa esa imagen en lugar de la oficial para el servicio `play`. El re
 | `06-version.patch` | Número de versión discreto abajo a la izquierda (`v0.2.0-alpha`; se cambia en `play/index.html` dentro del parche). |
 | `07-solo-crew.patch` | La oficina y la terraza son solo para el crew: exigen haber entrado con cuenta (y el servidor rechaza a quien se lo salte, mandándolo a la portada). Al cerrar sesión se pasa por `/cuentas/salir`. Solo se activa si `OPENID_CLIENT_ID` está configurado. |
 | `08-acciones.patch` | Los muñecos se ven sentados y bailando, según la variable pública `accion` del jugador (la pone el script del mapa: `"bailar"`, `"sentado:<dirección>"` o nada). Sentado: quieto, mirando hacia el asiento y unos píxeles más abajo. Bailar: bota con ritmo (todos a la vez, por el reloj), cambia de lado cada dos tiempos y le suben notas musicales naranjas y amarillas. Solo mientras está quieto; al andar vuelve a lo normal. Lo dibuja `play/src/front/Phaser/Entity/Acciones.ts`, con unas pocas líneas de enganche en `Character`, `GameScene`, `RemotePlayersRepository` y `PlayerVariablesManager`. |
+| `09-coleccion-entidades.patch` | Arregla la barra que faltaba en `GameScene.getCustomEntityCollectionUrl`: con `PUBLIC_MAP_STORAGE_URL=https://…/map-storage`, WorkAdventure pedía `/map-storageassets/entities/entities.json` (el «error de la colección de entidades» del editor de mapas). Ahora la dirección sale bien; da 404 mientras no se suba ninguna entidad propia, que es lo normal. |
 
 ## Archivos propios (`archivos/`)
 
