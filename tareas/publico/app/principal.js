@@ -1,6 +1,6 @@
 // Tablón de tareas de HOT SPOT S.L. · arranque, estado compartido, barra superior y filtros.
 
-import { h, $, vaciar, normalizar, hoy, plazo, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, pesoPrioridad, guardarLocal, leerLocal, fechaMedia } from "./util.js";
+import { h, $, vaciar, normalizar, hoy, plazo, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, pesoPrioridad, guardarLocal, leerLocal, fechaMedia, retrasar, MESES } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion } from "./api.js";
 import { pantallaEntrar, pantallaAlta } from "./acceso.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar, chipEtiqueta } from "./menus.js";
@@ -11,6 +11,8 @@ import { pintarLista } from "./lista.js";
 import { pintarCalendario } from "./calendario.js";
 import { pintarCronograma } from "./cronograma.js";
 import { abrirFicha, cerrarFicha, fichaAbierta, actualizarFicha } from "./ficha.js";
+import { textoCumples, fechaCumple, cumpleValido, maximoDelMes } from "./cumple.js";
+import { lanzarConfeti } from "./confeti.js";
 
 const VISTAS = [
     { id: "tablero", nombre: "Tablero", tecla: "1", pintar: pintarTablero },
@@ -28,6 +30,7 @@ const E = {
     vista: leerLocal("vista", "tablero"),
     filtros: { ...FILTROS_VACIOS, ...leerLocal("filtros", {}), texto: "" },
     porVista: {}, // estado propio de cada vista (mes del calendario, zoom del cronograma…)
+    oficina: null, // { hoy, cumples, proximos } de /api/oficina: el día de la oficina y sus cumpleaños
 };
 if (!VISTAS.some((v) => v.id === E.vista)) E.vista = "tablero";
 
@@ -252,6 +255,7 @@ function montar() {
             ),
             h("div", { class: "barra-derecha" }, h("button", { type: "button", class: "btn primario", id: "boton-nueva", title: "Nueva tarea (N)", onclick: () => nuevaTarea() }, "+ Nueva"), h("button", { type: "button", class: "boton-yo", id: "boton-yo", onclick: (e) => menuYo(e.currentTarget) })),
         ),
+        h("div", { id: "cumple-aviso", class: "cumple-zona", hidden: true }),
         h(
             "div",
             { class: "filtros" },
@@ -298,7 +302,71 @@ function montar() {
         h("main", { id: "vista", class: "vista" }),
     );
     pintarYa();
+    pintarCumple();
 }
+
+// ---------- cumpleaños: el aviso del día (con confeti) ----------
+
+// Se puede cerrar hasta el día siguiente (de la oficina). El confeti sale una vez por página y aviso.
+let confetiLanzado = null;
+
+function pintarCumple() {
+    const zona = $("#cumple-aviso");
+    if (!zona || !E.yo) return;
+    const oficina = E.oficina;
+    const texto = oficina ? textoCumples(oficina.cumples, E.yo.id) : "";
+    if (!texto || leerLocal("cumple-cerrado", null) === oficina.hoy) {
+        zona.hidden = true;
+        zona.replaceChildren();
+        delete zona.dataset.texto;
+        return;
+    }
+    zona.hidden = false;
+    if (zona.dataset.texto === texto) return; // ya está puesto: no se repinta (ni se repite el confeti)
+    zona.dataset.texto = texto;
+    const mio = oficina.cumples.some((c) => c.id === E.yo.id);
+    const aviso = h(
+        "div",
+        { class: ["cumple-aviso", mio && "mio"], role: "status" },
+        h("button", { type: "button", class: "cumple-tarta", title: "¡Más confeti!", "aria-label": "Más confeti", onclick: () => lanzarConfeti({ desde: aviso.getBoundingClientRect() }) }),
+        h("span", { class: "cumple-texto" }, texto),
+        h(
+            "button",
+            {
+                type: "button",
+                class: "cumple-cerrar",
+                title: "Cerrar hasta mañana",
+                "aria-label": "Cerrar el aviso hasta mañana",
+                onclick: () => {
+                    guardarLocal("cumple-cerrado", oficina.hoy);
+                    pintarCumple();
+                },
+            },
+            "×",
+        ),
+    );
+    zona.replaceChildren(aviso);
+    const clave = `${oficina.hoy} ${texto}`;
+    if (confetiLanzado !== clave) {
+        confetiLanzado = clave;
+        requestAnimationFrame(() => lanzarConfeti({ desde: aviso.getBoundingClientRect() }));
+    }
+}
+
+async function cargarOficina() {
+    if (!E.yo) return;
+    try {
+        E.oficina = await api.oficina();
+    } catch {
+        return; // sin conexión (ya se avisa) o sin sesión (ya se pasa a la pantalla de entrada)
+    }
+    pintarCumple();
+}
+const recargarOficina = retrasar(cargarOficina, 600);
+// El día cambia a medianoche de la oficina: se pregunta de vez en cuando.
+setInterval(() => {
+    if (E.yo && !document.hidden) cargarOficina();
+}, 10 * 60 * 1000);
 
 function pintarBarra() {
     for (const b of document.querySelectorAll(".pestana")) {
@@ -580,7 +648,14 @@ async function panelCrew() {
                     "div",
                     { class: ["crew-fila", p.baja && "baja"] },
                     avatar(p),
-                    h("div", { class: "crew-datos" }, h("strong", null, p.nombre, p.admin ? h("span", { class: "chip crew-admin" }, "ADMIN") : null), h("span", { class: "tenue" }, p.email || "sin correo"), h("span", { class: ["crew-estado", estado[0]] }, estado[1])),
+                    h(
+                        "div",
+                        { class: "crew-datos" },
+                        h("strong", null, p.nombre, p.admin ? h("span", { class: "chip crew-admin" }, "ADMIN") : null),
+                        h("span", { class: "tenue" }, p.email || "sin correo"),
+                        h("span", { class: ["crew-estado", estado[0]] }, estado[1]),
+                        p.cumple ? h("span", { class: "crew-cumple" }, `Cumple: ${fechaCumple(p.cumple)}`) : null,
+                    ),
                     h(
                         "div",
                         { class: "crew-botones" },
@@ -669,6 +744,51 @@ function ajustesYo() {
             ),
         );
     pintarMuestras();
+
+    // Cumpleaños: solo día y mes. Se guarda en cuanto están los dos; «Quitar» lo borra.
+    const dos = (n) => String(n).padStart(2, "0");
+    const selMes = h("select", { class: "campo selector-cumple mes", "aria-label": "Mes de tu cumpleaños" }, h("option", { value: "" }, "Mes"), MESES.map((m, i) => h("option", { value: dos(i + 1) }, m)));
+    const selDia = h("select", { class: "campo selector-cumple dia", "aria-label": "Día de tu cumpleaños" });
+    const estadoCumple = h("p", { class: "nota estado-cumple", role: "status" });
+    const quitarCumple = h("button", { type: "button", class: "btn pequeno quitar-cumple", title: "Quitar mi cumpleaños", onclick: () => guardarCumple(null) }, "Quitar");
+    const pintarDias = () => {
+        const maximo = selMes.value ? maximoDelMes(Number(selMes.value)) : 31;
+        const elegido = selDia.value;
+        selDia.replaceChildren(h("option", { value: "" }, "Día"), ...Array.from({ length: maximo }, (_, i) => h("option", { value: dos(i + 1) }, String(i + 1))));
+        selDia.value = elegido && Number(elegido) <= maximo ? elegido : "";
+    };
+    const ponerCumple = (cumple) => {
+        const [mes, dia] = cumpleValido(cumple) ? cumple.split("-") : ["", ""];
+        selMes.value = mes;
+        pintarDias();
+        selDia.value = dia;
+        quitarCumple.hidden = !cumple;
+    };
+    const decir = (texto, malo = false) => {
+        estadoCumple.className = `${malo ? "error" : "nota"} estado-cumple`;
+        estadoCumple.textContent = texto;
+    };
+    async function guardarCumple(cumple) {
+        try {
+            const { yo } = await api.cambiarYo({ cumple });
+            actualizarUsuario(yo);
+            ponerCumple(yo.cumple);
+            decir(yo.cumple ? `Guardado: ${fechaCumple(yo.cumple)}.` : "Quitado.");
+            cargarOficina();
+        } catch (err) {
+            decir(err.message, true);
+        }
+    }
+    const alElegir = () => {
+        pintarDias();
+        if (!selDia.value || !selMes.value) return decir(selMes.value ? "Elige el día." : "Elige el mes.");
+        const cumple = `${selMes.value}-${selDia.value}`;
+        if (cumple !== E.yo.cumple) guardarCumple(cumple);
+    };
+    selMes.addEventListener("change", alElegir);
+    selDia.addEventListener("change", alElegir);
+    ponerCumple(E.yo.cumple);
+
     const actual = h("input", { class: "campo", type: "password", autocomplete: "current-password" });
     const nueva = h("input", { class: "campo", type: "password", autocomplete: "new-password", minlength: 8 });
     const error = h("p", { class: "error", role: "alert" });
@@ -679,6 +799,14 @@ function ajustesYo() {
             { class: "pila" },
             E.yo.email ? h("p", null, "Entras con tu cuenta de Google ", h("strong", null, E.yo.email), ".") : null,
             h("div", { class: "etiqueta-campo" }, h("span", null, "Mi color"), muestras),
+            h(
+                "div",
+                { class: "etiqueta-campo", role: "group", "aria-label": "Mi cumpleaños" },
+                h("span", null, "Mi cumpleaños"),
+                h("div", { class: "fila-cumple" }, selDia, selMes, quitarCumple),
+                estadoCumple,
+                h("p", { class: "nota" }, "Solo el día y el mes, sin el año. Lo ve el crew: sale en el tablón y en la oficina."),
+            ),
             !E.yo.tieneClave ? null : h(
                 "form",
                 {
@@ -870,6 +998,7 @@ function alRecibir(ev) {
         const yo = ev.usuarios.find((u) => u.id === E.yo.id);
         if (yo) E.yo = { ...E.yo, ...yo };
         pintar();
+        recargarOficina(); // alguien ha puesto o cambiado su cumpleaños (o su nombre)
     }
 }
 
@@ -878,7 +1007,9 @@ async function recargar() {
         cargar(await api.datos());
     } catch {
         /* sin conexión: ya se avisará */
+        return;
     }
+    cargarOficina();
 }
 
 function cargar(datos) {
@@ -895,9 +1026,12 @@ function cargar(datos) {
 
 function empezar(datos) {
     cargar(datos);
+    // Para el puente de la oficina (/tareas/oficina/): si estaba sin sesión, se entera al momento.
+    guardarLocal("sesion", Date.now());
     montar();
     dejarDeEscuchar?.();
     dejarDeEscuchar = escuchar(alRecibir, recargar);
+    cargarOficina();
     const pedida = new URLSearchParams(location.search).get("tarea");
     if (pedida && E.tareas.has(pedida)) ctx.abrir(pedida);
 }
@@ -906,6 +1040,7 @@ function sinSesion() {
     dejarDeEscuchar?.();
     dejarDeEscuchar = null;
     E.yo = null;
+    E.oficina = null;
     cerrarFicha({ forzar: true });
     cerrarMenu();
     pantallaEntrar(raiz, empezar);

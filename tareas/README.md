@@ -9,6 +9,7 @@ Aplicación propia (Node, sin dependencias) con estas partes:
 | `https://oficina.hot-spot.es/tareas/` | Tablón de tareas. |
 | `https://oficina.hot-spot.es/tareas/libro/` | Libro de cuentas de los socios. |
 | `https://oficina.hot-spot.es/tareas/pizarra/` | Pizarra compartida (la de la sala de reuniones). |
+| `https://oficina.hot-spot.es/tareas/oficina/` | Puente invisible: lo abre el mapa de la oficina, sin enseñarlo, para leer el tablón de quien juega. |
 
 ## Crew e invitados
 
@@ -57,8 +58,9 @@ Node 22 sin dependencias:
 | `servidor/excel.js` | Lectura y escritura de `.xlsx` sin librerías. |
 | `servidor/libro.js` | Libro de cuentas: movimientos, reparto, quién debe a quién, CSV. |
 | `servidor/pizarra.js` | Pizarras: trazos, notas y fotos (en su propio `pizarras.json`). |
-| `publico/` | Las pantallas (tablón, `libro/`, `pizarra/`): HTML, CSS y módulos de JavaScript sin compilar. |
-| `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar (tablón, libro, pizarra y acceso de la oficina). |
+| `servidor/perfil.js` | Cumpleaños («MM-DD»), qué día es hoy en la oficina y el personaje de cada uno. |
+| `publico/` | Las pantallas (tablón, `libro/`, `pizarra/` y `oficina/`): HTML, CSS y módulos de JavaScript sin compilar. |
+| `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar (tablón, libro, pizarra, cumpleaños y personaje, y acceso de la oficina). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
 
 Las tareas borradas pasan 30 días en una papelera interna (el aviso «Deshacer» las recupera).
@@ -86,6 +88,55 @@ misma sesión que el tablón.
   pizarra abierta.
 - **Vaciar:** quita todo para todos; se puede recuperar durante 30 días.
 - Se guarda en `pizarras.json` y las fotos en `pizarra/`, dentro de la carpeta de datos.
+
+## Cumpleaños y personaje
+
+- **Cumpleaños:** cada persona pone el suyo en «Mi cuenta…»: solo día y mes (el año ni se pide ni se guarda; quien
+  nació un 29 de febrero lo celebra el 28 los años que no son bisiestos). El día de cada cumple el tablón saca un
+  aviso con confeti (se cierra y no vuelve hasta el día siguiente), y hay una tarta en el calendario y en el crew.
+- **«Hoy»** es el día en la oficina (`TAREAS_ZONA`, por defecto `Europe/Madrid`), no el del servidor, que va en UTC.
+- **Personaje:** WorkAdventure guarda el muñeco y el compañero en el navegador; aquí se guardan también, para que
+  cada uno salga igual desde cualquier aparato.
+
+| Llamada (todas con sesión; sin ella, 401) | Qué hace |
+| --- | --- |
+| `PATCH /tareas/api/yo` con `{ "cumple": "05-17" }` | Pone el cumpleaños (`null` o `""` lo quita; con año se rechaza). Va junto a `color`, `nombre` y `clave`. |
+| `GET /tareas/api/oficina` | `{ hoy, cumples: [{ id, nombre }], proximos: [{ id, nombre, dia, fecha, enDias }] }`: de quién es el cumple hoy y los de los próximos 30 días. Quien ha salido del crew no cuenta. |
+| `GET /tareas/api/yo/personaje` | `{ texturas, companero, actualizado }` (con `null` en lo que no hay). |
+| `PUT /tareas/api/yo/personaje` | Guarda `{ texturas: [de 1 a 10 piezas], companero: pieza o null }` (piezas de hasta 64 letras, números, `_`, `.` o `-`). |
+
+### El puente de la oficina (`/tareas/oficina/`)
+
+El script del mapa va en un marco aislado, con un origen propio: no tiene la sesión del crew ni almacenamiento, así
+que no puede leer el tablón. Por eso abre esta página sin enseñarla:
+
+```js
+WA.ui.website.open({ url: "/tareas/oficina/", visible: false, allowApi: true,
+                     position: { vertical: "top", horizontal: "left" }, size: { width: "1px", height: "1px" } });
+```
+
+La página es de la misma web que el tablón (lleva la cookie de la sesión). Carga `/iframe_api.js` (lo sirve la
+oficina en la misma dirección), espera a `WA.onInit()` y deja lo que necesita el mapa en variables **privadas** del
+jugador, con `WA.player.state.saveVariable(nombre, valor, { public: false, persist: false, scope: "room" })`: no las
+ve nadie más ni se guardan (`scope: "world"` sin `persist: true` lo rechaza WorkAdventure). El mapa las lee con
+`WA.player.state.loadVariable(nombre)` y `onVariableChange(nombre)`:
+
+| Variable | Valor |
+| --- | --- |
+| `hsSesion` | `true` si quien juega ha entrado en el tablón; `false` si no (o si se le ha caducado la sesión). |
+| `hsTareas` | `{ abiertas, hoy, atrasadas }`: sus tareas sin terminar, las que vencen hoy y las atrasadas (como las cuenta la Jefa de Producción). `null` sin sesión. Es lo que necesita el número del botón «Tareas». |
+| `hsCumples` | `{ hoy: "AAAA-MM-DD", cumples: [{ id, nombre }] }`: de quién es el cumple hoy en la oficina. `null` sin sesión. |
+
+- **Al día:** se actualiza con los avisos en directo del tablón; cada minuto recuenta las tareas (a medianoche
+  cambian «hoy» y «atrasadas») y cada 10 minutos vuelve a preguntar qué día es y quién cumple. Sin sesión vuelve a
+  probar cada vez más espaciado (1, 2, 4… hasta 15 minutos) y al momento si se vuelve a la pestaña o se entra en el
+  tablón en ese navegador.
+- **Aviso de cumpleaños:** lo saca él mismo (`WA.ui.banner.openBanner`, amarillo, se cierra a mano): «¡Hoy es el
+  cumple de Diego!», «…de Diego y Víctor!» y, a quien cumple, «¡Feliz cumpleaños, Diego!». Una vez al día en cada
+  navegador: el día visto lo recuerda en su `localStorage`, porque el mapa no puede recordar nada.
+- **Fuera de la oficina** (sin `WA`: abierta en una pestaña, o en local) no hace nada ni pide `/iframe_api.js`.
+- **Ligero y con la misma CSP** que las demás pantallas (`script-src 'self'`): sin interfaz, solo 4 módulos pequeños
+  (`publico/app/oficina.js` y los que ya usa el tablón). `/iframe_api.js` pasa porque es de la misma web.
 
 ## En el servidor
 
