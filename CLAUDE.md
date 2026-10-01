@@ -24,7 +24,7 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
 | `parches/01…07-*.patch` | Cambios sobre WorkAdventure, en orden (tabla en `README.md`). |
 | `archivos/` | Archivos propios que se copian encima (estilo retro, letras, marca, muñecos `hs-…`). |
 | `.github/workflows/hotspot-imagen.yml` | Construye la imagen `ghcr.io/nerva2026/hotspot-hq-play` (~7 min). |
-| `tareas/` | Servicio propio (Node sin dependencias): portada `/`, cuentas del crew `/cuentas`, tablón `/tareas`, libro de cuentas `/tareas/libro/` y pizarra `/tareas/pizarra/`. Detalles en `tareas/README.md`. |
+| `tareas/` | Servicio propio (Node sin dependencias): portada `/`, cuentas del crew `/cuentas`, tablón `/tareas`, libro de cuentas `/tareas/libro/`, pizarra `/tareas/pizarra/` y archivo de documentos `/tareas/archivo/`. Detalles en `tareas/README.md`. |
 | `.github/workflows/hotspot-tareas.yml` | Prueba y construye `ghcr.io/nerva2026/hotspot-hq-tareas` (~1 min), incluida una prueba con `openid-client` 5 (la librería de WorkAdventure). |
 
 ### Hacer o cambiar un parche

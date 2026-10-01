@@ -85,10 +85,54 @@ export const api = {
     fotoEnPizarra: (id, archivo, { id: idElemento, x, y, ancho, alto }) =>
         llamar("POST", `pizarras/${id}/imagenes`, archivo, { binario: true, extra: { "x-id": idElemento, "x-x": String(x), "x-y": String(y), "x-ancho": String(ancho), "x-alto": String(alto) } }),
     vivoEnPizarra: (id, datos) => llamar("POST", `pizarras/${id}/vivo`, datos),
+    // archivo de documentos
+    archivo: () => llamar("GET", "archivo"),
+    buscarEnArchivo: (consulta) => llamar("GET", `archivo/buscar?q=${encodeURIComponent(consulta)}`),
+    documento: (id) => llamar("GET", `archivo/documentos/${id}`),
+    cambiarDocumento: (id, cambios) => llamar("PATCH", `archivo/documentos/${id}`, cambios),
+    borrarDocumento: (id) => llamar("DELETE", `archivo/documentos/${id}`),
+    restaurarDocumento: (id) => llamar("POST", `archivo/documentos/${id}/restaurar`),
+    eliminarDocumento: (id) => llamar("POST", `archivo/documentos/${id}/eliminar`),
+    anadirEnlace: (datos) => llamar("POST", "archivo/enlaces", datos),
 };
 
 // Direcciones para descargar (enlaces normales, con la sesión del navegador).
 export const direccionApi = (ruta) => new URL(ruta, BASE_API).href;
+
+// Sube un documento al archivo con el progreso (fetch no lo da): el archivo va tal cual y el nombre y la carpeta, en
+// cabeceras. Devuelve una promesa con el documento creado; si se le llama a .cancelar(), se rechaza con estado 0.
+export function subirDocumento(archivo, { carpeta = "", alProgreso } = {}) {
+    const xhr = new XMLHttpRequest();
+    const promesa = new Promise((resolver, rechazar) => {
+        xhr.open("POST", new URL("archivo/documentos", BASE_API));
+        xhr.responseType = "text";
+        xhr.setRequestHeader("x-tablon", "1");
+        xhr.setRequestHeader("x-cliente", CLIENTE);
+        xhr.setRequestHeader("content-type", archivo.type || "application/octet-stream");
+        xhr.setRequestHeader("x-nombre", encodeURIComponent(archivo.name));
+        if (carpeta) xhr.setRequestHeader("x-carpeta", encodeURIComponent(carpeta));
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) alProgreso?.(e.loaded / e.total);
+        };
+        xhr.onerror = () => rechazar(new ErrorApi("No hay conexión con el servidor.", 0));
+        xhr.onabort = () => rechazar(new ErrorApi("Subida cancelada.", 0));
+        xhr.ontimeout = () => rechazar(new ErrorApi("La subida ha tardado demasiado.", 0));
+        xhr.onload = () => {
+            let datos = null;
+            try {
+                datos = JSON.parse(xhr.responseText);
+            } catch {
+                /* respuesta sin cuerpo */
+            }
+            if (xhr.status >= 200 && xhr.status < 300) return resolver(datos);
+            if (xhr.status === 401) alPerderSesion();
+            rechazar(new ErrorApi(datos?.error || `Error ${xhr.status}`, xhr.status));
+        };
+        xhr.send(archivo);
+    });
+    promesa.cancelar = () => xhr.abort();
+    return promesa;
+}
 
 // Cambios en directo: el servidor avisa de todo lo que hacen los demás (y, con «pizarra», de lo que pasa en ella).
 export function escuchar(alRecibir, alReconectar, { pizarra } = {}) {
