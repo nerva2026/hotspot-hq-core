@@ -39,13 +39,20 @@ El servidor usa esa imagen en lugar de la oficial para el servicio `play`. El re
 - `play/public/static/images/hotspot/`: marca provisional (mientras llega el logo) y fachada de la calle.
 - `play/public/resources/characters/hotspot/` y `play/src/pusher/data/woka.json`: los muñecos de HOT SPOT (24 ya hechos y piezas para personalizar: piel, pelo, ropa, cabeza y complementos). Se generan con `herramientas/wokas_hs.py` del repositorio del mapa.
 
-## Portada, cuentas del crew y tablón de tareas (`tareas/`)
+## Portada, cuentas del crew, tablón y pantallas de la oficina (`tareas/`)
 
 Aplicación aparte, con su propia imagen (`ghcr.io/nerva2026/hotspot-hq-tareas`):
 
 - `oficina.hot-spot.es/` — portada: CREW (entrar con Google) o INVITADO (solo la calle).
 - `oficina.hot-spot.es/cuentas/` — entrar con Google y proveedor de identidad (OpenID Connect) de la oficina.
-- `oficina.hot-spot.es/tareas/` — tablón de tareas, con el panel «Crew» para decidir quién puede entrar.
+- `oficina.hot-spot.es/tareas/` — tablón de tareas, con el panel «Crew» para decidir quién puede entrar, los
+  cumpleaños de cada uno y el personaje (muñeco y compañero) guardado con la cuenta.
+- `oficina.hot-spot.es/tareas/libro/` — libro de cuentas de los socios.
+- `oficina.hot-spot.es/tareas/pizarra/` — pizarra compartida (la de la sala de reuniones).
+- `oficina.hot-spot.es/tareas/archivo/` — archivo de documentos del crew (la sala ARCHIVO).
+- `oficina.hot-spot.es/tareas/musica/` — cabina de música con Spotify; `/tareas/musica/mini/` es su reproductor
+  pequeño para abrirlo en la oficina.
+- `oficina.hot-spot.es/tareas/oficina/` — puente invisible: lo abre el mapa para leer el tablón de quien juega.
 
 Detalles en [`tareas/README.md`](tareas/README.md).
 

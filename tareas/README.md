@@ -1,4 +1,4 @@
-# Portada, cuentas del crew, tablón, cuentas, pizarra, archivo y música · HOT SPOT S.L.
+# Portada, cuentas del crew, tablón, libro de cuentas, pizarra, archivo y música · HOT SPOT S.L.
 
 Aplicación propia (Node, sin dependencias) con estas partes:
 
@@ -68,10 +68,17 @@ Node 22 sin dependencias:
 | `publico/` | Las pantallas (tablón, `libro/`, `pizarra/`, `archivo/`, `musica/`, `musica/mini/` y `oficina/`): HTML, CSS y módulos de JavaScript sin compilar. |
 | `publico/app/markdown.js` | Markdown a HTML seguro (todo escapado), para el visor del archivo. |
 | `publico/app/archivo*.js` | El archivo en pantalla: la lista (`archivo.js`), el visor con índice y buscador (`archivo-visor.js`) y piezas comunes (`archivo-comun.js`). |
-| `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar (tablón, libro, pizarra, archivo, cumpleaños y personaje, música con un Spotify de mentira y acceso de la oficina). |
+| `publico/app/musica*.js` | La música en pantalla: la cabina (`musica.js`), el reproductor pequeño (`musica-mini.js`) y piezas comunes (`musica-comun.js`). |
+| `publico/app/cumple.js`, `confeti.js`, `oficina.js` | Los cumpleaños (cuentas y textos), el confeti y el puente invisible de la oficina (`/tareas/oficina/`). |
+| `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar, una por pantalla y cada una con su servidor y su puerto (tabla en «Las pruebas»). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
 
 Las tareas borradas pasan 30 días en una papelera interna (el aviso «Deshacer» las recupera).
+
+**Cómo se llega de una pantalla a otra:** el menú de la cuenta (arriba a la derecha) de cada pantalla y las pestañas
+de arriba llevan a las demás con los mismos nombres: «Tablón de tareas», «Libro de cuentas» (en las pestañas,
+«Cuentas»; solo a quien tiene parte en el reparto), «Pizarra», «Archivo» y «Música». Al añadir una pantalla nueva hay
+que añadirla en todas (en `principal.js`, `libro.js`, `pizarra.js`, `archivo.js` y `musica.js`, de `publico/app/`).
 
 ## Libro de cuentas
 
@@ -272,3 +279,24 @@ cd tareas
 TAREAS_DATOS=/tmp/tablon TAREAS_PUERTO=8411 node servidor/principal.js
 # abrir el enlace #alta=… que sale en la consola
 ```
+
+### Las pruebas
+
+Se pasan en GitHub antes de publicar la imagen (`.github/workflows/hotspot-tareas.yml`). Cada paso arranca **su propio
+servidor**, con su carpeta de datos (`/tmp/datos-…`), su registro y su puerto (ninguno se repite), y lo para al acabar;
+las pruebas de las pantallas usan el enlace de alta que sale en el registro de su servidor. Los comandos exactos, con
+sus variables, están en el workflow.
+
+| Paso | Prueba | Puerto | Qué comprueba |
+| --- | --- | --- | --- |
+| Probar el servidor | (con `curl`) | 3999 | Que arranca, sirve el tablón, imprime el enlace de alta y pide sesión (401) a quien no la tiene. |
+| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. |
+| Probar la pizarra | `pruebas/pizarra.mjs` | 3997 | Trazos, notas y fotos con dos personas a la vez, vaciar y recuperar, el lápiz en directo y quién la tiene abierta. |
+| Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora). |
+| Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje y puente `/tareas/oficina/`. |
+| Probar el archivo | `pruebas/archivo.mjs` | 3992 | Subir un documento de cada tipo, enlaces, papelera, búsqueda, lo que no debe entrar, Markdown y Word escapados y el límite total (`ARCHIVO_MAXIMO_MB=40`). |
+| Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify y lo que suena en directo; y la música «sin configurar». |
+| Probar el acceso de la oficina | `pruebas/oficina-oidc.mjs` y `pruebas/google-falso.mjs` | 3998 y 8412 (el Google de mentira) | Entrar por `/cuentas` con `openid-client` 5 (la librería de WorkAdventure): PKCE, `userinfo` y revocar. Es el único paso que instala un paquete (`npm install`). |
+
+El paso «Comprobar el código» pasa antes `node --check` a todo el JavaScript (`servidor/`, `publico/app/`, `portada/`
+y `pruebas/`).
