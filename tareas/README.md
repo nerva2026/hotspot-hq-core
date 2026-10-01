@@ -1,4 +1,4 @@
-# Portada, cuentas del crew, tablón, cuentas y pizarra · HOT SPOT S.L.
+# Portada, cuentas del crew, tablón, cuentas, pizarra y música · HOT SPOT S.L.
 
 Aplicación propia (Node, sin dependencias) con estas partes:
 
@@ -10,6 +10,8 @@ Aplicación propia (Node, sin dependencias) con estas partes:
 | `https://oficina.hot-spot.es/tareas/libro/` | Libro de cuentas de los socios. |
 | `https://oficina.hot-spot.es/tareas/pizarra/` | Pizarra compartida (la de la sala de reuniones). |
 | `https://oficina.hot-spot.es/tareas/oficina/` | Puente invisible: lo abre el mapa de la oficina, sin enseñarlo, para leer el tablón de quien juega. |
+| `https://oficina.hot-spot.es/tareas/musica/` | La cabina de música: escuchar a la vez lo que pincha alguien del crew (Spotify). |
+| `https://oficina.hot-spot.es/tareas/musica/mini/` | El reproductor pequeño (360 × 128 px) para abrirlo en la oficina mientras se anda. |
 
 ## Crew e invitados
 
@@ -59,8 +61,9 @@ Node 22 sin dependencias:
 | `servidor/libro.js` | Libro de cuentas: movimientos, reparto, quién debe a quién, CSV. |
 | `servidor/pizarra.js` | Pizarras: trazos, notas y fotos (en su propio `pizarras.json`). |
 | `servidor/perfil.js` | Cumpleaños («MM-DD»), qué día es hoy en la oficina y el personaje de cada uno. |
-| `publico/` | Las pantallas (tablón, `libro/`, `pizarra/` y `oficina/`): HTML, CSS y módulos de JavaScript sin compilar. |
-| `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar (tablón, libro, pizarra, cumpleaños y personaje, y acceso de la oficina). |
+| `servidor/musica.js` | Música: la cabina, conectar Spotify (OAuth) y mirar qué suena (en su propio `musica.json`). |
+| `publico/` | Las pantallas (tablón, `libro/`, `pizarra/`, `oficina/`, `musica/` y `musica/mini/`): HTML, CSS y módulos de JavaScript sin compilar. |
+| `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar (tablón, libro, pizarra, cumpleaños y personaje, música con un Spotify de mentira y acceso de la oficina). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
 
 Las tareas borradas pasan 30 días en una papelera interna (el aviso «Deshacer» las recupera).
@@ -137,6 +140,79 @@ ve nadie más ni se guardan (`scope: "world"` sin `persist: true` lo rechaza Wor
 - **Fuera de la oficina** (sin `WA`: abierta en una pestaña, o en local) no hace nada ni pide `/iframe_api.js`.
 - **Ligero y con la misma CSP** que las demás pantallas (`script-src 'self'`): sin interfaz, solo 4 módulos pequeños
   (`publico/app/oficina.js` y los que ya usa el tablón). `/iframe_api.js` pasa porque es de la misma web.
+
+## Música (Spotify)
+
+La cabina del estudio: una persona del crew pincha (pone música en su Spotify de siempre) y quien quiera la
+oye a la vez. **Por aquí no pasa audio**: Spotify no permite retransmitir el de una cuenta. El servidor solo
+mira qué le suena al DJ y lo cuenta a todos por el canal en directo; cada navegador pone la misma canción con
+el reproductor oficial de Spotify (Embed, `https://open.spotify.com/embed/iframe-api/v1`) y salta al mismo
+punto. Si esa persona ha entrado en Spotify en su navegador suena entera; si no, Spotify solo deja 30 segundos
+de muestra (la pantalla lo avisa). Los anuncios, los archivos locales del DJ y lo que no está en Spotify no se
+pueden poner.
+
+- **`/tareas/musica/`** (la cabina): lo que suena (portada, título, artistas, por dónde va), «Escuchar» /
+  «Silenciar», «Pinchar yo» / «Dejar la cabina», conectar y desconectar tu Spotify, las últimas 20 canciones
+  con quién las puso y, si falta configurar, los pasos de abajo. Solo hay un DJ a la vez; un administrador
+  puede dejar libre la cabina de otro.
+- **`/tareas/musica/mini/`**: la misma música en una barra de 360 × 128 px sin desplazamiento (portada,
+  título y artistas, quién pincha, escuchar y enlace a la cabina; «cabina vacía», «sin sesión», «sin
+  configurar» y «sin conexión»). La oficina la abre como un panel flotante; si la cabina y el pequeño están
+  abiertos a la vez, solo suena uno. Los paneles de la oficina tienen que dejar pasar el sonido
+  (`allow="autoplay; encrypted-media"` en el marco). El botón «Música» de la barra y la cabina del DJ del
+  mapa se ponen en el repositorio de mapas, no aquí.
+- Spotify no deja iniciar sesión dentro de un marco: «Conectar mi Spotify» se abre en una pestaña nueva y la
+  página de la oficina se actualiza sola (por el canal en directo) cuando termina.
+- **API** (con sesión del crew; lo que cambia algo lleva además la cabecera `x-tablon: 1`): `GET /api/musica` (estado),
+  `POST` y `DELETE /api/musica/cabina` (entrar y dejar la cabina), `POST /api/musica/desconectar`,
+  `POST /api/musica/escucho` (esta pestaña escucha o no, con `x-cliente`), `GET /api/musica/conectar` (lleva a
+  Spotify) y `GET /api/musica/vuelta` (la dirección de vuelta de Spotify). En `GET /api/eventos?musica=1&cliente=…`
+  llegan `musica`, `musica-oyentes` y `musica-yo`.
+- **Lo que se guarda:** `musica.json` en la carpeta de datos (permisos 600): quién está en la cabina, las
+  últimas 20 canciones y el token de refresco de cada persona que ha conectado Spotify. Los tokens no salen
+  del servidor (ni por la API, ni al registro) y el de acceso solo vive en memoria. Se pide únicamente permiso
+  de lectura (`user-read-currently-playing user-read-playback-state`). Quien sale del crew, quita el permiso
+  en Spotify o pulsa «Desconectar» pierde su token y deja la cabina.
+- **Cuánto se pregunta a Spotify:** solo mientras haya alguien con la música abierta, cada 5 segundos
+  (`MUSICA_INTERVALO_MS`); si Spotify pide calma (429) se espera lo que diga.
+- **Variables** (en el `.env` del servidor, nunca en el repositorio): `SPOTIFY_CLIENT_ID` y
+  `SPOTIFY_CLIENT_SECRET` (la aplicación de Spotify); opcionales `SPOTIFY_REDIRECT_URI` (por defecto
+  `<TAREAS_URL>api/musica/vuelta`, o sea `https://oficina.hot-spot.es/tareas/api/musica/vuelta`) y
+  `MUSICA_INTERVALO_MS`. `SPOTIFY_AUTH_URL`, `SPOTIFY_TOKEN_URL` y `SPOTIFY_API_URL` son solo para las pruebas
+  (el Spotify de mentira). Sin las dos primeras, la música sale como «sin configurar».
+
+### Ponerlo en marcha (una sola vez, lo hace una persona del equipo)
+
+1. Entrar en <https://developer.spotify.com/dashboard> con una cuenta de Spotify y crear una aplicación
+   («Create app»): nombre y descripción, y marcar «Web API».
+2. En «Redirect URIs» poner exactamente `https://oficina.hot-spot.es/tareas/api/musica/vuelta` (la cabina
+   la muestra, lista para copiar, a los administradores mientras falte configurar).
+3. En «User Management» añadir el nombre y el correo de Spotify de cada persona del crew que vaya a pinchar:
+   mientras la aplicación esté en modo de desarrollo, Spotify solo deja conectar esas cuentas (y limita cuántas).
+   Para escuchar no hace falta estar dada de alta.
+4. Copiar el «Client ID» y el «Client secret» a `/opt/hotspot-tareas/.env` (permisos 600):
+   `SPOTIFY_CLIENT_ID=…` y `SPOTIFY_CLIENT_SECRET=…`. Si el `docker-compose.yaml` lista las variables una a una
+   en lugar de leer el `.env` entero (`env_file`), añadirlas también ahí.
+5. Reiniciar el servicio: `cd /opt/hotspot-tareas && docker compose up -d`. En `/tareas/musica/` los pasos
+   dejan paso a la cabina; cada persona que vaya a pinchar pulsa «Conectar mi Spotify» una vez.
+
+### Probar la música en local
+
+Con el Spotify de mentira (`pruebas/spotify-falso.mjs`, que imita la autorización, los tokens y «lo que suena»
+y se maneja con peticiones `/control/…`):
+
+```sh
+cd tareas
+node pruebas/spotify-falso.mjs 8614 &
+TAREAS_DATOS=/tmp/m TAREAS_PUERTO=3995 TAREAS_URL=http://127.0.0.1:3995/tareas/ \
+SPOTIFY_CLIENT_ID=cliente-spotify SPOTIFY_CLIENT_SECRET=secreto-spotify \
+SPOTIFY_AUTH_URL=http://127.0.0.1:8614/authorize SPOTIFY_TOKEN_URL=http://127.0.0.1:8614/api/token \
+SPOTIFY_API_URL=http://127.0.0.1:8614/v1 MUSICA_INTERVALO_MS=300 node servidor/principal.js &
+TAREAS_DATOS=/tmp/m node pruebas/musica.mjs http://127.0.0.1:3995/tareas <código de #alta=…> http://127.0.0.1:8614 3996
+```
+
+El script de Spotify (Embed) no carga sin salida a internet; para ver las pantallas sin él, una prueba en
+navegador puede definir `window.onSpotifyIframeApiReady` con un reproductor de mentira.
 
 ## En el servidor
 

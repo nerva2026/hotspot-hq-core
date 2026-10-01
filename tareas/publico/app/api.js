@@ -18,7 +18,7 @@ export const cuandoSePierdaLaSesion = (fn) => {
     alPerderSesion = fn;
 };
 
-async function llamar(metodo, ruta, cuerpo, { binario = false, nombre, extra } = {}) {
+export async function llamar(metodo, ruta, cuerpo, { binario = false, nombre, extra } = {}) {
     const cabeceras = { "x-tablon": "1", "x-cliente": CLIENTE, ...extra };
     let body;
     if (binario) {

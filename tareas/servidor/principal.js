@@ -7,6 +7,7 @@
 //   /tareas/pizarra/ pizarras compartidas (reuniones…)              → publico/pizarra/, servidor/pizarra.js
 //   /tareas/oficina/ puente invisible de la oficina (para el mapa)  → publico/oficina/, publico/app/oficina.js
 //                    tareas y cumpleaños de quien juega               (y /api/oficina: servidor/perfil.js)
+//   /tareas/musica/  música con Spotify (la cabina del estudio)     → publico/musica/, servidor/musica.js
 //
 // Sin dependencias: solo Node.
 //
@@ -21,6 +22,7 @@
 //   TAREAS_ZONA     zona horaria de la oficina, para saber qué día es hoy (Europe/Madrid)
 //   TAREAS_HOY      SOLO PARA PRUEBAS: fija el día de hoy («2027-02-28») o el instante («2027-02-27T23:30:00Z»);
 //                   con NODE_ENV=production (la imagen de Docker) se ignora
+//   SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET   aplicación de Spotify (la música; ver servidor/musica.js)
 //
 // Órdenes (dentro del contenedor):
 //   node servidor/principal.js enlace   → imprime un enlace nuevo para dar de alta a alguien (con permisos
@@ -39,6 +41,7 @@ import { crearCrew, correoValido, limpiarCorreo } from "./crew.js";
 import * as libro from "./libro.js";
 import { abrirPizarras, idValido as pizarraValida, COLORES_TRAZO, GROSORES, ANCHO as ANCHO_PIZARRA, ALTO as ALTO_PIZARRA } from "./pizarra.js";
 import * as perfil from "./perfil.js";
+import { crearMusica } from "./musica.js";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PUBLICO = path.join(RAIZ, "publico");
@@ -154,6 +157,39 @@ function avisarPresentes(id) {
     emitirPizarra(id, { tipo: "pizarra-presentes", usuarios });
 }
 
+// Lo de la música (qué suena, la cabina, quién escucha) solo a quien tiene abierta la cabina o el reproductor.
+function emitirMusica(evento, condicion = () => true) {
+    const linea = `data: ${JSON.stringify(evento)}\n\n`;
+    for (const o of [...oyentes]) {
+        if (!o.musica || !condicion(o)) continue;
+        try {
+            o.res.write(linea);
+        } catch {
+            oyentes.delete(o);
+        }
+    }
+}
+
+const quienesEscuchan = () => [...new Set([...oyentes].filter((o) => o.musica && o.escucha).map((o) => o.usuario.id))];
+let escuchabanAntes = "[]";
+function avisarEscuchando() {
+    const ahora = quienesEscuchan();
+    if (JSON.stringify(ahora) === escuchabanAntes) return;
+    escuchabanAntes = JSON.stringify(ahora);
+    emitirMusica({ tipo: "musica-oyentes", escuchando: ahora });
+}
+
+const musica = crearMusica({
+    carpetaDatos: CARPETA_DATOS,
+    urlPublica: URL_PUBLICA,
+    base: BASE,
+    usuarioDe: (id) => datos().usuarios.find((u) => u.id === id) || null,
+    emitir: (evento) => emitirMusica(evento),
+    emitirA: (id, evento) => emitirMusica(evento, (o) => o.usuario.id === id),
+    hayOyentes: () => [...oyentes].some((o) => o.musica),
+    escuchando: quienesEscuchan,
+});
+
 function cerrarOyentes(condicion) {
     for (const o of [...oyentes]) {
         if (!condicion(o)) continue;
@@ -206,6 +242,12 @@ const TIPOS = {
 
 const CSP =
     "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; " +
+    "font-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; object-src 'none'";
+
+// La música (/tareas/musica/) además carga el reproductor oficial de Spotify (su script y su marco) y las portadas.
+const CSP_MUSICA =
+    "default-src 'self'; img-src 'self' data: https://i.scdn.co https://*.scdn.co https://*.spotifycdn.com; style-src 'self' 'unsafe-inline'; " +
+    "script-src 'self' https://open.spotify.com https://*.spotifycdn.com; frame-src https://open.spotify.com; connect-src 'self'; " +
     "font-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; object-src 'none'";
 
 function cabecerasComunes(res) {
@@ -279,7 +321,12 @@ function servirArchivo(req, res, ruta) {
         "Cache-Control": "no-cache",
         ETag: etag,
     };
-    if (archivo.endsWith(".html")) cabeceras["Content-Security-Policy"] = CSP;
+    if (archivo.endsWith(".html")) {
+        const deMusica = ruta.startsWith("/musica/");
+        cabeceras["Content-Security-Policy"] = deMusica ? CSP_MUSICA : CSP;
+        // El reproductor de Spotify recibe solo el origen (como hace el navegador por defecto), nunca la ruta.
+        if (deMusica) cabeceras["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    }
     if (req.headers["if-none-match"] === etag) {
         res.writeHead(304, cabeceras);
         return res.end();
@@ -675,6 +722,10 @@ async function api(req, res, ruta) {
         return json(res, 200, datosPara(persona));
     }
 
+    // Ida y vuelta a Spotify para conectar la cuenta: se abren en una pestaña y contestan con una página.
+    if (ruta === "/api/musica/conectar" && metodo === "GET") return musica.conectar(req, res, encontrada, new URL(req.url, "http://x"));
+    if (ruta === "/api/musica/vuelta" && metodo === "GET") return await musica.vuelta(req, res, encontrada, new URL(req.url, "http://x"));
+
     // --- con sesión ---
     if (!usuario) return fallo(res, 401, "Tienes que entrar con tu cuenta.");
 
@@ -753,6 +804,7 @@ async function api(req, res, ruta) {
             if (persona.baja) {
                 // Fuera del crew: se le cierran la oficina y el tablón al momento.
                 crew.revocarTodo(persona.id);
+                musica.olvidar(persona.id);
                 cerrarOyentes((o) => o.usuario.id === persona.id);
             }
         }
@@ -771,8 +823,18 @@ async function api(req, res, ruta) {
             "X-Accel-Buffering": "no",
         });
         res.write("retry: 3000\n\n");
-        const pizarra = new URL(req.url, "http://x").searchParams.get("pizarra");
-        const oyente = { res, usuario, sesion: encontrada.sesion, pizarra: pizarraValida(pizarra) ? pizarra : null };
+        const parametros = new URL(req.url, "http://x").searchParams;
+        const pizarra = parametros.get("pizarra");
+        const oyente = {
+            res,
+            usuario,
+            sesion: encontrada.sesion,
+            pizarra: pizarraValida(pizarra) ? pizarra : null,
+            // La música: «cliente» es la pestaña, para saber quién está escuchando (POST /api/musica/escucho).
+            musica: parametros.get("musica") === "1",
+            cliente: String(parametros.get("cliente") || "").slice(0, 40),
+            escucha: false,
+        };
         oyentes.add(oyente);
         let fuera = false;
         const quitar = () => {
@@ -780,11 +842,14 @@ async function api(req, res, ruta) {
             fuera = true;
             oyentes.delete(oyente);
             avisarPresentes(oyente.pizarra);
+            if (oyente.escucha) avisarEscuchando();
         };
         req.on("close", quitar);
         res.on("close", quitar);
         res.on("error", quitar);
         avisarPresentes(oyente.pizarra);
+        // Con la música abierta, el servidor mira qué suena (si estaba parado porque no había nadie).
+        if (oyente.musica) musica.despertar();
         return;
     }
 
@@ -1153,7 +1218,44 @@ async function api(req, res, ruta) {
         }
     }
 
+    // --- música (Spotify): la cabina del estudio ---
+    if (ruta === "/api/musica" && metodo === "GET") return json(res, 200, datosMusica(usuario));
+
+    if (ruta === "/api/musica/cabina" && metodo === "POST") {
+        musica.tomar(usuario);
+        return json(res, 200, datosMusica(usuario));
+    }
+    if (ruta === "/api/musica/cabina" && metodo === "DELETE") {
+        musica.dejar(usuario);
+        return json(res, 200, datosMusica(usuario));
+    }
+    if (ruta === "/api/musica/desconectar" && metodo === "POST") {
+        musica.desconectar(usuario);
+        return json(res, 200, datosMusica(usuario));
+    }
+    if (ruta === "/api/musica/escucho" && metodo === "POST") {
+        // Esta pestaña (x-cliente) se pone a escuchar o lo deja: los demás ven quién está escuchando.
+        const { si } = await leerJson(req);
+        let encontrado = false;
+        for (const o of oyentes) {
+            if (o.musica && o.usuario.id === usuario.id && origen && o.cliente === origen) {
+                o.escucha = Boolean(si);
+                encontrado = true;
+            }
+        }
+        avisarEscuchando();
+        return json(res, 200, { ok: encontrado, escuchando: quienesEscuchan() });
+    }
+
     return fallo(res, 404, "No existe");
+}
+
+function datosMusica(usuario) {
+    return {
+        ...musica.estadoPara(usuario),
+        yo: { ...cuentas.usuarioPublico(usuario), libro: puedeVerLibro(usuario) },
+        usuarios: datos().usuarios.map(cuentas.usuarioPublico),
+    };
 }
 
 // ---------- servidor ----------
@@ -1202,6 +1304,7 @@ function apagar() {
     try {
         if (almacen.pendiente()) almacen.guardarYa();
         if (pizarras.pendiente()) pizarras.guardarYa();
+        if (musica.pendiente()) musica.guardarYa();
     } catch (error) {
         console.error("[tablón] Error al guardar antes de salir:", error);
     }
@@ -1217,6 +1320,7 @@ process.on("uncaughtException", (error) => {
     try {
         if (almacen.pendiente()) almacen.guardarYa();
         if (pizarras.pendiente()) pizarras.guardarYa();
+        if (musica.pendiente()) musica.guardarYa();
     } finally {
         process.exit(1);
     }

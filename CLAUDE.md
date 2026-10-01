@@ -24,7 +24,7 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
 | `parches/01…10-*.patch` | Cambios sobre WorkAdventure, en orden (tabla en `README.md`). |
 | `archivos/` | Archivos propios que se copian encima (estilo retro, letras, marca, muñecos `hs-…`). |
 | `.github/workflows/hotspot-imagen.yml` | Construye la imagen `ghcr.io/nerva2026/hotspot-hq-play` (~7 min). |
-| `tareas/` | Servicio propio (Node sin dependencias): portada `/`, cuentas del crew `/cuentas`, tablón `/tareas` (con el cumpleaños y el personaje de cada uno: `/tareas/api/oficina`, `/tareas/api/yo/personaje`), libro de cuentas `/tareas/libro/`, pizarra `/tareas/pizarra/` y el puente invisible de la oficina `/tareas/oficina/` (la abre el mapa y deja las tareas y los cumpleaños de quien juega en las variables privadas `hsSesion`, `hsTareas` y `hsCumples`). Detalles en `tareas/README.md`. |
+| `tareas/` | Servicio propio (Node sin dependencias): portada `/`, cuentas del crew `/cuentas`, tablón `/tareas` (con el cumpleaños y el personaje de cada uno: `/tareas/api/oficina`, `/tareas/api/yo/personaje`), libro de cuentas `/tareas/libro/`, pizarra `/tareas/pizarra/`, música `/tareas/musica/` (cabina del DJ con Spotify, «escuchar a la vez» con el reproductor oficial; `musica/mini/` es la barra pequeña de 360×128 para la oficina; hace falta crear la aplicación de Spotify, ver «Música (Spotify)») y el puente invisible de la oficina `/tareas/oficina/` (la abre el mapa y deja las tareas y los cumpleaños de quien juega en las variables privadas `hsSesion`, `hsTareas` y `hsCumples`). Detalles en `tareas/README.md`. |
 | `.github/workflows/hotspot-tareas.yml` | Prueba y construye `ghcr.io/nerva2026/hotspot-hq-tareas` (~1 min), incluida una prueba con `openid-client` 5 (la librería de WorkAdventure). |
 
 ### Hacer o cambiar un parche
@@ -59,7 +59,7 @@ node servidor/principal.js
   - Traefik: el router `hq-entrada` (prioridad 1000) manda `/_/…` a la calle; la portada `/` la sirve
     `tareas` con prioridad 1100.
 - `/opt/hotspot-tareas`: `docker-compose.yaml` del servicio `tareas` (en la red de Traefik, rutas `/`,
-  `/cuentas`, `/tareas`), `.env` con las claves (Google, OIDC, primer admin; permisos 600) y `datos/`
+  `/cuentas`, `/tareas`), `.env` con las claves (Google, Spotify, OIDC, primer admin; permisos 600) y `datos/`
   (`tablon.json`, copias diarias en `copias/`, `clave-oidc.pem`).
 - Actualización sola cada 5 minutos: `/etc/cron.d/hotspot-oficina` (imagen `play`) y
   `/etc/cron.d/hotspot-tareas` (imagen `tareas`). Un push a esta rama llega solo a la oficina.
