@@ -5,6 +5,7 @@
 //   /tareas/     tablón de tareas (aplicación y API)                → carpeta publico/
 //   /tareas/libro/   libro de cuentas de Don Balance (misma API)    → publico/libro/, servidor/libro.js
 //   /tareas/pizarra/ pizarras compartidas (reuniones…)              → publico/pizarra/, servidor/pizarra.js
+//   /tareas/archivo/ archivo de documentos (la sala ARCHIVO)         → publico/archivo/, servidor/archivo.js
 //
 // Sin dependencias: solo Node.
 //
@@ -16,6 +17,7 @@
 //   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET     cliente OAuth de Google (entrar con Google)
 //   OIDC_SECRETO, OIDC_CLIENTE, OIDC_EMISOR    acceso de la oficina (WorkAdventure) a /cuentas
 //   CREW_ADMIN      correo de Google del primer administrador
+//   ARCHIVO_MAXIMO_MB  lo que pueden ocupar entre todos los documentos del archivo (1024)
 //
 // Órdenes (dentro del contenedor):
 //   node servidor/principal.js enlace   → imprime un enlace nuevo para dar de alta a alguien (con permisos
@@ -33,6 +35,7 @@ import { crearExcel, leerExcel, fechaDeCelda } from "./excel.js";
 import { crearCrew, correoValido, limpiarCorreo } from "./crew.js";
 import * as libro from "./libro.js";
 import { abrirPizarras, idValido as pizarraValida, COLORES_TRAZO, GROSORES, ANCHO as ANCHO_PIZARRA, ALTO as ALTO_PIZARRA } from "./pizarra.js";
+import { abrirArchivo } from "./archivo.js";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PUBLICO = path.join(RAIZ, "publico");
@@ -63,6 +66,7 @@ if (process.argv[2] === "enlace") {
 const almacen = abrirAlmacen(CARPETA_DATOS);
 const datos = () => almacen.datos;
 const pizarras = abrirPizarras(CARPETA_DATOS);
+const elArchivo = abrirArchivo(CARPETA_DATOS, { emitir: (evento, origen) => emitir(evento, origen), maximoTotal: (Number(process.env.ARCHIVO_MAXIMO_MB) || 1024) * 1024 * 1024 });
 const crew = crearCrew({
     almacen,
     cuentas,
@@ -155,6 +159,8 @@ setInterval(() => {
     if (datos().tareas.length !== antes) almacen.guardar();
     // Las pizarras: papelera y lo vaciado, 30 días; las fotos que ya no usa nadie, fuera.
     pizarras.limpiarViejo(limite);
+    // El archivo de documentos: lo de la papelera, a los 30 días, fuera (con su archivo).
+    elArchivo.limpiarViejo(limite);
     for (const archivo of pizarras.fotosHuerfanas()) fs.rm(path.join(pizarras.carpetaImagenes, archivo), { force: true }, () => {});
     // Lo mismo con los movimientos del libro de cuentas (y la foto de su tique).
     if (datos().libro) {
@@ -185,6 +191,8 @@ const TIPOS = {
 const CSP =
     "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; " +
     "font-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; object-src 'none'";
+// El archivo enseña dentro las vistas previas de Google (Docs, Hojas, Presentaciones y Drive).
+const CSP_ARCHIVO = `${CSP}; frame-src 'self' https://docs.google.com https://drive.google.com`;
 
 function cabecerasComunes(res) {
     res.setHeader("X-Content-Type-Options", "nosniff");
@@ -257,7 +265,7 @@ function servirArchivo(req, res, ruta) {
         "Cache-Control": "no-cache",
         ETag: etag,
     };
-    if (archivo.endsWith(".html")) cabeceras["Content-Security-Policy"] = CSP;
+    if (archivo.endsWith(".html")) cabeceras["Content-Security-Policy"] = relativa.startsWith("/archivo/") ? CSP_ARCHIVO : CSP;
     if (req.headers["if-none-match"] === etag) {
         res.writeHead(304, cabeceras);
         return res.end();
@@ -741,6 +749,16 @@ async function api(req, res, ruta) {
 
     if (ruta === "/api/datos" && metodo === "GET") return json(res, 200, datosPara(usuario));
 
+    // --- archivo de documentos (todo en servidor/archivo.js) ---
+    if (ruta === "/api/archivo" || ruta.startsWith("/api/archivo/")) {
+        return await elArchivo.manejar(req, res, ruta, {
+            usuario,
+            origen,
+            yo: { ...cuentas.usuarioPublico(usuario), libro: puedeVerLibro(usuario) },
+            usuarios: datos().usuarios.map(cuentas.usuarioPublico),
+        });
+    }
+
     if (ruta === "/api/eventos" && metodo === "GET") {
         res.writeHead(200, {
             "Content-Type": "text/event-stream; charset=utf-8",
@@ -1160,6 +1178,7 @@ function apagar() {
     try {
         if (almacen.pendiente()) almacen.guardarYa();
         if (pizarras.pendiente()) pizarras.guardarYa();
+        if (elArchivo.pendiente()) elArchivo.guardarYa();
     } catch (error) {
         console.error("[tablón] Error al guardar antes de salir:", error);
     }
@@ -1175,6 +1194,7 @@ process.on("uncaughtException", (error) => {
     try {
         if (almacen.pendiente()) almacen.guardarYa();
         if (pizarras.pendiente()) pizarras.guardarYa();
+        if (elArchivo.pendiente()) elArchivo.guardarYa();
     } finally {
         process.exit(1);
     }
