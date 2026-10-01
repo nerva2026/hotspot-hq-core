@@ -1,13 +1,19 @@
-diff --git a/play/index.html b/play/index.html
-index 0ab3ce9..fbf3020 100644
---- a/play/index.html
-+++ b/play/index.html
-@@ -221,6 +221,8 @@
-         <input type="hidden" id="authToken" value="{{ authToken }}" name="authToken">
-         <input type="hidden" id="matrixLoginToken" value="{{ matrixLoginToken }}" name="matrixLoginToken">
-         <div id="app"></div>
-+        <!-- HOT SPOT S.L.: número de versión (estilo en hotspot-retro.css) -->
-+        <div id="hotspot-version" aria-hidden="true">v0.2.0-alpha</div>
-         <script type="module" src="/src/svelte.ts"></script>
-     </body>
-     {{{cssVariablesOverride}}}
+diff --git a/play/src/front/Components/GameOverlay.svelte b/play/src/front/Components/GameOverlay.svelte
+index 3f0626e..aa16318 100644
+--- a/play/src/front/Components/GameOverlay.svelte
++++ b/play/src/front/Components/GameOverlay.svelte
+@@ -41,6 +41,7 @@
+     import WokaScene from "./Woka/WokaScene.svelte";
+     import Onboarding from "./Onboarding/Onboarding.svelte";
+     import PwaInstallScreen from "./PwaInstall/PwaInstallScreen.svelte";
++    import Novedades from "./Hotspot/Novedades.svelte";
+ 
+     interface Props {
+         game: Game;
+@@ -124,4 +125,6 @@
+ {/if}
+ 
+ <FloatingUiPopupList />
++<!-- HOT SPOT S.L.: número de versión (pulsable) y aviso de novedades -->
++<Novedades />
+ <!-- </div> -->
