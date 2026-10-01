@@ -198,14 +198,18 @@ function fila(t, ctx) {
         h(
             "td",
             { class: "col-hecha" },
-            h("input", {
-                type: "checkbox",
-                class: "casilla",
-                checked: hecha,
-                title: hecha ? "Marcar como pendiente" : "Marcar como hecha",
-                "aria-label": "Hecha",
-                onchange: (e) => ctx.cambiar(t.id, { estado: e.target.checked ? "hecho" : "por-hacer" }),
-            }),
+            h(
+                "label",
+                { class: "zona-toque" },
+                h("input", {
+                    type: "checkbox",
+                    class: "casilla",
+                    checked: hecha,
+                    title: hecha ? "Marcar como pendiente" : "Marcar como hecha",
+                    "aria-label": "Hecha",
+                    onchange: (e) => ctx.cambiar(t.id, { estado: e.target.checked ? "hecho" : "por-hacer" }),
+                }),
+            ),
         ),
         h(
             "td",

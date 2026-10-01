@@ -85,9 +85,10 @@ const ctx = {
             return null;
         }
     },
-    async cambiar(id, cambios) {
+    // Devuelve «ok», «conflicto» (otra persona cambió las notas y el servidor no las ha pisado) o «error».
+    async cambiar(id, cambios, opciones = {}) {
         const t = E.tareas.get(id);
-        if (!t) return;
+        if (!t) return "error";
         const c = { ...cambios };
         // Al cambiar de columna sin decir dónde, la tarea va al final de la nueva.
         if (c.estado && c.estado !== t.estado && !("orden" in c)) {
@@ -103,7 +104,7 @@ const ctx = {
         pintar();
         actualizarFicha(ctx);
         try {
-            const nueva = await api.cambiar(id, c);
+            const nueva = await api.cambiar(id, c, opciones.antes);
             // Solo se copian los campos que se han pedido: si mientras tanto se ha seguido escribiendo, no se pisa.
             const actual = E.tareas.get(id);
             if (actual) {
@@ -111,16 +112,24 @@ const ctx = {
             }
             pintar();
             actualizarFicha(ctx);
+            return "ok";
         } catch (err) {
+            if (err.estado === 409 && err.datos?.tarea) {
+                // El tablero enseña lo que hay ahora, pero la ficha no se repinta: lo escrito sigue ahí hasta que se elija.
+                E.tareas.set(id, err.datos.tarea);
+                pintar();
+                return "conflicto";
+            }
             aviso(`No se ha guardado: ${err.message}`, { tipo: "malo" });
             await recargar();
+            return "error";
         }
     },
     async borrar(id) {
         const t = E.tareas.get(id);
         if (!t) return;
         E.tareas.delete(id);
-        if (fichaAbierta() === id) cerrarFicha();
+        if (fichaAbierta() === id) cerrarFicha({ forzar: true });
         pintar();
         try {
             await api.borrar(id);
@@ -851,7 +860,7 @@ function alRecibir(ev) {
     } else if (ev.tipo === "borrada") {
         E.tareas.delete(ev.id);
         if (fichaAbierta() === ev.id) {
-            cerrarFicha();
+            cerrarFicha({ forzar: true });
             const quien = ctx.usuario(ev.autor);
             aviso(`${quien ? quien.nombre : "Alguien"} ha borrado la tarea que tenías abierta.`);
         }
@@ -880,7 +889,7 @@ function cargar(datos) {
     pintar();
     if (fichaAbierta()) {
         if (E.tareas.has(fichaAbierta())) actualizarFicha(ctx, { deFuera: true });
-        else cerrarFicha();
+        else cerrarFicha({ forzar: true });
     }
 }
 
@@ -897,7 +906,7 @@ function sinSesion() {
     dejarDeEscuchar?.();
     dejarDeEscuchar = null;
     E.yo = null;
-    cerrarFicha();
+    cerrarFicha({ forzar: true });
     cerrarMenu();
     pantallaEntrar(raiz, empezar);
 }

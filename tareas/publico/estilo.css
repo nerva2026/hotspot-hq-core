@@ -1974,3 +1974,76 @@ table.lista {
         justify-content: flex-start;
     }
 }
+
+/* ---------- aviso de choque de notas (en la ficha) ---------- */
+.zona-toque {
+    display: contents; /* en pantallas anchas la casilla se queda como está; en el móvil es una zona de toque */
+}
+.ficha-conflicto {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    background: var(--amarillo);
+    border: 2px solid var(--tinta);
+    font-size: 14px;
+}
+.ficha-conflicto[hidden] {
+    display: none;
+}
+.ficha-conflicto-texto {
+    flex: 1 1 100%;
+}
+.ficha-conflicto.llama {
+    animation: llama-conflicto 0.5s steps(1, end) 2;
+}
+@keyframes llama-conflicto {
+    50% {
+        background: var(--naranja);
+        color: #fff;
+    }
+}
+
+/* ---------- móvil: lo que se toca mide 44 px de alto como mínimo ---------- */
+@media (max-width: 600px) {
+    .pestana,
+    .btn,
+    .btn.pequeno,
+    .filtro,
+    .boton-yo,
+    .boton-icono,
+    .cerrar,
+    .anadir,
+    .segmento,
+    .ordenar,
+    .grupo,
+    .celda,
+    .propiedad-valor,
+    .subtarea .quitar,
+    .opcion,
+    .resumen-boton,
+    .cal-suelta,
+    .interruptor,
+    .aviso button,
+    .campo,
+    .buscar,
+    .celda-titulo,
+    .celda-nueva,
+    .subtarea-texto {
+        min-height: 44px;
+    }
+    .boton-icono,
+    .cerrar,
+    .subtarea .quitar {
+        min-width: 44px;
+    }
+    .zona-toque {
+        display: grid;
+        place-items: center;
+        min-width: 44px;
+        min-height: 44px;
+        cursor: pointer;
+    }
+}

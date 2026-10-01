@@ -1,6 +1,6 @@
 // Menús desplegables (estado, prioridad, personas, fechas, etiquetas), avisos y ventanas.
 
-import { h, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, hoy, sumarDias, lunesDe, fechaMedia, colorEtiqueta, normalizar, inicial } from "./util.js";
+import { h, rellenar, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, hoy, sumarDias, lunesDe, fechaMedia, colorEtiqueta, normalizar, inicial } from "./util.js";
 
 let abierto = null;
 
@@ -132,7 +132,8 @@ export function avatar(u, { tam = "" } = {}) {
 export function menuPersonas(ancla, usuarios, seleccion, alCambiar) {
     let elegidos = new Set(seleccion);
     const pintar = (lista) => {
-        lista.replaceChildren(
+        rellenar(
+            lista,
             ...usuarios.map((u) =>
                 opcion({
                     marcado: elegidos.has(u.id),
@@ -333,7 +334,8 @@ export function menuEtiquetas(ancla, actuales, todas, alCambiar) {
                 );
                 const q = limpiar(entrada.value);
                 const sugeridas = todas.filter((e) => !elegidas.includes(e) && (!q || e.includes(q))).slice(0, 8);
-                lista.replaceChildren(
+                rellenar(
+                    lista,
                     ...sugeridas.map((e) =>
                         opcion({
                             marcado: false,
