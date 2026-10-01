@@ -16,6 +16,9 @@
 //   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET     cliente OAuth de Google (entrar con Google)
 //   OIDC_SECRETO, OIDC_CLIENTE, OIDC_EMISOR    acceso de la oficina (WorkAdventure) a /cuentas
 //   CREW_ADMIN      correo de Google del primer administrador
+//   TAREAS_ZONA     zona horaria de la oficina, para saber qué día es hoy (Europe/Madrid)
+//   TAREAS_HOY      SOLO PARA PRUEBAS: fija el día de hoy («2027-02-28») o el instante («2027-02-27T23:30:00Z»);
+//                   con NODE_ENV=production (la imagen de Docker) se ignora
 //
 // Órdenes (dentro del contenedor):
 //   node servidor/principal.js enlace   → imprime un enlace nuevo para dar de alta a alguien (con permisos
@@ -33,6 +36,7 @@ import { crearExcel, leerExcel, fechaDeCelda } from "./excel.js";
 import { crearCrew, correoValido, limpiarCorreo } from "./crew.js";
 import * as libro from "./libro.js";
 import { abrirPizarras, idValido as pizarraValida, COLORES_TRAZO, GROSORES, ANCHO as ANCHO_PIZARRA, ALTO as ALTO_PIZARRA } from "./pizarra.js";
+import * as perfil from "./perfil.js";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PUBLICO = path.join(RAIZ, "publico");
@@ -71,6 +75,22 @@ const crew = crearCrew({
     urlPublica: URL_PUBLICA,
     alCambiarUsuarios: () => emitir({ tipo: "usuarios", usuarios: datos().usuarios.map(cuentas.usuarioPublico) }),
 });
+
+// Qué día es hoy en la oficina (el servidor va en UTC). TAREAS_HOY es solo para las pruebas.
+let ZONA = process.env.TAREAS_ZONA || perfil.ZONA_POR_DEFECTO;
+if (!perfil.zonaValida(ZONA)) {
+    console.error(`[tablón] TAREAS_ZONA=${ZONA} no es una zona horaria válida: se usa ${perfil.ZONA_POR_DEFECTO}.`);
+    ZONA = perfil.ZONA_POR_DEFECTO;
+}
+// En la imagen de Docker (NODE_ENV=production) se ignora: así no se puede quedar la oficina parada en un día.
+let HOY_FIJO = perfil.leerHoyFijo(process.env.TAREAS_HOY);
+if (HOY_FIJO && process.env.NODE_ENV === "production") {
+    console.error(`[tablón] TAREAS_HOY=${process.env.TAREAS_HOY} es solo para pruebas: con NODE_ENV=production no se usa.`);
+    HOY_FIJO = null;
+}
+if (HOY_FIJO === undefined) console.error(`[tablón] TAREAS_HOY=${process.env.TAREAS_HOY} no se entiende (AAAA-MM-DD o AAAA-MM-DDTHH:MM:SSZ): no se usa.`);
+const hoyOficina = () => perfil.hoyEnLaOficina(ZONA, HOY_FIJO || null);
+if (HOY_FIJO) console.warn(`[tablón] OJO: TAREAS_HOY=${process.env.TAREAS_HOY} es solo para pruebas. Para la oficina, hoy es ${hoyOficina()} (${ZONA}).`);
 
 const claveInterna = crypto.randomBytes(24).toString("hex");
 const CLAVE_FALSA = await cuentas.cifrarClave(crypto.randomBytes(12).toString("hex"));
@@ -767,7 +787,9 @@ async function api(req, res, ruta) {
     }
 
     if (ruta === "/api/yo" && metodo === "PATCH") {
-        const { color, clave, claveActual, nombre } = await leerJson(req);
+        const { color, clave, claveActual, nombre, cumple } = await leerJson(req);
+        // El cumpleaños se comprueba antes de cambiar nada: «MM-DD», o null para quitarlo.
+        const cumpleNuevo = cumple === undefined ? undefined : perfil.validarCumple(cumple);
         if (color !== undefined) {
             if (!cuentas.COLORES.includes(color)) return fallo(res, 400, "Color no válido");
             usuario.color = color;
@@ -783,9 +805,23 @@ async function api(req, res, ruta) {
             if (e) return fallo(res, 400, e);
             usuario.clave = await cuentas.cifrarClave(clave);
         }
+        if (cumpleNuevo) usuario.cumple = cumpleNuevo;
+        else if (cumpleNuevo === null) delete usuario.cumple;
         almacen.guardar();
         emitir({ tipo: "usuarios", usuarios: datos().usuarios.map(cuentas.usuarioPublico) });
         return json(res, 200, { yo: cuentas.usuarioPublico(usuario) });
+    }
+
+    // --- la oficina: cumpleaños de hoy y de los próximos 30 días (para el mapa, los paneles y el tablón) ---
+    if (ruta === "/api/oficina" && metodo === "GET") return json(res, 200, perfil.resumenOficina(datos().usuarios, hoyOficina()));
+
+    // --- el personaje de cada uno en la oficina (WorkAdventure lo guarda aquí para tenerlo en todos sus aparatos) ---
+    if (ruta === "/api/yo/personaje" && metodo === "GET") return json(res, 200, perfil.personajeDe(usuario));
+    if (ruta === "/api/yo/personaje" && metodo === "PUT") {
+        const { texturas, companero } = perfil.validarPersonaje(await leerJson(req));
+        usuario.personaje = { texturas, companero, actualizado: new Date().toISOString() };
+        almacen.guardar();
+        return json(res, 200, perfil.personajeDe(usuario));
     }
 
     if (ruta === "/api/invitar" && metodo === "POST") {

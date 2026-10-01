@@ -74,6 +74,22 @@ jobs:
           fi
           cat /tmp/prueba-pizarra.log
 
+      - name: Probar cumpleaños y personaje
+        working-directory: tareas
+        run: |
+          # Un servidor aparte (puerto 3994) con un «hoy» fijo, SOLO PARA PRUEBAS: las 23:30 en UTC del 27 de febrero
+          # de 2027, que en Madrid ya es el 28 (y 2027 no es bisiesto: quien nació un 29 lo celebra ese día).
+          mkdir -p /tmp/datos-cumple
+          TAREAS_HOY=2027-02-27T23:30:00Z TAREAS_DATOS=/tmp/datos-cumple TAREAS_PUERTO=3994 node servidor/principal.js > /tmp/tablon-cumple.log 2>&1 &
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:3994/tareas/salud && break; sleep 0.5; done
+          CODIGO=$(grep -o '#alta=[A-Za-z0-9_-]*' /tmp/tablon-cumple.log | head -1 | cut -d= -f2)
+          if ! node pruebas/cumple.mjs http://127.0.0.1:3994/tareas "$CODIGO" > /tmp/prueba-cumple.log 2>&1; then
+            cat /tmp/prueba-cumple.log /tmp/tablon-cumple.log
+            tail -n 15 /tmp/prueba-cumple.log | sed 's/%/%25/g' | while IFS= read -r linea; do echo "::error::cumple: $linea"; done
+            exit 1
+          fi
+          cat /tmp/prueba-cumple.log
+
       - name: Probar el acceso de la oficina (openid-client, como WorkAdventure)
         working-directory: tareas
         run: |
