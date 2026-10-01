@@ -74,6 +74,28 @@ jobs:
           fi
           cat /tmp/prueba-pizarra.log
 
+      - name: Probar la música
+        working-directory: tareas
+        run: |
+          # El Spotify de mentira (puerto 8614) y un servidor aparte (3995) que habla con él, con su propio enlace de alta.
+          # La prueba arranca por su cuenta otro servidor sin Spotify (3996) para ver la música «sin configurar».
+          mkdir -p /tmp/datos-musica
+          node pruebas/spotify-falso.mjs 8614 > /tmp/spotify-falso.log 2>&1 &
+          TAREAS_DATOS=/tmp/datos-musica TAREAS_PUERTO=3995 TAREAS_URL=http://127.0.0.1:3995/tareas/ \
+          SPOTIFY_CLIENT_ID=cliente-spotify SPOTIFY_CLIENT_SECRET=secreto-spotify \
+          SPOTIFY_AUTH_URL=http://127.0.0.1:8614/authorize SPOTIFY_TOKEN_URL=http://127.0.0.1:8614/api/token \
+          SPOTIFY_API_URL=http://127.0.0.1:8614/v1 MUSICA_INTERVALO_MS=300 \
+          node servidor/principal.js > /tmp/tablon-musica.log 2>&1 &
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:3995/tareas/salud && break; sleep 0.5; done
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:8614/control/estado > /dev/null && break; sleep 0.5; done
+          CODIGO=$(grep -o '#alta=[A-Za-z0-9_-]*' /tmp/tablon-musica.log | head -1 | cut -d= -f2)
+          if ! TAREAS_DATOS=/tmp/datos-musica node pruebas/musica.mjs http://127.0.0.1:3995/tareas "$CODIGO" http://127.0.0.1:8614 3996 > /tmp/prueba-musica.log 2>&1; then
+            cat /tmp/prueba-musica.log /tmp/tablon-musica.log /tmp/spotify-falso.log
+            tail -n 15 /tmp/prueba-musica.log | sed 's/%/%25/g' | while IFS= read -r linea; do echo "::error::música: $linea"; done
+            exit 1
+          fi
+          cat /tmp/prueba-musica.log
+
       - name: Probar el acceso de la oficina (openid-client, como WorkAdventure)
         working-directory: tareas
         run: |

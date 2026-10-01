@@ -608,8 +608,13 @@ if (puertoSinSpotify) {
         assert.match((await tomar.json()).error, /todavía no está conectada/);
         assert.equal((await fetch(`${baseSin}/musica/`)).status, 200);
     } finally {
-        hijo.kill();
-        fs.rmSync(datosSin, { recursive: true, force: true });
+        // Se espera a que el servidor se haya ido de verdad: si aún escribe en su carpeta, no se puede borrar.
+        await new Promise((listo) => {
+            hijo.once("exit", listo);
+            hijo.kill();
+            setTimeout(listo, 3000).unref();
+        });
+        fs.rmSync(datosSin, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
 } else {
     console.log("(sin puerto libre: no se prueba la música sin configurar)");
