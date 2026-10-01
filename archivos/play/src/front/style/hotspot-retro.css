@@ -179,18 +179,5 @@ textarea {
     letter-spacing: 0.04em;
 }
 
-/* ---------- número de versión: abajo a la izquierda, discreto y sin tapar nada ---------- */
-#hotspot-version {
-    position: fixed;
-    left: 4px;
-    bottom: 2px;
-    z-index: 9999;
-    font-family: "Pixelify Sans", ui-monospace, monospace;
-    font-size: 10px;
-    line-height: 1;
-    letter-spacing: 0.03em;
-    color: rgba(243, 230, 216, 0.45);
-    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
-    pointer-events: none;
-    user-select: none;
-}
+/* El número de versión (abajo a la izquierda, pulsable) y el aviso de novedades llevan su propio estilo
+   en Components/Hotspot/Novedades.svelte; qué versión es y qué novedades salen, en novedades.ts. */

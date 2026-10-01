@@ -1,0 +1,65 @@
+diff --git a/play/src/front/Connection/ConnectionManager.ts b/play/src/front/Connection/ConnectionManager.ts
+index b151f04..de718c8 100644
+--- a/play/src/front/Connection/ConnectionManager.ts
++++ b/play/src/front/Connection/ConnectionManager.ts
+@@ -16,6 +16,7 @@ import { ENABLE_OPENID } from "../Enum/EnvironmentVariable";
+ import { limitMapStore } from "../Stores/GameStore";
+ import { showLimitRoomModalStore } from "../Stores/ModalStore";
+ import { gameManager } from "../Phaser/Game/GameManager";
++import { sincronizarPersonajeConLaCuenta } from "./PersonajeCuenta";
+ import { locales } from "../../i18n/i18n-util";
+ import type { Locales } from "../../i18n/i18n-types";
+ import { setCurrentLocale } from "../Utils/locales";
+@@ -297,6 +298,8 @@ class ConnectionManager {
+                     return redirect;
+                 }
+             } else {
++                // HOT SPOT S.L.: el muñeco guardado en la cuenta manda sobre el del navegador (hasta 2 s; si falla, no pasa nada)
++                await sincronizarPersonajeConLaCuenta();
+                 try {
+                     const response = await this.checkAuthUserConnexion(this.authToken);
+                     if (response.status === "error") {
+diff --git a/play/src/front/Phaser/Game/GameManager.ts b/play/src/front/Phaser/Game/GameManager.ts
+index b292c7b..0e95148 100644
+--- a/play/src/front/Phaser/Game/GameManager.ts
++++ b/play/src/front/Phaser/Game/GameManager.ts
+@@ -22,6 +22,7 @@ import { PwaInstallSceneName } from "../Login/PwaInstallScene";
+ import { SelectCharacterSceneName } from "../Login/SelectCharacterScene";
+ import { EmptySceneName } from "../Login/EmptyScene";
+ import { gameSceneIsLoadedStore, gameSceneStore } from "../../Stores/GameSceneStore";
++import { guardarPersonajeEnLaCuenta } from "../../Connection/PersonajeCuenta";
+ import { myCameraStore } from "../../Stores/MyMediaStore";
+ import { SelectCompanionSceneName } from "../Login/SelectCompanionScene";
+ import { errorScreenStore } from "../../Stores/ErrorScreenStore";
+@@ -243,6 +244,7 @@ export class GameManager {
+         if (!localUserStore.isLogged() || !hasCapability("api/save-textures")) {
+             localUserStore.setCharacterTextures(textureIds);
+         }
++        guardarPersonajeEnLaCuenta(); // HOT SPOT S.L.
+     }
+ 
+     getPlayerName(): string | null {
+@@ -259,6 +261,7 @@ export class GameManager {
+ 
+     setCompanionTextureId(textureId: string | null): void {
+         this.companionTextureId = textureId;
++        guardarPersonajeEnLaCuenta(); // HOT SPOT S.L.
+     }
+ 
+     getCompanionTextureId(): string | null {
+diff --git a/play/src/pusher/services/LocalWokaService.ts b/play/src/pusher/services/LocalWokaService.ts
+index 046fefc..d0900f0 100644
+--- a/play/src/pusher/services/LocalWokaService.ts
++++ b/play/src/pusher/services/LocalWokaService.ts
+@@ -34,6 +34,11 @@ class LocalWokaService implements WokaServiceInterface {
+      * If one of the textures cannot be found, undefined is returned (and the user should be redirected to Woka choice page!)
+      */
+     async fetchWokaDetails(textureIds: string[]): Promise<WokaDetail[] | undefined> {
++        // HOT SPOT S.L.: sin ningún muñeco (ni guardado en el navegador ni en la cuenta) no hay nada válido:
++        // la lista vacía salía «bien» y se entraba con el muñeco gris por defecto sin preguntar.
++        if (textureIds.length === 0) {
++            return undefined;
++        }
+         const wokaData: WokaList = await this.loadWokaData();
+         const textures = new Map<string, string>();
+         const searchIds = new Set(textureIds);
