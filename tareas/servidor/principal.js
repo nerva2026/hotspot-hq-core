@@ -5,6 +5,8 @@
 //   /tareas/     tablón de tareas (aplicación y API)                → carpeta publico/
 //   /tareas/libro/   libro de cuentas de Don Balance (misma API)    → publico/libro/, servidor/libro.js
 //   /tareas/pizarra/ pizarras compartidas (reuniones…)              → publico/pizarra/, servidor/pizarra.js
+//   /tareas/oficina/ puente invisible de la oficina (para el mapa)  → publico/oficina/, publico/app/oficina.js
+//                    tareas y cumpleaños de quien juega               (y /api/oficina: servidor/perfil.js)
 //
 // Sin dependencias: solo Node.
 //

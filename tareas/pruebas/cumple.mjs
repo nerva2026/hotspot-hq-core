@@ -7,6 +7,7 @@
 // Primero comprueba las cuentas de fechas de servidor/perfil.js (zonas horarias, 29 de febrero, cambio de año…) y
 // luego la API: poner, quitar y comprobar el cumpleaños, «hoy en la oficina» (/api/oficina), el personaje
 // (/api/yo/personaje), que sin sesión no se ve nada y la página del puente de la oficina (/tareas/oficina/).
+// (El puente en funcionamiento, con una oficina de mentira —window.WA—, necesita un navegador y no se prueba aquí.)
 
 import assert from "node:assert/strict";
 import * as perfil from "../servidor/perfil.js";
@@ -333,4 +334,44 @@ assert.equal(r.datos.companero, null, "sin «companero» se queda sin compañero
 r = await victor("GET", "datos");
 assert.ok(!("personaje" in r.datos.yo), "el personaje no viaja con los datos del tablón");
 
-console.log("Cumpleaños y personaje: bien");
+// ---------- 3. el puente de la oficina (/tareas/oficina/) ----------
+// Lo abre el mapa sin enseñarlo; carga /iframe_api.js de la misma web, así que le vale la CSP de las demás páginas.
+const puente = await fetch(`${base}/oficina/`);
+assert.equal(puente.status, 200);
+assert.match(puente.headers.get("content-type") || "", /^text\/html/);
+const csp = puente.headers.get("content-security-policy") || "";
+assert.match(csp, /script-src 'self'(;|$)/, "solo guiones de la misma web (también /iframe_api.js)");
+assert.match(csp, /connect-src 'self'/, "habla con la API y los avisos en directo de la misma web");
+assert.match(csp, /frame-ancestors 'self'/, "solo la oficina (la misma web) puede meterlo en un marco");
+assert.equal(puente.headers.get("x-content-type-options"), "nosniff");
+const html = await puente.text();
+assert.match(html, /<script type="module" src="\.\.\/app\/oficina\.js"><\/script>/);
+assert.doesNotMatch(html, /<script(?![^>]*src=)[^>]*>/, "sin guiones en línea (la CSP no los deja)");
+const modulo = await fetch(`${base}/app/oficina.js`);
+assert.equal(modulo.status, 200);
+assert.match(modulo.headers.get("content-type") || "", /^text\/javascript/);
+const codigo = await modulo.text();
+assert.ok(codigo.includes('"/iframe_api.js"'), "carga la API de la oficina de la misma web");
+for (const variable of ["hsSesion", "hsTareas", "hsCumples"]) assert.ok(codigo.includes(`"${variable}"`), `escribe ${variable}`);
+for (const dependencia of ["api.js", "util.js", "cumple.js"]) {
+    const r = await fetch(`${base}/app/${dependencia}`);
+    assert.equal(r.status, 200, dependencia);
+    assert.match(r.headers.get("content-type") || "", /^text\/javascript/);
+}
+const sinBarra = await fetch(`${base}/oficina`, { redirect: "manual" });
+assert.equal(sinBarra.status, 301);
+assert.equal(new URL(sinBarra.headers.get("location"), base).pathname, new URL(`${base}/oficina/`).pathname);
+
+// ---------- 4. el texto del aviso (el mismo en el tablón y en el puente de la oficina) ----------
+const { textoCumples } = await import("../publico/app/cumple.js");
+const cDiego = { id: "d", nombre: "Diego" };
+const cVictor = { id: "v", nombre: "Víctor" };
+const cAna = { id: "a", nombre: "Ana" };
+assert.equal(textoCumples([], "d"), "", "sin cumples, sin aviso");
+assert.equal(textoCumples([cDiego], "v"), "¡Hoy es el cumple de Diego!");
+assert.equal(textoCumples([cDiego, cVictor], "a"), "¡Hoy es el cumple de Diego y Víctor!");
+assert.equal(textoCumples([cDiego, cVictor, cAna], "x"), "¡Hoy es el cumple de Diego, Víctor y Ana!");
+assert.equal(textoCumples([cDiego], "d"), "¡Feliz cumpleaños, Diego!", "a quien cumple se le felicita");
+assert.equal(textoCumples([cDiego, cVictor], "d"), "¡Feliz cumpleaños, Diego! Hoy también es el cumple de Víctor.");
+
+console.log("Cumpleaños, personaje y puente de la oficina: bien");

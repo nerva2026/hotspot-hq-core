@@ -1017,6 +1017,8 @@ function cargar(datos) {
 
 function empezar(datos) {
     cargar(datos);
+    // Para el puente de la oficina (/tareas/oficina/): si estaba sin sesión, se entera al momento.
+    guardarLocal("sesion", Date.now());
     montar();
     dejarDeEscuchar?.();
     dejarDeEscuchar = escuchar(alRecibir, recargar);
