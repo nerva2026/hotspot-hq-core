@@ -6,9 +6,10 @@ export const BASE_API = new URL("../api/", import.meta.url);
 export const CLIENTE = Math.random().toString(36).slice(2, 12);
 
 export class ErrorApi extends Error {
-    constructor(mensaje, estado) {
+    constructor(mensaje, estado, datos = null) {
         super(mensaje);
         this.estado = estado;
+        this.datos = datos; // lo que contestó el servidor (un 409 trae la tarea tal como está ahora)
     }
 }
 
@@ -42,7 +43,7 @@ async function llamar(metodo, ruta, cuerpo, { binario = false, nombre, extra } =
     }
     if (!r.ok) {
         if (r.status === 401 && ruta !== "entrar") alPerderSesion();
-        throw new ErrorApi(datos?.error || `Error ${r.status}`, r.status);
+        throw new ErrorApi(datos?.error || `Error ${r.status}`, r.status, datos);
     }
     return datos;
 }
@@ -60,7 +61,8 @@ export const api = {
     cambiarCrew: (id, datos) => llamar("PATCH", `crew/${id}`, datos),
     cambiarYo: (datos) => llamar("PATCH", "yo", datos),
     crear: (tarea) => llamar("POST", "tareas", tarea),
-    cambiar: (id, cambios) => llamar("PATCH", `tareas/${id}`, cambios),
+    // «antes»: el texto en el que se basan los cambios de las notas; si ya no es el que hay, el servidor contesta 409.
+    cambiar: (id, cambios, antes) => llamar("PATCH", `tareas/${id}`, antes ? { ...cambios, antes } : cambios),
     borrar: (id) => llamar("DELETE", `tareas/${id}`),
     restaurar: (id) => llamar("POST", `tareas/${id}/restaurar`),
     importar: (archivo) => llamar("POST", "importar", archivo, { binario: true }),

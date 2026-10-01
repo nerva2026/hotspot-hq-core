@@ -28,7 +28,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { abrirAlmacen } from "./almacen.js";
 import * as cuentas from "./cuentas.js";
-import { aplicarCambios, crearTarea, publica, ErrorDeDatos, ESTADOS, NOMBRES_ESTADO, NOMBRES_PRIORIDAD, PRIORIDADES } from "./tareas.js";
+import { aplicarCambios, camposEnConflicto, crearTarea, publica, ErrorDeDatos, ESTADOS, NOMBRES_ESTADO, NOMBRES_PRIORIDAD, PRIORIDADES } from "./tareas.js";
 import { crearExcel, leerExcel, fechaDeCelda } from "./excel.js";
 import { crearCrew, correoValido, limpiarCorreo } from "./crew.js";
 import * as libro from "./libro.js";
@@ -849,7 +849,11 @@ async function api(req, res, ruta) {
         }
         if (tarea.borrada) return fallo(res, 404, "Esa tarea está borrada.");
         if (metodo === "PATCH") {
-            const cambiados = aplicarCambios(tarea, await leerJson(req), datos().usuarios);
+            const cambios = await leerJson(req);
+            // Sin ningún «await» entre comprobar y aplicar: de dos guardados a la vez, el primero se guarda y el segundo recibe esto.
+            const choque = camposEnConflicto(tarea, cambios);
+            if (choque.length) return json(res, 409, { error: "Otra persona cambió las notas antes.", conflicto: choque, tarea: publica(tarea) });
+            const cambiados = aplicarCambios(tarea, cambios, datos().usuarios);
             if (!tarea.titulo) throw new ErrorDeDatos("La tarea necesita un título");
             if (cambiados.length) {
                 tocar(tarea, usuario);

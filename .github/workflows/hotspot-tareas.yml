@@ -74,6 +74,21 @@ jobs:
           fi
           cat /tmp/prueba-pizarra.log
 
+      - name: Probar el tablón
+        working-directory: tareas
+        run: |
+          # Un servidor aparte (puerto 3993), con su propio enlace de alta.
+          mkdir -p /tmp/datos-tablon
+          TAREAS_DATOS=/tmp/datos-tablon TAREAS_PUERTO=3993 node servidor/principal.js > /tmp/tablon-tablon.log 2>&1 &
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:3993/tareas/salud && break; sleep 0.5; done
+          CODIGO=$(grep -o '#alta=[A-Za-z0-9_-]*' /tmp/tablon-tablon.log | head -1 | cut -d= -f2)
+          if ! node pruebas/tablon.mjs http://127.0.0.1:3993/tareas "$CODIGO" > /tmp/prueba-tablon.log 2>&1; then
+            cat /tmp/prueba-tablon.log /tmp/tablon-tablon.log
+            tail -n 15 /tmp/prueba-tablon.log | sed 's/%/%25/g' | while IFS= read -r linea; do echo "::error::tablón: $linea"; done
+            exit 1
+          fi
+          cat /tmp/prueba-tablon.log
+
       - name: Probar el acceso de la oficina (openid-client, como WorkAdventure)
         working-directory: tareas
         run: |

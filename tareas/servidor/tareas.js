@@ -58,6 +58,19 @@ function personas(v, usuarios) {
     return [...new Set(v.filter((id) => ids.has(id)))];
 }
 
+// Textos largos que se escriben con guardado retrasado: si dos personas los editan a la vez, no gana el último
+// sin más. Quien escribe manda en «cambios.antes» el texto en el que se basó; si ya no es el que hay, no se guarda.
+export const TEXTOS_CON_VERSION = ["notas"];
+
+// Campos de «cambios» que otra persona ha cambiado desde la versión en la que se basa quien escribe.
+// Sin «antes» (clientes antiguos, importaciones…) no se comprueba nada, como siempre. Si lo que llega ya es
+// justo lo que hay, tampoco hay choque: da igual quién llegó primero.
+export function camposEnConflicto(tarea, cambios) {
+    const antes = cambios.antes;
+    if (!antes || typeof antes !== "object") return [];
+    return TEXTOS_CON_VERSION.filter((c) => c in cambios && c in antes && texto(antes[c], LIMITES[c]) !== tarea[c] && texto(cambios[c], LIMITES[c]) !== tarea[c]);
+}
+
 // Aplica sobre «tarea» los campos de «cambios» que sean válidos. Devuelve la lista de campos cambiados.
 export function aplicarCambios(tarea, cambios, usuarios) {
     const cambiados = [];

@@ -58,7 +58,7 @@ Node 22 sin dependencias:
 | `servidor/libro.js` | Libro de cuentas: movimientos, reparto, quién debe a quién, CSV. |
 | `servidor/pizarra.js` | Pizarras: trazos, notas y fotos (en su propio `pizarras.json`). |
 | `publico/` | Las pantallas (tablón, `libro/`, `pizarra/`): HTML, CSS y módulos de JavaScript sin compilar. |
-| `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar (libro, pizarra y acceso de la oficina). |
+| `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar (tablón, libro, pizarra y acceso de la oficina). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
 
 Las tareas borradas pasan 30 días en una papelera interna (el aviso «Deshacer» las recupera).

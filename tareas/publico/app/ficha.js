@@ -1,17 +1,30 @@
 // Ficha de una tarea: panel lateral para verla y editarla entera, como una página de Notion.
 
-import { h, retrasar, estadoDe, prioridadDe, plazo, fechaMedia, fechaCorta, fechaLarga, haceCuanto } from "./util.js";
-import { menuEstado, menuPrioridad, menuPersonas, menuPersona, menuFecha, menuEtiquetas, avatar, chipEtiqueta, cerrarMenu } from "./menus.js";
+import { h, rellenar, retrasar, estadoDe, prioridadDe, plazo, fechaMedia, fechaCorta, fechaLarga, haceCuanto } from "./util.js";
+import { menuEstado, menuPrioridad, menuPersonas, menuPersona, menuFecha, menuEtiquetas, avatar, chipEtiqueta, cerrarMenu, aviso } from "./menus.js";
 
 let abierta = null; // id
 let panel = null;
 let guardarTitulo = null;
 let guardarNotas = null;
+let notasEnConflicto = false; // otra persona ha cambiado las notas a la vez y quien escribe aún no ha elegido
 
 export const fichaAbierta = () => abierta;
 
-export function cerrarFicha() {
-    if (!panel) return;
+// Mientras haya un choque de notas sin resolver no se cierra (se perdería lo escrito), salvo con «forzar» (tarea
+// borrada, sesión cerrada…). Devuelve si se ha cerrado.
+export function cerrarFicha({ forzar = false } = {}) {
+    if (!panel) return true;
+    if (notasEnConflicto && !forzar) {
+        // Se llama la atención sin mover el foco: si se sigue escribiendo, una tecla no puede elegir por nadie.
+        const caja = panel.querySelector(".ficha-conflicto");
+        caja.classList.remove("llama");
+        void caja.offsetWidth;
+        caja.classList.add("llama");
+        caja.scrollIntoView({ block: "nearest" });
+        return false;
+    }
+    notasEnConflicto = false;
     guardarTitulo?.pendiente() && guardarTitulo.ya();
     guardarNotas?.pendiente() && guardarNotas.ya();
     cerrarMenu();
@@ -21,6 +34,7 @@ export function cerrarFicha() {
     abierta = null;
     document.body.classList.remove("con-ficha");
     document.querySelector(`[data-id="${CSS.escape(id)}"]`)?.focus({ preventScroll: true });
+    return true;
 }
 
 function crecer(area) {
@@ -30,9 +44,10 @@ function crecer(area) {
 
 const ENLACE = /\bhttps?:\/\/[^\s<>"')]+/g;
 
-export function abrirFicha(id, ctx, { nueva = false } = {}) {
+// «mias»: unas notas que no se llegaron a guardar por un choque; se abre la ficha con ellas y el aviso para elegir.
+export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
     if (abierta === id && panel) return;
-    if (panel) cerrarFicha();
+    if (panel && !cerrarFicha()) return;
     const t = ctx.E.tareas.get(id);
     if (!t) return;
     abierta = id;
@@ -41,10 +56,11 @@ export function abrirFicha(id, ctx, { nueva = false } = {}) {
     const marcarGuardando = () => {
         estadoGuardado.textContent = "Guardando…";
     };
-    const cambiar = async (cambios) => {
+    const cambiar = async (cambios, opciones) => {
         marcarGuardando();
-        await ctx.cambiar(id, cambios);
-        estadoGuardado.textContent = "Guardado";
+        const r = await ctx.cambiar(id, cambios, opciones);
+        estadoGuardado.textContent = r === "ok" ? "Guardado" : "Sin guardar";
+        return r;
     };
 
     const titulo = h("textarea", {
@@ -76,19 +92,75 @@ export function abrirFicha(id, ctx, { nueva = false } = {}) {
 
     const notas = h("textarea", { class: "ficha-notas", placeholder: "Detalles, enlaces, contactos, lo que haga falta…", "aria-label": "Notas" });
     const enlaces = h("div", { class: "ficha-enlaces" });
-    guardarNotas = retrasar(() => {
-        if (notas.value !== ctx.E.tareas.get(id)?.notas) cambiar({ notas: notas.value });
-    }, 800);
+    const avisoConflicto = h("div", { class: "ficha-conflicto", role: "alert", hidden: true });
+    // Las notas del servidor en las que se basa lo que hay escrito. Se mandan al guardar: si otra persona ya las ha
+    // cambiado, el servidor no las pisa (409) y aquí se deja elegir.
+    let baseNotas = t.notas;
+    let enVuelo = false;
+    let conflicto = false;
+    const notasSinConfirmar = () => guardarNotas.pendiente() || enVuelo || conflicto;
+    async function enviarNotas() {
+        if (conflicto || enVuelo || notas.value === baseNotas) return;
+        const texto = notas.value;
+        const suPanel = panel;
+        enVuelo = true;
+        const r = await cambiar({ notas: texto }, { antes: { notas: baseNotas } });
+        enVuelo = false;
+        if (r === "ok") baseNotas = texto;
+        if (r === "conflicto") {
+            if (panel === suPanel) mostrarConflicto();
+            else aviso("Notas sin guardar: otra persona las cambió.", { tipo: "malo", accion: "Ver", duracion: 15000, alAccion: () => abrirFicha(id, ctx, { mias: texto }) });
+            return;
+        }
+        if (panel === suPanel && notas.value !== baseNotas) guardarNotas(); // se ha seguido escribiendo mientras tanto
+    }
+    function mostrarConflicto() {
+        conflicto = true;
+        notasEnConflicto = true;
+        const editor = ctx.usuario(ctx.E.tareas.get(id)?.actualizadaPor);
+        rellenar(
+            avisoConflicto,
+            h("span", { class: "ficha-conflicto-texto" }, `${editor && editor.id !== ctx.E.yo.id ? editor.nombre : "Otra ventana tuya"} ha cambiado estas notas a la vez.`),
+            h("button", { type: "button", class: "btn pequeno", onclick: dejarLasMias }, "Dejar las mías"),
+            h("button", { type: "button", class: "btn pequeno", onclick: usarLasSuyas }, "Usar las suyas"),
+        );
+        avisoConflicto.hidden = false;
+        estadoGuardado.textContent = "Sin guardar";
+        panel.pintar(); // lo demás (último cambio, propiedades…) se pone como está en el servidor; las notas escritas no se tocan
+    }
+    function resolverConflicto() {
+        conflicto = false;
+        notasEnConflicto = false;
+        avisoConflicto.hidden = true;
+    }
+    function dejarLasMias() {
+        resolverConflicto();
+        baseNotas = ctx.E.tareas.get(id)?.notas ?? baseNotas; // lo que hay ahora en el servidor: se guarda encima
+        if (notas.value === baseNotas) estadoGuardado.textContent = "Guardado";
+        enviarNotas();
+    }
+    function usarLasSuyas() {
+        resolverConflicto();
+        const actual = ctx.E.tareas.get(id);
+        if (actual) {
+            notas.value = actual.notas;
+            baseNotas = actual.notas;
+            crecer(notas);
+            pintarEnlaces();
+        }
+        estadoGuardado.textContent = "Guardado";
+    }
+    guardarNotas = retrasar(enviarNotas, 800);
     notas.addEventListener("input", () => {
         crecer(notas);
-        marcarGuardando();
+        if (!conflicto) marcarGuardando();
         guardarNotas();
         pintarEnlaces();
     });
     notas.addEventListener("blur", () => guardarNotas.pendiente() && guardarNotas.ya());
     function pintarEnlaces() {
         const urls = [...new Set(notas.value.match(ENLACE) || [])].slice(0, 12);
-        enlaces.replaceChildren(...urls.map((u) => h("a", { href: u, target: "_blank", rel: "noopener noreferrer" }, u.replace(/^https?:\/\//, "").slice(0, 60), " ↗")));
+        rellenar(enlaces, ...urls.map((u) => h("a", { href: u, target: "_blank", rel: "noopener noreferrer" }, u.replace(/^https?:\/\//, "").slice(0, 60), " ↗")));
     }
 
     const propiedades = h("div", { class: "propiedades" });
@@ -141,7 +213,7 @@ export function abrirFicha(id, ctx, { nueva = false } = {}) {
             titulo,
             propiedades,
             subtareas,
-            h("section", { class: "ficha-seccion" }, h("h3", null, "Notas"), notas, enlaces),
+            h("section", { class: "ficha-seccion" }, h("h3", null, "Notas"), avisoConflicto, notas, enlaces),
             pie,
         ),
     );
@@ -175,7 +247,8 @@ export function abrirFicha(id, ctx, { nueva = false } = {}) {
         const responsables = t.responsables.map(ctx.usuario).filter(Boolean);
         const pedido = ctx.usuario(t.pedidoPor);
         panel.style.setProperty("--color-prioridad", prio.color);
-        propiedades.replaceChildren(
+        rellenar(
+            propiedades,
             fila("Estado", [h("span", { class: "punto-estado", style: { background: est.color } }), est.nombre], (a) => menuEstado(a, t.estado, (v) => cambiar({ estado: v }))),
             fila(
                 "Prioridad",
@@ -210,13 +283,17 @@ export function abrirFicha(id, ctx, { nueva = false } = {}) {
                 h(
                     "li",
                     { class: ["subtarea", s.hecha && "hecha"] },
-                    h("input", {
-                        type: "checkbox",
-                        class: "casilla",
-                        checked: s.hecha,
-                        "aria-label": "Hecha",
-                        onchange: (e) => guardarLista(t.subtareas.map((x, j) => (j === i ? { ...x, hecha: e.target.checked } : x))),
-                    }),
+                    h(
+                        "label",
+                        { class: "zona-toque" },
+                        h("input", {
+                            type: "checkbox",
+                            class: "casilla",
+                            checked: s.hecha,
+                            "aria-label": "Hecha",
+                            onchange: (e) => guardarLista(t.subtareas.map((x, j) => (j === i ? { ...x, hecha: e.target.checked } : x))),
+                        }),
+                    ),
                     h("input", {
                         class: "subtarea-texto",
                         value: s.texto,
@@ -249,7 +326,8 @@ export function abrirFicha(id, ctx, { nueva = false } = {}) {
                 subtareas.querySelector(".subtarea-nueva")?.focus();
             },
         });
-        subtareas.replaceChildren(
+        rellenar(
+            subtareas,
             h("h3", null, "Subtareas", total ? h("span", { class: "tenue" }, ` ${hechas}/${total}`) : null),
             total ? h("div", { class: "progreso" }, h("span", { style: { width: `${(100 * hechas) / total}%` } })) : null,
             lista,
@@ -262,7 +340,8 @@ export function abrirFicha(id, ctx, { nueva = false } = {}) {
         if (!t) return;
         const creador = ctx.usuario(t.creadaPor);
         const editor = ctx.usuario(t.actualizadaPor);
-        pie.replaceChildren(
+        rellenar(
+            pie,
             h("span", null, `Creada ${creador ? `por ${creador.nombre} ` : ""}el ${fechaLarga(t.creada.slice(0, 10))}.`),
             t.actualizada !== t.creada ? h("span", null, ` Último cambio ${editor ? `de ${editor.nombre} ` : ""}${haceCuanto(t.actualizada)}.`) : null,
             t.hechaEl ? h("span", null, ` Hecha el ${fechaMedia(t.hechaEl.slice(0, 10))}.`) : null,
@@ -276,8 +355,12 @@ export function abrirFicha(id, ctx, { nueva = false } = {}) {
             titulo.value = t.titulo;
             crecer(titulo);
         }
-        if (document.activeElement !== notas && notas.value !== t.notas && !guardarNotas.pendiente()) {
+        // Con el cursor puesto también se actualizan, si no hay nada escrito encima de lo que se veía.
+        if ((document.activeElement !== notas || notas.value === baseNotas) && notas.value !== t.notas && !notasSinConfirmar()) {
+            const { selectionStart: desde, selectionEnd: hasta } = notas;
             notas.value = t.notas;
+            baseNotas = t.notas;
+            if (document.activeElement === notas) notas.setSelectionRange(Math.min(desde, t.notas.length), Math.min(hasta, t.notas.length));
             crecer(notas);
             pintarEnlaces();
         }
@@ -285,7 +368,7 @@ export function abrirFicha(id, ctx, { nueva = false } = {}) {
         // No se repintan las subtareas mientras se está escribiendo en una (se perdería lo escrito).
         if (!document.activeElement?.matches?.(".subtarea-texto, .subtarea-nueva")) pintarSubtareas();
         pintarPie();
-        if (deFuera) {
+        if (deFuera && !conflicto) {
             const editor = ctx.usuario(t.actualizadaPor);
             if (editor && editor.id !== ctx.E.yo.id) estadoGuardado.textContent = `${editor.nombre} acaba de cambiarla`;
         }
@@ -295,6 +378,10 @@ export function abrirFicha(id, ctx, { nueva = false } = {}) {
     notas.value = t.notas;
     panel.pintar();
     pintarEnlaces();
+    if (mias !== undefined) {
+        notas.value = mias;
+        mostrarConflicto();
+    }
     requestAnimationFrame(() => {
         crecer(titulo);
         crecer(notas);
