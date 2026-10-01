@@ -1,5 +1,5 @@
 // Prueba del archivo de documentos contra un servidor en marcha sin Google (como el paso «Probar el servidor»):
-//   node pruebas/archivo.mjs http://127.0.0.1:3996/tareas <código de alta del registro>
+//   node pruebas/archivo.mjs http://127.0.0.1:3992/tareas <código de alta del registro>
 // Crea dos cuentas (Diego y Víctor), sube un documento de cada tipo (Markdown, texto, PDF, fotos y Word, hechos aquí
 // mismo, inventados) y comprueba la lista, los cambios, fijar, buscar, la papelera, los enlaces, lo que no debe entrar
 // (tipos que no cuadran, demasiado grande, nombres con «../»), las cabeceras de los archivos y que un Markdown y un

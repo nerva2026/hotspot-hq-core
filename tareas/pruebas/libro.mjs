@@ -1,5 +1,6 @@
-// Prueba del libro de cuentas contra un servidor en marcha sin Google (como el paso «Probar el servidor»):
-//   node pruebas/libro.mjs http://127.0.0.1:3999/tareas <código de alta del registro>
+// Prueba del libro de cuentas contra un servidor en marcha sin Google (el que arranca el paso «Probar el libro de
+// cuentas», con su propia carpeta de datos, en el puerto 3991):
+//   node pruebas/libro.mjs http://127.0.0.1:3991/tareas <código de alta del registro>
 // Crea dos cuentas (Diego y Víctor), apunta gastos, ingresos y pagos, y comprueba el balance, el CSV, el Excel,
 // la importación de la hoja de Drive y los tiques.
 

@@ -34,26 +34,35 @@ jobs:
         with:
           node-version: 22
       - run: |
-          for f in tareas/servidor/*.js tareas/publico/app/*.js; do node --check "$f"; done
+          for f in tareas/servidor/*.js tareas/publico/app/*.js tareas/portada/*.js tareas/pruebas/*.mjs; do node --check "$f"; done
 
+      # Pruebas: cada paso arranca su propio servidor, con su carpeta de datos, su registro y su puerto (no se repite
+      # ninguno), y lo para al acabar. Puertos: servidor 3999 · libro 3991 · pizarra 3997 · tablón 3993 ·
+      # cumpleaños 3994 · archivo 3992 · música 3995 (la prueba arranca otro sin Spotify en el 3996 y usa el
+      # Spotify de mentira del 8614) · acceso de la oficina 3998 (con el Google de mentira del 8412).
       - name: Probar el servidor
         working-directory: tareas
         run: |
-          mkdir -p /tmp/datos
-          TAREAS_DATOS=/tmp/datos TAREAS_PUERTO=3999 node servidor/principal.js > /tmp/tablon.log 2>&1 &
+          trap 'kill $(jobs -p) 2>/dev/null || true' EXIT   # al acabar el paso (bien o mal) se para lo que haya arrancado
+          mkdir -p /tmp/datos-servidor
+          TAREAS_DATOS=/tmp/datos-servidor TAREAS_PUERTO=3999 node servidor/principal.js > /tmp/tablon-servidor.log 2>&1 &
           for i in $(seq 1 20); do curl -fs http://127.0.0.1:3999/tareas/salud && break; sleep 0.5; done
           curl -fs http://127.0.0.1:3999/tareas/ | grep -q "Tareas · HOT SPOT S.L."
-          grep -q "#alta=" /tmp/tablon.log
+          grep -q "#alta=" /tmp/tablon-servidor.log
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3999/tareas/api/datos)" = 401
           echo "Servidor del tablón: bien"
 
       - name: Probar el libro de cuentas
         working-directory: tareas
         run: |
-          # Usa el servidor del paso anterior (puerto 3999) y su enlace de alta, que aún no ha usado nadie.
-          CODIGO=$(grep -o '#alta=[A-Za-z0-9_-]*' /tmp/tablon.log | head -1 | cut -d= -f2)
-          if ! node pruebas/libro.mjs http://127.0.0.1:3999/tareas "$CODIGO" > /tmp/prueba-libro.log 2>&1; then
-            cat /tmp/prueba-libro.log /tmp/tablon.log
+          trap 'kill $(jobs -p) 2>/dev/null || true' EXIT   # al acabar el paso (bien o mal) se para lo que haya arrancado
+          # Un servidor aparte (puerto 3991), con su propio enlace de alta.
+          mkdir -p /tmp/datos-libro
+          TAREAS_DATOS=/tmp/datos-libro TAREAS_PUERTO=3991 node servidor/principal.js > /tmp/tablon-libro.log 2>&1 &
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:3991/tareas/salud && break; sleep 0.5; done
+          CODIGO=$(grep -o '#alta=[A-Za-z0-9_-]*' /tmp/tablon-libro.log | head -1 | cut -d= -f2)
+          if ! node pruebas/libro.mjs http://127.0.0.1:3991/tareas "$CODIGO" > /tmp/prueba-libro.log 2>&1; then
+            cat /tmp/prueba-libro.log /tmp/tablon-libro.log
             tail -n 15 /tmp/prueba-libro.log | sed 's/%/%25/g' | while IFS= read -r linea; do echo "::error::libro: $linea"; done
             exit 1
           fi
@@ -62,6 +71,7 @@ jobs:
       - name: Probar la pizarra
         working-directory: tareas
         run: |
+          trap 'kill $(jobs -p) 2>/dev/null || true' EXIT   # al acabar el paso (bien o mal) se para lo que haya arrancado
           # Un servidor aparte (puerto 3997), con su propio enlace de alta.
           mkdir -p /tmp/datos-pizarra
           TAREAS_DATOS=/tmp/datos-pizarra TAREAS_PUERTO=3997 node servidor/principal.js > /tmp/tablon-pizarra.log 2>&1 &
@@ -77,6 +87,7 @@ jobs:
       - name: Probar el tablón
         working-directory: tareas
         run: |
+          trap 'kill $(jobs -p) 2>/dev/null || true' EXIT   # al acabar el paso (bien o mal) se para lo que haya arrancado
           # Un servidor aparte (puerto 3993), con su propio enlace de alta.
           mkdir -p /tmp/datos-tablon
           TAREAS_DATOS=/tmp/datos-tablon TAREAS_PUERTO=3993 node servidor/principal.js > /tmp/tablon-tablon.log 2>&1 &
@@ -92,6 +103,7 @@ jobs:
       - name: Probar cumpleaños y personaje
         working-directory: tareas
         run: |
+          trap 'kill $(jobs -p) 2>/dev/null || true' EXIT   # al acabar el paso (bien o mal) se para lo que haya arrancado
           # Un servidor aparte (puerto 3994) con un «hoy» fijo, SOLO PARA PRUEBAS: las 23:30 en UTC del 27 de febrero
           # de 2027, que en Madrid ya es el 28 (y 2027 no es bisiesto: quien nació un 29 lo celebra ese día).
           mkdir -p /tmp/datos-cumple
@@ -108,6 +120,7 @@ jobs:
       - name: Probar la música
         working-directory: tareas
         run: |
+          trap 'kill $(jobs -p) 2>/dev/null || true' EXIT   # al acabar el paso (bien o mal) se para lo que haya arrancado
           # El Spotify de mentira (puerto 8614) y un servidor aparte (3995) que habla con él, con su propio enlace de alta.
           # La prueba arranca por su cuenta otro servidor sin Spotify (3996) para ver la música «sin configurar».
           mkdir -p /tmp/datos-musica
@@ -130,6 +143,7 @@ jobs:
       - name: Probar el archivo
         working-directory: tareas
         run: |
+          trap 'kill $(jobs -p) 2>/dev/null || true' EXIT   # al acabar el paso (bien o mal) se para lo que haya arrancado
           # Un servidor aparte (puerto 3992), con su propio enlace de alta y poco sitio (40 MB) para probar también el límite total.
           mkdir -p /tmp/datos-archivo
           TAREAS_DATOS=/tmp/datos-archivo TAREAS_PUERTO=3992 ARCHIVO_MAXIMO_MB=40 node servidor/principal.js > /tmp/tablon-archivo.log 2>&1 &
@@ -145,6 +159,7 @@ jobs:
       - name: Probar el acceso de la oficina (openid-client, como WorkAdventure)
         working-directory: tareas
         run: |
+          trap 'kill $(jobs -p) 2>/dev/null || true' EXIT   # al acabar el paso (bien o mal) se para lo que haya arrancado
           mkdir -p /tmp/oidc && (cd /tmp/oidc && npm init -y >/dev/null && npm install --silent openid-client@5.7.1)
           node pruebas/google-falso.mjs > /tmp/google.log 2>&1 &
           mkdir -p /tmp/datos-oidc
@@ -155,7 +170,6 @@ jobs:
           CREW_ADMIN=admin@example.com node servidor/principal.js > /tmp/tablon-oidc.log 2>&1 &
           for i in $(seq 1 20); do curl -fs http://127.0.0.1:3998/tareas/salud && break; sleep 0.5; done
           cp pruebas/oficina-oidc.mjs /tmp/oidc/
-          # (el servidor del paso anterior sigue en el 3999; este usa el 3998)
           if ! (cd /tmp/oidc && node oficina-oidc.mjs > /tmp/prueba-oidc.log 2>&1); then
             cat /tmp/prueba-oidc.log /tmp/tablon-oidc.log
             # Los errores también como anotaciones, para poder leerlos sin entrar en GitHub
