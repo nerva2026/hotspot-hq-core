@@ -1974,3 +1974,129 @@ table.lista {
         justify-content: flex-start;
     }
 }
+
+/* ---------- cumpleaños: aviso del día, confeti, «Mi cuenta», calendario y crew ---------- */
+.cumple-zona {
+    flex: none;
+}
+.cumple-aviso {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 8px 6px 12px;
+    color: var(--tinta);
+    border-bottom: 3px solid var(--tinta);
+    /* una tira de papelitos de colores por arriba */
+    background:
+        repeating-linear-gradient(90deg, var(--naranja) 0 9px, transparent 9px 18px, #c4461f 18px 27px, transparent 27px 36px, var(--crema) 36px 45px, transparent 45px 54px) top / 100% 3px no-repeat,
+        var(--amarillo);
+}
+.cumple-texto {
+    flex: 1;
+    min-width: 0;
+    font: 700 16px/1.25 var(--texto);
+    overflow-wrap: anywhere;
+}
+.cumple-tarta {
+    flex: none;
+    width: 36px;
+    height: 33px;
+    padding: 0;
+    border: 0;
+    background: url("tarta.svg") center / 36px 33px no-repeat;
+    image-rendering: pixelated;
+}
+.cumple-tarta:hover {
+    transform: translateY(-3px);
+}
+.cumple-cerrar {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    background: transparent;
+    border: 2px solid transparent;
+    color: var(--tinta);
+    font: 400 22px/1 var(--texto);
+}
+.cumple-cerrar:hover {
+    border-color: var(--tinta);
+    background: var(--papel);
+}
+.confeti {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 400;
+    pointer-events: none;
+    image-rendering: pixelated;
+}
+.fila-cumple {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.campo.selector-cumple {
+    width: auto;
+    padding: 6px 8px;
+}
+.selector-cumple.dia {
+    flex: 0 0 86px;
+}
+.selector-cumple.mes {
+    flex: 1 1 140px;
+    max-width: 190px;
+}
+.estado-cumple:empty {
+    display: none;
+}
+.cal-cabeza {
+    /* el número y los cumpleaños en la misma línea; si no caben, se cortan con «…» */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.cal-cumple {
+    margin-left: 5px;
+    font-size: 12px;
+    color: var(--naranja-osc);
+}
+.cal-cumple .tarta,
+.crew-cumple::before {
+    content: "";
+    flex: none;
+    display: inline-block;
+    width: 12px;
+    height: 11px;
+    background: url("tarta.svg") center / 12px 11px no-repeat;
+}
+.cal-cumple .tarta {
+    margin-right: 4px;
+    vertical-align: -1px;
+}
+.crew-cumple {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--tinta-suave);
+}
+@media (max-width: 720px) {
+    .cumple-aviso {
+        gap: 8px;
+        padding-left: 8px;
+    }
+    .cumple-texto {
+        font-size: 15px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .confeti {
+        display: none;
+    }
+    .cumple-tarta:hover {
+        transform: none;
+    }
+}

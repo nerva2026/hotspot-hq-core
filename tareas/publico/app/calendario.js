@@ -1,10 +1,12 @@
 // Vista «Calendario»: el mes entero con las tareas en su fecha (o de su inicio a su final).
 // Se arrastran para cambiarlas de día; lo que no tiene fecha espera en la columna «Sin fecha».
+// Los cumpleaños del crew salen cada año en su día, junto al número (una tarta y el nombre).
 
 import { h, hoy, aFecha, sumarDias, diasEntre, lunesDe, primeroDeMes, sumarMeses, diasDelMes, MESES, DIAS_CORTOS, prioridadDe, pesoPrioridad, fechaMedia, fechaLarga } from "./util.js";
 import { abrirMenu, cerrarMenu, avatar } from "./menus.js";
 import { arrastrable } from "./arrastre.js";
 import { interpretar } from "./rapida.js";
+import { seCelebraEl, listaNombres } from "./cumple.js";
 
 const CARRILES = 4; // barras visibles por semana antes de «+N más»
 
@@ -43,6 +45,7 @@ export function pintarCalendario(cont, ctx, ev) {
 
     const mesEl = h("div", { class: "cal-mes" }, h("div", { class: "cal-cabecera" }, DIAS_CORTOS.map((d) => h("div", null, d))));
     const conFecha = tareas.filter(rango);
+    const conCumple = ctx.activos().filter((u) => u.cumple);
 
     for (let s = 0; s < semanas; s++) {
         const lunes = sumarDias(desde, s * 7);
@@ -65,7 +68,10 @@ export function pintarCalendario(cont, ctx, ev) {
                             altaEnDia(e.currentTarget, dia, ctx);
                         },
                     },
-                    h("span", { class: "cal-numero", title: fechaLarga(dia) }, aFecha(dia).getUTCDate() === 1 ? `1 ${MESES[aFecha(dia).getUTCMonth()].slice(0, 3)}` : aFecha(dia).getUTCDate()),
+                    conCumpleanos(
+                        h("span", { class: "cal-numero", title: fechaLarga(dia) }, aFecha(dia).getUTCDate() === 1 ? `1 ${MESES[aFecha(dia).getUTCMonth()].slice(0, 3)}` : aFecha(dia).getUTCDate()),
+                        conCumple.filter((u) => seCelebraEl(u.cumple, dia)),
+                    ),
                 ),
             );
         }
@@ -143,6 +149,18 @@ export function pintarCalendario(cont, ctx, ev) {
         cuerpo.appendChild(h("aside", { class: "cal-sinfecha" }, h("h3", null, "Sin fecha ", h("span", { class: "cuenta" }, sinFecha.length)), h("p", { class: "nota" }, "Arrastra una al calendario para darle fecha."), lista));
     }
     cont.append(barra, cuerpo);
+}
+
+// Los cumpleaños de ese día (todo el día, sin hora) junto al número: una tarta y los nombres (cortados si no caben).
+function conCumpleanos(numero, personas) {
+    if (!personas.length) return numero;
+    const nombres = listaNombres(personas.map((u) => u.nombre));
+    return h(
+        "div",
+        { class: "cal-cabeza" },
+        numero,
+        h("span", { class: "cal-cumple", title: `Cumpleaños de ${nombres}` }, h("span", { class: "tarta", "aria-hidden": "true" }), h("span", { class: "texto" }, nombres)),
+    );
 }
 
 function barraTarea(tr, i0, i1, carril, ctx) {

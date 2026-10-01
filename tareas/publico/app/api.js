@@ -59,6 +59,8 @@ export const api = {
     anadirCrew: (datos) => llamar("POST", "crew", datos),
     cambiarCrew: (id, datos) => llamar("PATCH", `crew/${id}`, datos),
     cambiarYo: (datos) => llamar("PATCH", "yo", datos),
+    // la oficina: qué día es hoy allí y de quién es el cumple (hoy y los próximos 30 días)
+    oficina: () => llamar("GET", "oficina"),
     crear: (tarea) => llamar("POST", "tareas", tarea),
     cambiar: (id, cambios) => llamar("PATCH", `tareas/${id}`, cambios),
     borrar: (id) => llamar("DELETE", `tareas/${id}`),
