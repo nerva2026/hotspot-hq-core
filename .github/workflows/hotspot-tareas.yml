@@ -127,6 +127,21 @@ jobs:
           fi
           cat /tmp/prueba-musica.log
 
+      - name: Probar el archivo
+        working-directory: tareas
+        run: |
+          # Un servidor aparte (puerto 3992), con su propio enlace de alta y poco sitio (40 MB) para probar también el límite total.
+          mkdir -p /tmp/datos-archivo
+          TAREAS_DATOS=/tmp/datos-archivo TAREAS_PUERTO=3992 ARCHIVO_MAXIMO_MB=40 node servidor/principal.js > /tmp/tablon-archivo.log 2>&1 &
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:3992/tareas/salud && break; sleep 0.5; done
+          CODIGO=$(grep -o '#alta=[A-Za-z0-9_-]*' /tmp/tablon-archivo.log | head -1 | cut -d= -f2)
+          if ! node pruebas/archivo.mjs http://127.0.0.1:3992/tareas "$CODIGO" > /tmp/prueba-archivo.log 2>&1; then
+            cat /tmp/prueba-archivo.log /tmp/tablon-archivo.log
+            tail -n 15 /tmp/prueba-archivo.log | sed 's/%/%25/g' | while IFS= read -r linea; do echo "::error::archivo: $linea"; done
+            exit 1
+          fi
+          cat /tmp/prueba-archivo.log
+
       - name: Probar el acceso de la oficina (openid-client, como WorkAdventure)
         working-directory: tareas
         run: |

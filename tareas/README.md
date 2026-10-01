@@ -1,4 +1,4 @@
-# Portada, cuentas del crew, tablón, cuentas, pizarra y música · HOT SPOT S.L.
+# Portada, cuentas del crew, tablón, cuentas, pizarra, archivo y música · HOT SPOT S.L.
 
 Aplicación propia (Node, sin dependencias) con estas partes:
 
@@ -9,9 +9,10 @@ Aplicación propia (Node, sin dependencias) con estas partes:
 | `https://oficina.hot-spot.es/tareas/` | Tablón de tareas. |
 | `https://oficina.hot-spot.es/tareas/libro/` | Libro de cuentas de los socios. |
 | `https://oficina.hot-spot.es/tareas/pizarra/` | Pizarra compartida (la de la sala de reuniones). |
-| `https://oficina.hot-spot.es/tareas/oficina/` | Puente invisible: lo abre el mapa de la oficina, sin enseñarlo, para leer el tablón de quien juega. |
+| `https://oficina.hot-spot.es/tareas/archivo/` | Archivo de documentos del crew (la sala ARCHIVO). |
 | `https://oficina.hot-spot.es/tareas/musica/` | La cabina de música: escuchar a la vez lo que pincha alguien del crew (Spotify). |
 | `https://oficina.hot-spot.es/tareas/musica/mini/` | El reproductor pequeño (360 × 128 px) para abrirlo en la oficina mientras se anda. |
+| `https://oficina.hot-spot.es/tareas/oficina/` | Puente invisible: lo abre el mapa de la oficina, sin enseñarlo, para leer el tablón de quien juega. |
 
 ## Crew e invitados
 
@@ -60,10 +61,14 @@ Node 22 sin dependencias:
 | `servidor/excel.js` | Lectura y escritura de `.xlsx` sin librerías. |
 | `servidor/libro.js` | Libro de cuentas: movimientos, reparto, quién debe a quién, CSV. |
 | `servidor/pizarra.js` | Pizarras: trazos, notas y fotos (en su propio `pizarras.json`). |
+| `servidor/archivo.js` | Archivo de documentos: subir y comprobar lo subido, título, carpeta y fijado, enlaces, papelera y búsqueda (en `archivo/`). |
+| `servidor/docx.js` | Word (`.docx`) a HTML limpio, sin librerías (solo `zlib` de Node). |
 | `servidor/perfil.js` | Cumpleaños («MM-DD»), qué día es hoy en la oficina y el personaje de cada uno. |
 | `servidor/musica.js` | Música: la cabina, conectar Spotify (OAuth) y mirar qué suena (en su propio `musica.json`). |
-| `publico/` | Las pantallas (tablón, `libro/`, `pizarra/`, `oficina/`, `musica/` y `musica/mini/`): HTML, CSS y módulos de JavaScript sin compilar. |
-| `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar (tablón, libro, pizarra, cumpleaños y personaje, música con un Spotify de mentira y acceso de la oficina). |
+| `publico/` | Las pantallas (tablón, `libro/`, `pizarra/`, `archivo/`, `musica/`, `musica/mini/` y `oficina/`): HTML, CSS y módulos de JavaScript sin compilar. |
+| `publico/app/markdown.js` | Markdown a HTML seguro (todo escapado), para el visor del archivo. |
+| `publico/app/archivo*.js` | El archivo en pantalla: la lista (`archivo.js`), el visor con índice y buscador (`archivo-visor.js`) y piezas comunes (`archivo-comun.js`). |
+| `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar (tablón, libro, pizarra, archivo, cumpleaños y personaje, música con un Spotify de mentira y acceso de la oficina). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
 
 Las tareas borradas pasan 30 días en una papelera interna (el aviso «Deshacer» las recupera).
@@ -91,6 +96,39 @@ misma sesión que el tablón.
   pizarra abierta.
 - **Vaciar:** quita todo para todos; se puede recuperar durante 30 días.
 - Se guarda en `pizarras.json` y las fotos en `pizarra/`, dentro de la carpeta de datos.
+
+## Archivo
+
+`/tareas/archivo/` es la sala ARCHIVO de la oficina: los documentos del crew, a mano y compartidos. Solo para
+el crew (sin sesión, la API contesta 401 y la página enseña la misma pantalla de entrada que el libro).
+Se llega desde las estanterías de la sala, desde las pestañas de la barra y desde el menú de la cuenta del tablón.
+
+- **Qué se sube:** Markdown (`.md`), PDF, fotos (PNG, JPG, WebP o GIF), textos (`.txt`) y Word (`.docx`), con el
+  botón o arrastrando, varios a la vez y con el progreso. Hasta 25 MB cada uno (5 MB los textos y Markdown) y,
+  entre todos, lo que diga `ARCHIVO_MAXIMO_MB` (1024 por defecto). También **enlaces** https con título: los de
+  Google Docs, Hojas, Presentaciones y Drive se ven dentro con su vista previa (`/preview`); los demás se abren
+  en una pestaña nueva.
+- **Cada documento:** título (el nombre del archivo o el primer título del Markdown), descripción, carpeta
+  (texto libre con sugerencias), quién lo subió y cuándo, tamaño, tipo y, si se quiere, fijado. Cualquiera del
+  crew puede cambiarlo. Borrar lo manda a la papelera 30 días; se restaura, o lo borra del todo quien lo subió
+  o un admin.
+- **Inicio:** carpetas con su cuenta, «Todo», «Recientes» (los 12 últimos tocados), orden por fecha o título
+  (lo fijado va primero) y búsqueda en títulos, descripciones, carpetas y en el texto de los `.md`, `.txt` y
+  Word, sin fijarse en tildes ni mayúsculas y con un fragmento alrededor de lo encontrado.
+- **Visor** (`?doc=<id>` abre un documento directamente): Markdown y Word con índice de títulos (a un lado; plegado
+  en el móvil; marca en qué sección estás) y buscador dentro del documento (resalta, cuenta, salta); PDF con el
+  visor del navegador; fotos ajustadas a la pantalla y a tamaño real al pulsarlas; textos tal cual. Siempre
+  «Descargar» y «Abrir en pestaña nueva ↗».
+- **Teclado:** `/` busca (dentro del visor, busca en el documento), `Esc` cierra el visor, Intro y Mayús+Intro
+  saltan entre coincidencias.
+- **Seguridad:** el tipo sale de la extensión y se comprueba con lo que hay dentro (firmas de PDF y fotos, que
+  el Word sea un zip con su documento, que un texto sea texto); el nombre en disco lo pone el servidor, nunca
+  quien sube; los archivos salen con `nosniff`, en línea solo el PDF y las fotos, y con
+  `Content-Security-Policy: sandbox` todo lo que no es PDF. El Markdown se escapa entero (`markdown.js`; enlaces
+  solo a http, https o mailto, en pestaña nueva) y el HTML del Word se limpia en el servidor y otra vez en la
+  página. La CSP de `/archivo/` solo añade `frame-src` para `docs.google.com` y `drive.google.com`.
+- Se guarda en `archivo/indice.json` (copia diaria en `archivo/copias/`, se guardan 30) y los archivos en
+  `archivo/archivos/`, dentro de la carpeta de datos.
 
 ## Cumpleaños y personaje
 

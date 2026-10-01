@@ -554,6 +554,7 @@ function menuYo(ancla) {
                 { contenido: "Importar desde Excel…", accion: importarExcel },
                 "-",
                 E.yo.libro ? { contenido: "Libro de cuentas", href: "libro/" } : null,
+                { contenido: "Archivo", href: "archivo/" },
                 E.yo.admin ? { contenido: "Crew: quién puede entrar…", accion: panelCrew } : null,
                 { contenido: "Mi cuenta…", accion: ajustesYo },
                 { contenido: "Atajos de teclado", accion: atajos },
