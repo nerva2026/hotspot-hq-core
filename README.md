@@ -28,6 +28,7 @@ El servidor usa esa imagen en lugar de la oficial para el servicio `play`. El re
 | `05-direcciones-cortas.patch` | Direcciones cortas: `oficina.hot-spot.es/calle`, `/oficina` y `/terraza` (lista en `play/src/pusher/services/HotspotSalas.ts` y `play/src/front/Url/HotspotSalas.ts`). Son alias: por dentro la sala sigue siendo `/~/hotspot/…` (la que entiende el servidor «back», que es el oficial); el navegador enseña la corta y quita el `#from-…` al entrar. |
 | `06-version.patch` | Número de versión discreto abajo a la izquierda (`v0.2.0-alpha`; se cambia en `play/index.html` dentro del parche). |
 | `07-solo-crew.patch` | La oficina y la terraza son solo para el crew: exigen haber entrado con cuenta (y el servidor rechaza a quien se lo salte, mandándolo a la portada). Al cerrar sesión se pasa por `/cuentas/salir`. Solo se activa si `OPENID_CLIENT_ID` está configurado. |
+| `08-acciones.patch` | Los muñecos se ven sentados y bailando, según la variable pública `accion` del jugador (la pone el script del mapa: `"bailar"`, `"sentado:<dirección>"` o nada). Sentado: quieto, mirando hacia el asiento y unos píxeles más abajo. Bailar: bota con ritmo (todos a la vez, por el reloj), cambia de lado cada dos tiempos y le suben notas musicales naranjas y amarillas. Solo mientras está quieto; al andar vuelve a lo normal. Lo dibuja `play/src/front/Phaser/Entity/Acciones.ts`, con unas pocas líneas de enganche en `Character`, `GameScene`, `RemotePlayersRepository` y `PlayerVariablesManager`. |
 
 ## Archivos propios (`archivos/`)
 
