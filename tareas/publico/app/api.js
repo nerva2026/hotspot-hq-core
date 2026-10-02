@@ -65,8 +65,12 @@ export const api = {
     // la música: el estado de la cabina (el puente de la oficina solo mira «configurado»)
     musica: () => llamar("GET", "musica"),
     crear: (tarea) => llamar("POST", "tareas", tarea),
-    // «antes»: el texto en el que se basan los cambios de las notas; si ya no es el que hay, el servidor contesta 409.
-    cambiar: (id, cambios, antes) => llamar("PATCH", `tareas/${id}`, antes ? { ...cambios, antes } : cambios),
+    // «antes»: el texto en el que se basan los cambios de las notas; si ya no es el que hay, el servidor contesta 409
+    // (y también si falta y la tarea ya tiene notas). Por eso unas notas no salen nunca de aquí sin «antes».
+    cambiar: (id, cambios, antes) => {
+        if ("notas" in cambios && typeof antes?.notas !== "string") return Promise.reject(new ErrorApi("Las notas se guardan siempre diciendo en qué texto se basan («antes»).", 400));
+        return llamar("PATCH", `tareas/${id}`, antes ? { ...cambios, antes } : cambios);
+    },
     borrar: (id) => llamar("DELETE", `tareas/${id}`),
     restaurar: (id) => llamar("POST", `tareas/${id}/restaurar`),
     importar: (archivo) => llamar("POST", "importar", archivo, { binario: true }),

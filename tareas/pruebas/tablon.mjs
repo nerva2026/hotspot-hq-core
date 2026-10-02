@@ -1,9 +1,11 @@
 // Prueba del tablón de tareas contra un servidor en marcha sin Google (como el paso «Probar el servidor»):
 //   node pruebas/tablon.mjs http://127.0.0.1:3993/tareas <código de alta del registro>
 // Crea dos cuentas (Diego y Víctor) y comprueba que las notas de una tarea no se pisan: quien guarda sobre una versión
-// que ya no es la que hay recibe un 409 con lo que hay ahora, y con la versión buena se guarda.
+// que ya no es la que hay recibe un 409 con lo que hay ahora, y con la versión buena se guarda. Sin «antes» pasa lo
+// mismo si la tarea ya tiene notas, y el cliente de ahora (publico/app/) siempre lo manda.
 
 import assert from "node:assert/strict";
+import { readdirSync, readFileSync } from "node:fs";
 
 const [base, codigoAlta] = process.argv.slice(2);
 if (!base || !codigoAlta) {
@@ -94,13 +96,25 @@ assert.equal(r.estado, 200, JSON.stringify(r.datos));
 r = await victor("PATCH", T, { notas: "L1\nL2\nL3", antes: { notas: "algo muy viejo" } });
 assert.equal(r.estado, 200, JSON.stringify(r.datos));
 
-// Sin «antes» se guarda como siempre (pestañas con la versión anterior del tablón); un «antes» raro se ignora
-r = await victor("PATCH", T, { notas: "Sin antes" });
-assert.equal(r.estado, 200);
-for (const raro of [null, "texto", 7, [], {}]) {
+// Sin «antes» no se sabe en qué texto se basa el cambio: si la tarea ya tiene notas, 409 y no se guarda nada (una
+// pestaña con el JS viejo recibe el aviso en vez de pisar lo de otra persona). Un «antes» raro, o sin «notas», es lo mismo.
+const conNotas = await tarea();
+assert.notEqual(conNotas.notas, "", "la tarea tiene notas");
+r = await victor("PATCH", T, { notas: "Sin antes", estado: "hecho" });
+assert.equal(r.estado, 409, JSON.stringify(r.datos));
+assert.deepEqual(r.datos.conflicto, ["notas"]);
+assert.equal(r.datos.tarea.notas, conNotas.notas, "el 409 trae lo que hay ahora");
+for (const raro of [null, "texto", 7, [], {}, { titulo: "otra cosa" }]) {
     r = await victor("PATCH", T, { notas: `Con antes raro ${JSON.stringify(raro)}`, antes: raro });
-    assert.equal(r.estado, 200, JSON.stringify(raro));
+    assert.equal(r.estado, 409, JSON.stringify(raro));
 }
+const trasLosRechazos = await tarea();
+assert.equal(trasLosRechazos.notas, conNotas.notas, "ningún rechazo guarda nada");
+assert.equal(trasLosRechazos.estado, conNotas.estado, "ni lo demás que viniera en la misma petición");
+assert.equal(trasLosRechazos.actualizada, conNotas.actualizada, "un 409 no toca la tarea");
+// Lo que llega ya es lo que hay: no es un cambio y pasa aunque no venga «antes»
+r = await victor("PATCH", T, { notas: conNotas.notas });
+assert.equal(r.estado, 200, JSON.stringify(r.datos));
 
 // Dos guardados a la vez sobre la misma versión: entra uno y el otro recibe el 409 (no se pierde ninguno sin avisar)
 const version = (await tarea()).notas;
@@ -123,5 +137,50 @@ assert.equal(r.datos.titulo, "Preparar la feria de octubre");
 assert.equal((await victor("PATCH", "tareas/no-existe", { notas: "x", antes: { notas: "y" } })).estado, 404);
 assert.equal((await victor("DELETE", T)).estado, 200);
 assert.equal((await victor("PATCH", T, { notas: "x", antes: { notas: "y" } })).estado, 404);
+
+// Una tarea sin notas no tiene nada que pisar: sin «antes» se acepta (y cuando ya las tiene, sí lo pide)
+r = await diego("POST", "tareas", { titulo: "Sin notas todavía" });
+assert.equal(r.estado, 201, JSON.stringify(r.datos));
+const vacia = `tareas/${r.datos.id}`;
+r = await victor("PATCH", vacia, { notas: "Primeras notas" });
+assert.equal(r.estado, 200, JSON.stringify(r.datos));
+assert.equal(r.datos.notas, "Primeras notas");
+r = await victor("PATCH", vacia, { notas: "Segundas notas, sin antes" });
+assert.equal(r.estado, 409, JSON.stringify(r.datos));
+r = await victor("PATCH", vacia, { notas: "Segundas notas", antes: { notas: "Primeras notas" } });
+assert.equal(r.estado, 200, JSON.stringify(r.datos));
+r = await victor("PATCH", vacia, { estado: "en-marcha", prioridad: "alta" }); // lo que no son notas no pide «antes»
+assert.equal(r.estado, 200, JSON.stringify(r.datos));
+r = await victor("PATCH", vacia, { notas: "", antes: { notas: "Segundas notas" } }); // borrar las notas, con «antes»
+assert.equal(r.estado, 200, JSON.stringify(r.datos));
+r = await victor("PATCH", vacia, { notas: "De nuevo sin notas antes" }); // sin notas otra vez: nada que pisar
+assert.equal(r.estado, 200, JSON.stringify(r.datos));
+
+// El cliente de ahora siempre manda «antes» con las notas: api.cambiar lo exige (y lo manda tal cual), y ninguna otra
+// pantalla cambia tareas a mano ni llama a «cambiar» con notas sin «antes».
+const carpetaApp = new URL("../publico/app/", import.meta.url);
+for (const f of readdirSync(carpetaApp).filter((f) => f.endsWith(".js") && f !== "api.js")) {
+    const codigo = readFileSync(new URL(f, carpetaApp), "utf8");
+    assert.ok(!/["'`]PATCH["'`]\s*,\s*[`"']tareas\//.test(codigo) && !/method:\s*["']PATCH["']/.test(codigo), `${f} cambia tareas sin pasar por api.cambiar`);
+    for (const llamada of codigo.matchAll(/cambiar\(\s*\{[^}]*\bnotas\b[^}]*\}[^;]*;/g)) assert.match(llamada[0], /\bantes\b/, `${f}: unas notas sin «antes»: ${llamada[0]}`);
+}
+const { api } = await import(new URL("api.js", carpetaApp).href);
+const enviadas = [];
+const fetchReal = globalThis.fetch;
+globalThis.fetch = async (url, opciones) => {
+    enviadas.push([opciones.method, opciones.body ? JSON.parse(opciones.body) : null]);
+    return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+};
+try {
+    await assert.rejects(() => api.cambiar("t1", { notas: "x" }), /siempre/);
+    await assert.rejects(() => api.cambiar("t1", { notas: "x" }, {}), /siempre/);
+    await assert.rejects(() => api.cambiar("t1", { notas: "x" }, { notas: null }), /siempre/);
+    assert.equal(enviadas.length, 0, "sin «antes» no sale nada");
+    await api.cambiar("t1", { notas: "x" }, { notas: "" }); // «antes» vacío vale: la tarea no tenía notas
+    await api.cambiar("t1", { estado: "hecho" }); // lo que no son notas no pide «antes»
+    assert.deepEqual(enviadas, [["PATCH", { notas: "x", antes: { notas: "" } }], ["PATCH", { estado: "hecho" }]]);
+} finally {
+    globalThis.fetch = fetchReal;
+}
 
 console.log("Tablón (notas que no se pisan): bien");

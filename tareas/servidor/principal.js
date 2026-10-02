@@ -974,7 +974,7 @@ async function api(req, res, ruta) {
             const cambios = await leerJson(req);
             // Sin ningún «await» entre comprobar y aplicar: de dos guardados a la vez, el primero se guarda y el segundo recibe esto.
             const choque = camposEnConflicto(tarea, cambios);
-            if (choque.length) return json(res, 409, { error: "Otra persona cambió las notas antes.", conflicto: choque, tarea: publica(tarea) });
+            if (choque.length) return json(res, 409, { error: "Las notas han cambiado (o falta «antes», el texto en el que te basas): no se ha guardado.", conflicto: choque, tarea: publica(tarea) });
             const cambiados = aplicarCambios(tarea, cambios, datos().usuarios);
             if (!tarea.titulo) throw new ErrorDeDatos("La tarea necesita un título");
             if (cambiados.length) {

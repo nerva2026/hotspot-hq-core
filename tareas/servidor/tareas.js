@@ -62,13 +62,19 @@ function personas(v, usuarios) {
 // sin más. Quien escribe manda en «cambios.antes» el texto en el que se basó; si ya no es el que hay, no se guarda.
 export const TEXTOS_CON_VERSION = ["notas"];
 
-// Campos de «cambios» que otra persona ha cambiado desde la versión en la que se basa quien escribe.
-// Sin «antes» (clientes antiguos, importaciones…) no se comprueba nada, como siempre. Si lo que llega ya es
-// justo lo que hay, tampoco hay choque: da igual quién llegó primero.
+// Campos de «cambios» que no se pueden guardar porque ya no son lo que había cuando quien escribe empezó (otra
+// persona los ha cambiado). Si lo que llega ya es justo lo que hay, no hay choque: da igual quién llegó primero.
+// Sin «antes» (o sin ese campo dentro) no se sabe en qué texto se basa el cambio: si la tarea ya tiene texto ahí,
+// se rechaza igual (el cliente de ahora siempre lo manda; una pestaña con el JS viejo recibe el 409 en vez de pisar
+// lo de otra persona); si está vacío no hay nada que pisar y se acepta.
 export function camposEnConflicto(tarea, cambios) {
-    const antes = cambios.antes;
-    if (!antes || typeof antes !== "object") return [];
-    return TEXTOS_CON_VERSION.filter((c) => c in cambios && c in antes && texto(antes[c], LIMITES[c]) !== tarea[c] && texto(cambios[c], LIMITES[c]) !== tarea[c]);
+    const antes = cambios.antes && typeof cambios.antes === "object" ? cambios.antes : {};
+    return TEXTOS_CON_VERSION.filter((c) => {
+        const hay = tarea[c] ?? "";
+        if (!(c in cambios) || texto(cambios[c], LIMITES[c]) === hay) return false;
+        if (!(c in antes)) return hay !== "";
+        return texto(antes[c], LIMITES[c]) !== hay;
+    });
 }
 
 // Aplica sobre «tarea» los campos de «cambios» que sean válidos. Devuelve la lista de campos cambiados.
