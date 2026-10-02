@@ -1,0 +1,42 @@
+diff --git a/play/src/front/Phaser/UserInput/GameSceneUserInputHandler.ts b/play/src/front/Phaser/UserInput/GameSceneUserInputHandler.ts
+index 4e72694..a173949 100644
+--- a/play/src/front/Phaser/UserInput/GameSceneUserInputHandler.ts
++++ b/play/src/front/Phaser/UserInput/GameSceneUserInputHandler.ts
+@@ -19,10 +19,16 @@ import LL from "../../../i18n/i18n-svelte";
+ import { followRoleStore, followStateStore, followUsersStore } from "../../Stores/FollowStore";
+ import { localUserStore } from "../../Connection/LocalUserStore";
+ import type { Shortcut } from "./UserInputManager";
++import { iframeListener } from "../../Api/IframeListener";
+ 
+ import Pointer = Phaser.Input.Pointer;
+ import GameObject = Phaser.GameObjects.GameObject;
+ 
++// HOT SPOT S.L. (parche 11): teclas que se le cuentan al script del mapa, que decide qué hacen (sentarse, bailar,
++// saludar…). Son letras que WorkAdventure no usa. Llegan al script como el evento «hs:tecla», con { code }, y solo
++// las de este navegador (sin «senderId»): `WA.event.on("hs:tecla")`.
++const TECLAS_DEL_MAPA = new Set(["KeyX", "KeyB", "KeyH", "KeyG", "KeyV"]);
++
+ export class GameSceneUserInputHandler implements UserInputHandlerInterface {
+     private gameScene: GameScene;
+     private controlKeyisPressed: boolean = false;
+@@ -215,6 +221,20 @@ export class GameSceneUserInputHandler implements UserInputHandlerInterface {
+             return event;
+         }
+ 
++        // Parche 11: las teclas del mapa (este método solo se llama con el teclado del juego activo: no al escribir en el
++        // chat ni en un campo de texto). Sin Ctrl, Alt ni ⌘, sin repetición al dejarla pulsada y fuera del editor de mapas.
++        if (
++            TECLAS_DEL_MAPA.has(event.code) &&
++            !event.repeat &&
++            !event.ctrlKey &&
++            !event.metaKey &&
++            !event.altKey &&
++            !get(mapEditorModeStore)
++        ) {
++            iframeListener.dispatchReceivedEvent({ name: "hs:tecla", data: { code: event.code } });
++            return event;
++        }
++
+         switch (event.code) {
+             case "KeyE": {
+                 if (get(mapManagerActivated) == false) return event;

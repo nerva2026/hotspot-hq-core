@@ -1,223 +1,5 @@
-diff --git a/play/src/front/Phaser/Entity/Acciones.ts b/play/src/front/Phaser/Entity/Acciones.ts
-new file mode 100644
-index 0000000..1e81d1e
---- /dev/null
-+++ b/play/src/front/Phaser/Entity/Acciones.ts
-@@ -0,0 +1,212 @@
-+import * as Phaser from "phaser";
-+import { PositionMessage_Direction } from "@workadventure/messages";
-+import { PlayerAnimationTypes } from "../Player/Animation";
-+import type { Character } from "./Character";
-+
-+/**
-+ * Acciones de los muñecos: sentarse y bailar (parche 08 de hotspot-hq-core).
-+ *
-+ * El script del mapa (src/hq.js del repositorio de mapas) guarda en la variable pública «accion» del jugador lo que
-+ * está haciendo: "bailar", "sentado:arriba" | "sentado:abajo" | "sentado:izquierda" | "sentado:derecha", o nada.
-+ * La variable llega a todos (a quien entra después también, en la lista inicial de jugadores) y aquí solo se dibuja:
-+ *
-+ * - sentado: el muñeco se queda mirando hacia el asiento, sin la animación de andar y unos píxeles más abajo.
-+ * - bailar: bota con ritmo, cambia de lado cada pocos tiempos y le suben notas musicales.
-+ *
-+ * Solo mientras el muñeco está quieto: en cuanto anda, dibujar() lo deja todo en su sitio y Character.playAnimation
-+ * dibuja lo de siempre. No se toca la posición del muñeco (ni su cuerpo, ni las colisiones, ni el nombre, la burbuja o
-+ * el compañero): solo se mueven sus dibujos dentro de él. El baile sale del reloj (Date.now), no de un contador
-+ * propio, así que todos los que bailan van a la vez.
-+ */
-+
-+// Hacia dónde mira un asiento (nombre del script del mapa) → nombre en las animaciones del muñeco
-+const MIRADAS = new Map([
-+    ["arriba", "up"],
-+    ["abajo", "down"],
-+    ["izquierda", "left"],
-+    ["derecha", "right"],
-+]);
-+
-+const TIEMPO = 500; // ms por tiempo (120 pulsos por minuto)
-+const TIEMPOS_POR_LADO = 2; // cada cuántos tiempos cambia de lado al bailar
-+const REBOTE = 4; // píxeles del dibujo que sube en cada bote (se amplían con la escala del muñeco)
-+const SENTADO = 4; // píxeles del dibujo que baja al sentarse
-+const NOTAS = 3; // notas a la vez sobre la cabeza: sale una por tiempo y cada una dura NOTAS tiempos
-+const SUBIDA = 36; // píxeles que sube una nota mientras vive
-+const LADOS = [-14, 14, -8, 18, -18, 8]; // por dónde sale cada nota, a un lado y a otro (se van alternando)
-+
-+// Notas en pixel art (cada X es un píxel de 2×2, como los del muñeco). El contorno de tinta se calcula solo.
-+const FORMAS = [
-+    // corchea
-+    ["..XX.", "..X.X", "..X..", "..X..", "XXX..", "XXX..", ".X..."],
-+    // dos corcheas unidas
-+    ["..XXXXX", "..XXXXX", "..X...X", "..X...X", "XXX.XXX", "XXX.XXX", ".X...X."],
-+];
-+const COLORES = ["#e0562a", "#ffd84a"]; // naranja y amarillo de la casa
-+const TINTA = "#1c1715";
-+const PIXEL = 2;
-+// La nota número m sale con la forma (m / 2) % 2 y el color m % 2: así se alternan las cuatro
-+const claveNota = (m: number): string => `hs-nota-${Math.floor(m / 2) % FORMAS.length}-${m % COLORES.length}`;
-+
-+/** Dibuja (una sola vez por juego) las cuatro notas como texturas. */
-+function crearNotas(escena: Phaser.Scene): void {
-+    FORMAS.forEach((forma, f) =>
-+        COLORES.forEach((color, c) => {
-+            const clave = `hs-nota-${f}-${c}`;
-+            if (escena.textures.exists(clave)) return;
-+            const ancho = forma[0].length + 2; // un píxel de margen para el contorno
-+            const alto = forma.length + 2;
-+            const lienzo = escena.textures.createCanvas(clave, ancho * PIXEL, alto * PIXEL);
-+            if (!lienzo) return;
-+            const lleno = (x: number, y: number): boolean =>
-+                y >= 1 && y <= forma.length && forma[y - 1].charAt(x - 1) === "X";
-+            const dibujo = lienzo.getContext();
-+            for (let y = 0; y < alto; y++) {
-+                for (let x = 0; x < ancho; x++) {
-+                    const tocaForma = [-1, 0, 1].some((dy) => [-1, 0, 1].some((dx) => lleno(x + dx, y + dy)));
-+                    if (!tocaForma) continue;
-+                    dibujo.fillStyle = lleno(x, y) ? color : TINTA;
-+                    dibujo.fillRect(x * PIXEL, y * PIXEL, PIXEL, PIXEL);
-+                }
-+            }
-+            lienzo.refresh();
-+            lienzo.setFilter(Phaser.Textures.FilterMode.NEAREST);
-+        }),
-+    );
-+}
-+
-+export class Acciones {
-+    private accion: string | null = null; // "bailar", "sentado:abajo"… ya comprobado, o nada
-+    private ultimaDireccion = PositionMessage_Direction.DOWN;
-+    private ultimoMoviendo = false;
-+    private desplazado = false; // si los dibujos están ahora movidos de su sitio (sentado o botando)
-+    private bailando = false;
-+    private lado = ""; // hacia dónde mira ahora al bailar
-+    private inicio = 0; // cuándo empezó a bailar (ms): las notas que habrían salido antes no se enseñan
-+    private cabeza = 0; // altura (dentro del muñeco) de la que salen las notas: justo encima de su nombre
-+    private notas: Phaser.GameObjects.Image[] = [];
-+
-+    constructor(private readonly personaje: Character) {}
-+
-+    /** Lo último que se le pidió dibujar al muñeco (para redibujarlo cuando cambia la acción). */
-+    public get ultima(): { direccion: PositionMessage_Direction; moviendo: boolean } {
-+        return { direccion: this.ultimaDireccion, moviendo: this.ultimoMoviendo };
-+    }
-+
-+    /** Guarda lo que hace el muñeco (el valor de la variable «accion»). Devuelve si ha cambiado algo. */
-+    public poner(valor: unknown): boolean {
-+        const nueva =
-+            valor === "bailar" ||
-+            (typeof valor === "string" && valor.startsWith("sentado:") && MIRADAS.has(valor.slice(8)))
-+                ? valor
-+                : null;
-+        if (nueva === this.accion) return false;
-+        this.accion = nueva;
-+        return true;
-+    }
-+
-+    /**
-+     * Lo llama Character.playAnimation. Devuelve true si el muñeco está quieto y hace algo, y entonces lo dibuja
-+     * esta clase; si no, deja todo como estaba y devuelve false para que se dibuje lo de siempre (andar o estar quieto).
-+     */
-+    public dibujar(direccion: PositionMessage_Direction, moviendo: boolean): boolean {
-+        this.ultimaDireccion = direccion;
-+        this.ultimoMoviendo = moviendo;
-+        const accion = moviendo ? null : this.accion;
-+
-+        if (accion === "bailar") {
-+            this.empezarBaile();
-+            return true;
-+        }
-+        this.pararBaile();
-+
-+        const mira = accion?.startsWith("sentado:") ? MIRADAS.get(accion.slice(8)) : undefined;
-+        if (mira) {
-+            this.mirar(mira);
-+            this.mover(SENTADO);
-+            this.personaje.scene.markDirty();
-+            return true;
-+        }
-+        this.mover(0);
-+        return false;
-+    }
-+
-+    /** Lo llama Character.destroy: deja de escuchar y quita las notas. */
-+    public destruir(): void {
-+        this.pararBaile();
-+    }
-+
-+    /** Pone a los dibujos del muñeco quietos, mirando hacia ahí ("up", "down", "left" o "right"). */
-+    private mirar(direccion: string): void {
-+        for (const [textura, sprite] of this.personaje.sprites) {
-+            sprite.anims.play(`${textura}-${direccion}-${PlayerAnimationTypes.Idle}`, true);
-+        }
-+    }
-+
-+    /** Baja (o sube, si es negativo) los dibujos del muñeco; 0 los deja en su sitio. */
-+    private mover(pixeles: number): void {
-+        if (pixeles === 0 && !this.desplazado) return;
-+        this.desplazado = pixeles !== 0;
-+        for (const sprite of this.personaje.sprites.values()) {
-+            sprite.y = Math.round(pixeles * sprite.scaleY);
-+        }
-+    }
-+
-+    private empezarBaile(): void {
-+        if (this.bailando) return;
-+        this.bailando = true;
-+        this.lado = "";
-+        this.inicio = Date.now();
-+        const escena = this.personaje.scene;
-+        this.cabeza = this.personaje.playerNameOffsetY - 12;
-+        crearNotas(escena);
-+        for (let i = 0; i < NOTAS; i++) {
-+            const nota = new Phaser.GameObjects.Image(escena, 0, 0, claveNota(0)).setOrigin(0.5, 1).setVisible(false);
-+            this.personaje.add(nota);
-+            this.notas.push(nota);
-+        }
-+        escena.events.on(Phaser.Scenes.Events.POST_UPDATE, this.alActualizar);
-+        this.alActualizar();
-+    }
-+
-+    private pararBaile(): void {
-+        if (!this.bailando) return;
-+        this.bailando = false;
-+        this.personaje.scene.events.off(Phaser.Scenes.Events.POST_UPDATE, this.alActualizar);
-+        this.notas.forEach((nota) => nota.destroy());
-+        this.notas = [];
-+        this.mover(0);
-+        this.personaje.scene.markDirty();
-+    }
-+
-+    /** Cada fotograma mientras baila (en POST_UPDATE: GameScene.update borra la marca de «sucio» antes). */
-+    private readonly alActualizar = (): void => {
-+        const ahora = Date.now();
-+        const tiempos = ahora / TIEMPO;
-+        const n = Math.floor(tiempos);
-+
-+        // De un lado al otro cada pocos tiempos
-+        const lado = Math.floor(n / TIEMPOS_POR_LADO) % 2 === 0 ? "left" : "right";
-+        if (lado !== this.lado) {
-+            this.lado = lado;
-+            this.mirar(lado);
-+        }
-+        // Un bote por tiempo: llega al suelo justo en el tiempo
-+        this.mover(-REBOTE * Math.abs(Math.sin(Math.PI * (tiempos - n))));
-+
-+        // Notas: la número m sale en el tiempo m y sube mientras vive; cada hueco enseña la última que le toca
-+        this.notas.forEach((nota, hueco) => {
-+            const m = n - ((n - hueco) % NOTAS);
-+            const edad = (tiempos - m) / NOTAS; // de 0 (acaba de salir) a 1 (se va)
-+            const clave = claveNota(m);
-+            if (nota.texture.key !== clave) nota.setTexture(clave);
-+            nota.setPosition(
-+                LADOS[m % LADOS.length] + Math.round(2 * Math.sin(edad * 9)),
-+                Math.round(this.cabeza - SUBIDA * edad),
-+            );
-+            nota.setAlpha(Math.min(1, edad * 10, (1 - edad) * 2.5));
-+            nota.setVisible(m * TIEMPO >= this.inicio);
-+        });
-+        this.personaje.scene.markDirty();
-+    };
-+}
 diff --git a/play/src/front/Phaser/Entity/Character.ts b/play/src/front/Phaser/Entity/Character.ts
-index 9d688c1..c2dbc09 100644
+index 9d688c1..399f37b 100644
 --- a/play/src/front/Phaser/Entity/Character.ts
 +++ b/play/src/front/Phaser/Entity/Character.ts
 @@ -20,6 +20,7 @@ import { WOKA_SPEED } from "../../Enum/EnvironmentVariable";
@@ -228,16 +10,17 @@ index 9d688c1..c2dbc09 100644
  import { SpeechBubble } from "./SpeechBubble";
  import { SpeechDomElement } from "./SpeechDomElement";
  import { ThinkingCloud } from "./ThinkingCloud";
-@@ -74,6 +75,8 @@ export abstract class Character extends Container implements OutlineableInterfac
+@@ -74,6 +75,9 @@ export abstract class Character extends Container implements OutlineableInterfac
      private invisible: boolean;
      private clickable: boolean;
      public companion?: Companion;
-+    // Sentado o bailando (parche 08): lo que hace el muñeco, según la variable pública «accion» del jugador
++    // Parche 08: lo que hace el muñeco (sentado, bailando, saludando…) y lo que lleva en la mano, según las variables
++    // públicas «accion» y «lleva» del jugador. El dibujo está en Acciones.ts (carpeta «archivos» de hotspot-hq-core).
 +    private readonly acciones = new Acciones(this);
      private emote: DOMElement | null = null;
      private emoteTween: Tween | null = null;
      private texts: Map<string, DOMElement> = new Map();
-@@ -364,7 +367,7 @@ export abstract class Character extends Container implements OutlineableInterfac
+@@ -364,7 +368,7 @@ export abstract class Character extends Container implements OutlineableInterfac
  
      private hotspotTextures = false;
  
@@ -246,32 +29,38 @@ index 9d688c1..c2dbc09 100644
          return this.hotspotTextures ? hotspotPlayerNameY : playerNameY;
      }
  
-@@ -404,6 +407,8 @@ export abstract class Character extends Container implements OutlineableInterfac
+@@ -404,6 +408,8 @@ export abstract class Character extends Container implements OutlineableInterfac
  
      protected playAnimation(direction: PositionMessage_Direction, moving: boolean): void {
          if (this.invisible) return;
-+        // Sentado o bailando (parche 08): lo dibuja Acciones, y solo mientras está quieto
++        // Parche 08: las posturas (sentado, bailando…) las dibuja Acciones, y solo mientras está quieto
 +        if (this.acciones.dibujar(direction, moving)) return;
          for (const [texture, sprite] of this.sprites.entries()) {
              if (!sprite.anims) {
                  console.error("ANIMS IS NOT DEFINED!!!");
-@@ -418,6 +423,15 @@ export abstract class Character extends Container implements OutlineableInterfac
+@@ -418,6 +424,21 @@ export abstract class Character extends Container implements OutlineableInterfac
          }
      }
  
 +    /**
 +     * Lo que hace el muñeco, el valor de su variable pública «accion» ("bailar", "sentado:abajo"…, o nada).
-+     * Lo llaman GameScene (los demás jugadores) y PlayerVariablesManager (el propio).
++     * Lo llama GameScene, para los demás jugadores y para el propio.
 +     */
 +    public ponerAccion(valor: unknown): void {
 +        if (!this.acciones.poner(valor)) return;
 +        this.playAnimation(this.acciones.ultima.direccion, this.acciones.ultima.moviendo);
 +    }
 +
++    /** Lo que lleva en la mano, el valor de su variable pública «lleva» ("lata", "cafe"…, o nada). */
++    public ponerObjeto(valor: unknown): void {
++        if (!this.acciones.ponerObjeto(valor)) return;
++        this.playAnimation(this.acciones.ultima.direccion, this.acciones.ultima.moviendo);
++    }
++
      protected getBody(): Body {
          const body = this.body;
          if (!(body instanceof Body)) {
-@@ -611,6 +625,7 @@ export abstract class Character extends Container implements OutlineableInterfac
+@@ -611,6 +632,7 @@ export abstract class Character extends Container implements OutlineableInterfac
      }
  
      destroy(): void {
@@ -280,36 +69,41 @@ index 9d688c1..c2dbc09 100644
          if (this.scene) {
              this.scene.events.off(Phaser.Scenes.Events.POST_UPDATE, this.syncDisplayPositionWithPhysics);
 diff --git a/play/src/front/Phaser/Game/GameScene.ts b/play/src/front/Phaser/Game/GameScene.ts
-index 6ac8dcc..f71cb8a 100644
+index 6ac8dcc..7b635c8 100644
 --- a/play/src/front/Phaser/Game/GameScene.ts
 +++ b/play/src/front/Phaser/Game/GameScene.ts
-@@ -1578,6 +1578,9 @@ export class GameScene extends DirtyScene {
+@@ -1578,6 +1578,10 @@ export class GameScene extends DirtyScene {
          if (update.updated.sayMessage) {
              character.say(update.player.sayMessage?.message ?? "", update.player.sayMessage?.type ?? 0);
          }
 +        if (update.updated.accion) {
 +            character.ponerAccion(update.player.variables.get("accion"));
++            character.ponerObjeto(update.player.variables.get("lleva"));
 +        }
      }
  
      /**
-@@ -2366,6 +2369,10 @@ export class GameScene extends DirtyScene {
+@@ -2366,6 +2370,12 @@ export class GameScene extends DirtyScene {
              this._room.id,
              this._room.group ?? undefined,
          );
-+        // Parche 08: lo que hace el propio muñeco (sentado, bailando…) sale de su variable «accion»
++        // Parche 08: lo que hace el propio muñeco (sentado, bailando…) y lo que lleva en la mano salen de sus
++        // variables «accion» y «lleva»
 +        this.playerVariablesManager.alCambiar = (clave, valor) => {
 +            if (clave === "accion") this.CurrentPlayer?.ponerAccion(valor);
++            if (clave === "lleva") this.CurrentPlayer?.ponerObjeto(valor);
 +        };
  
          if (this._spaceRegistry === undefined) {
              throw new Error("Space registry is undefined when joining room");
-@@ -4275,6 +4282,8 @@ ${escapedMessage}
+@@ -4275,6 +4285,10 @@ ${escapedMessage}
          }
          this.MapPlayersByKey.set(player.userId, player);
          player.updatePosition(addPlayerData.position);
-+        // Parche 08: quien entra ve lo que ya hacen los demás (la variable llega en la lista inicial de jugadores)
-+        player.ponerAccion(this.remotePlayersRepository.getPlayers().get(player.userId)?.variables.get("accion"));
++        // Parche 08: quien entra ve lo que ya hacen los demás (las variables llegan en la lista inicial de jugadores)
++        const variablesDelJugador = this.remotePlayersRepository.getPlayers().get(player.userId)?.variables;
++        player.ponerAccion(variablesDelJugador?.get("accion"));
++        player.ponerObjeto(variablesDelJugador?.get("lleva"));
          this.remotePlayersSpatialIndex.set(player.userId, player);
  
          player.on(Phaser.Input.Events.POINTER_OVER, () => {
@@ -336,14 +130,14 @@ index 460677e..86acf2e 100644
          // If we are not logged
          if (localUserStore.isLogged() === false && event.persist) {
 diff --git a/play/src/front/Phaser/Game/RemotePlayersRepository.ts b/play/src/front/Phaser/Game/RemotePlayersRepository.ts
-index 69e6173..457074a 100644
+index 69e6173..e60735b 100644
 --- a/play/src/front/Phaser/Game/RemotePlayersRepository.ts
 +++ b/play/src/front/Phaser/Game/RemotePlayersRepository.ts
 @@ -21,6 +21,7 @@ export type PlayerDetailsUpdate = {
          availabilityStatus: boolean;
          chatID: boolean;
          sayMessage: boolean;
-+        accion: boolean; // parche 08: ha cambiado su variable pública «accion» (sentado, bailando…)
++        accion: boolean; // parche 08: ha cambiado su variable pública «accion» (sentado, bailando…) o «lleva»
      };
  };
  
@@ -367,7 +161,7 @@ index 69e6173..457074a 100644
          if (details.setVariable !== undefined) {
              const value = RoomConnection.unserializeVariable(details.setVariable.value);
              player.variables.set(details.setVariable.name, value);
-+            if (details.setVariable.name === "accion") {
++            if (details.setVariable.name === "accion" || details.setVariable.name === "lleva") {
 +                updateStruct.updated.accion = true;
 +            }
  
