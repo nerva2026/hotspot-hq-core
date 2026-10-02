@@ -1,0 +1,7 @@
+# Banco de pruebas · lo único que cambia respecto a la instalación de pruebas de WorkAdventure
+# (contrib/docker/docker-compose.prod.yaml + contrib/docker/tests/docker-compose.test.yaml):
+# el servicio «play» usa NUESTRA imagen, construida en el propio ejecutor (no sale de él ni entra en ningún registro).
+services:
+  play:
+    image: hotspot-play:banco
+    pull_policy: never

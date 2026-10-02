@@ -1,0 +1,256 @@
+name: Banco de pruebas (la oficina funcionando de verdad)
+
+# Arranca WorkAdventure entero en el ejecutor de GitHub (la instalación de producción con Docker Compose y Traefik, la
+# misma clase de instalación que la oficina de verdad), con NUESTRA imagen «play» (parches + archivos propios), y lo
+# maneja con Playwright: entra en un mapa de prueba, pulsa teclas, junta a dos jugadores, mide la barra de botones…
+# Qué comprueba y cómo se leen los resultados: pruebas/banco/LEEME.md.
+#
+# Este flujo NO publica nada: la imagen se construye y se carga en el Docker del propio ejecutor (no entra en ningún
+# registro) y el único permiso de escritura es el del job «resultados», que deja el informe y las capturas en la rama
+# «banco-resultados». No toca la rama «hotspot» (la que actualiza la oficina de verdad).
+
+on:
+  push:
+    branches: [banco-pruebas]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  WA_VERSION: v1.33.10
+
+concurrency:
+  group: banco-pruebas
+  cancel-in-progress: true
+
+jobs:
+  banco:
+    name: Arrancar la oficina y probarla
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    permissions:
+      contents: read
+    env:
+      BANCO_RESULTADOS: ${{ github.workspace }}/resultados
+      COMPOSE: docker compose -f docker-compose.prod.yaml -f tests/docker-compose.test.yaml -f docker-compose.banco.yaml
+    steps:
+      # En segundo plano: no hace falta esperar a que acabe para seguir.
+      - name: Liberar espacio en disco (en segundo plano)
+        run: |
+          nohup sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL > /dev/null 2>&1 &
+          df -h / | tail -n 1
+          mkdir -p "$BANCO_RESULTADOS/registros"
+
+      - name: Personalización de HOT-SPOT HQ
+        uses: actions/checkout@v4
+        with:
+          path: hotspot
+
+      - name: Descargar WorkAdventure ${{ env.WA_VERSION }}
+        run: git clone --quiet --depth 1 --branch "$WA_VERSION" https://github.com/workadventure/workadventure.git wa
+
+      - name: Aplicar parches y archivos propios
+        working-directory: wa
+        run: |
+          set -e
+          for p in ../hotspot/parches/*.patch; do
+            echo "Parche $(basename "$p")"
+            git apply --whitespace=nowarn "$p" || { echo "::error title=Parche que no aplica::$(basename "$p")"; exit 1; }
+          done
+          rsync -a --exclude .gitkeep ../hotspot/archivos/ ./
+          # la versión de la oficina (novedades.ts): las pruebas la usan para que el aviso de novedades no salga en todas
+          version=$(sed -n 's/^export const VERSION = "\(.*\)";$/\1/p' play/src/front/Components/Hotspot/novedades.ts)
+          echo "BANCO_VERSION=$version" >> "$GITHUB_ENV"
+          echo "Versión de la oficina: $version"
+
+      - name: Poner el banco dentro de WorkAdventure
+        run: |
+          set -e
+          # el mapa de prueba, donde el contenedor «maps» de las pruebas de WorkAdventure sirve los suyos
+          mkdir -p wa/maps/tests/banco
+          cp -r hotspot/pruebas/banco/mapa/. wa/maps/tests/banco/
+          # las especificaciones y su configuración, junto a las pruebas de WorkAdventure
+          mkdir -p wa/tests/tests/banco
+          cp hotspot/pruebas/banco/especificaciones/* wa/tests/tests/banco/
+          cp hotspot/pruebas/banco/banco.config.ts wa/tests/banco.config.ts
+          # el archivo de Compose que cambia «play» por nuestra imagen
+          cp hotspot/pruebas/banco/docker-compose.banco.yaml wa/contrib/docker/docker-compose.banco.yaml
+          ls -la wa/maps/tests/banco wa/tests/tests/banco
+
+      # Las claves de este archivo son de mentira (el banco vive y muere en el ejecutor) y por eso van en claro.
+      - name: Preparar el archivo .env de la instalación
+        working-directory: wa/contrib/docker
+        run: |
+          set -e
+          cp .env.prod.template .env
+          sed -i "s/^SECRET_KEY=.*/SECRET_KEY=clave-de-mentira-del-banco/" .env
+          sed -i "s/^ADMIN_API_TOKEN=.*/ADMIN_API_TOKEN=ficha-de-mentira/" .env
+          sed -i "s/^VERSION=.*/VERSION=${WA_VERSION}/" .env
+          sed -i "s/^DOMAIN=.*/DOMAIN=play.workadventure.localhost/" .env
+          sed -i "s|^START_ROOM_URL=.*|START_ROOM_URL=/_/banco/maps.workadventure.localhost/tests/banco/banco.tmj|" .env
+          sed -i "s/^MAP_STORAGE_AUTHENTICATION_USER=.*/MAP_STORAGE_AUTHENTICATION_USER=banco/" .env
+          sed -i "s/^MAP_STORAGE_AUTHENTICATION_PASSWORD=.*/MAP_STORAGE_AUTHENTICATION_PASSWORD=de-mentira/" .env
+          sed -i "s/^ROOM_API_SECRET_KEY=.*/ROOM_API_SECRET_KEY=otra-clave-de-mentira/" .env
+          sed -i "s/^ENABLE_TUTORIAL=.*/ENABLE_TUTORIAL=false/" .env
+          grep -E "^(VERSION|DOMAIN|START_ROOM_URL|ENABLE_TUTORIAL|OPENID_CLIENT_ID|MAX_PER_GROUP|MAX_USERS_FOR_WEBRTC|LIVEKIT_HOST)=" .env
+
+      # Las imágenes oficiales (back, map-storage, traefik…) se bajan mientras se construye la nuestra.
+      - name: Descargar las imágenes oficiales (en segundo plano)
+        working-directory: wa/contrib/docker
+        run: |
+          nohup $COMPOSE pull --quiet reverse-proxy back uploader icon redis map-storage maps livekit rustfs-livekit rustfs-livekit-init \
+            > "$BANCO_RESULTADOS/registros/descarga.txt" 2>&1 &
+
+      - name: Preparar Docker
+        uses: docker/setup-buildx-action@v3
+
+      # Como en hotspot-comprobar.yml, pero cargando la imagen en el Docker del ejecutor (load) para poder arrancarla.
+      # No se publica: sin registro, sin «push».
+      - name: Construir nuestra imagen «play» (no se publica)
+        uses: docker/build-push-action@v6
+        with:
+          context: wa
+          file: wa/play/Dockerfile
+          push: false
+          load: true
+          tags: hotspot-play:banco
+          build-args: |
+            NODE_OPTIONS=--max-old-space-size=12288
+          cache-from: |
+            type=gha,scope=banco
+            type=gha
+          cache-to: type=gha,mode=max,scope=banco
+          provenance: false
+          sbom: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Instalar Playwright
+        working-directory: wa/tests
+        run: |
+          set -e
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Arrancar WorkAdventure
+        working-directory: wa/contrib/docker
+        run: |
+          set -e
+          # «egress» (grabar reuniones) no hace falta y pesa: se queda sin arrancar
+          $COMPOSE up -d --scale egress=0
+          $COMPOSE ps
+
+      - name: Esperar a que responda
+        run: |
+          espera() {
+            for i in $(seq 1 60); do
+              if curl -ksf -o /dev/null "$1"; then echo "Responde: $1"; return 0; fi
+              sleep 5
+            done
+            echo "::error title=No responde::$1"
+            return 1
+          }
+          espera https://play.workadventure.localhost/ping
+          espera https://maps.workadventure.localhost/tests/banco/banco.tmj
+          espera https://maps.workadventure.localhost/tests/banco/banco.js
+          curl -ks -o /dev/null -w "Portada del mapa de prueba: %{http_code}\n" \
+            https://play.workadventure.localhost/_/banco/maps.workadventure.localhost/tests/banco/banco.tmj
+
+      - name: Pruebas (Playwright)
+        id: pruebas
+        working-directory: wa/tests
+        env:
+          NODE_TLS_REJECT_UNAUTHORIZED: "0"
+        run: |
+          set +e
+          npx playwright test --config banco.config.ts
+          echo "salida=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Informe
+        if: always()
+        run: node hotspot/pruebas/banco/informe.mjs "$BANCO_RESULTADOS" escribir
+
+      # Lo importante, como anotaciones (se leen desde fuera sin descargar nada). GitHub enseña 10 por paso y clase.
+      - name: Resultados de los puntos 0 a 8
+        if: always()
+        run: node hotspot/pruebas/banco/informe.mjs "$BANCO_RESULTADOS" anotar 0-8
+
+      - name: Resultados de los sondeos (punto 9)
+        if: always()
+        run: node hotspot/pruebas/banco/informe.mjs "$BANCO_RESULTADOS" anotar 9
+
+      - name: Guardar los registros de los contenedores
+        if: always()
+        working-directory: wa/contrib/docker
+        run: |
+          $COMPOSE ps -a > "$BANCO_RESULTADOS/registros/contenedores.txt" 2>&1 || true
+          for servicio in play back reverse-proxy maps map-storage uploader; do
+            $COMPOSE logs --no-color --tail 400 "$servicio" > "$BANCO_RESULTADOS/registros/$servicio.txt" 2>&1 || true
+          done
+          # sin carpetas grandes ni restos de Playwright que no se van a mirar
+          du -sh "$BANCO_RESULTADOS" || true
+
+      - name: Subir los resultados (para el job que los deja en la rama)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: banco-resultados
+          path: resultados/
+          if-no-files-found: warn
+          retention-days: 5
+
+      - name: Veredicto
+        run: |
+          if [ "${{ steps.pruebas.outputs.salida }}" != "0" ]; then
+            echo "::warning title=Playwright::Playwright ha terminado con salida ${{ steps.pruebas.outputs.salida }}"
+          fi
+          node hotspot/pruebas/banco/informe.mjs "$BANCO_RESULTADOS" veredicto
+
+  # Deja el informe y las capturas en la rama «banco-resultados» (se sustituye entera en cada ejecución). Corre siempre,
+  # también cuando las pruebas fallan, que es cuando más falta hace. Es el ÚNICO job con permiso de escritura y lo
+  # único que hace con él es ese «push».
+  resultados:
+    name: Dejar los resultados en la rama banco-resultados
+    needs: banco
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Repositorio (solo para tener con qué hacer el push)
+        uses: actions/checkout@v4
+        with:
+          path: repositorio
+
+      - name: Bajar los resultados
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: banco-resultados
+          path: resultados
+
+      - name: Dejar los resultados en la rama banco-resultados
+        working-directory: repositorio
+        env:
+          RESULTADO_DEL_BANCO: ${{ needs.banco.result }}
+        run: |
+          set -e
+          git checkout --quiet --orphan resultados-de-esta-ejecucion
+          git rm -rf --quiet . > /dev/null
+          if [ -d ../resultados ]; then cp -r ../resultados/. .; fi
+          if [ ! -f informe.md ]; then
+            printf '# Banco de pruebas · informe\n\nLa ejecución %s no ha dejado resultados (el job «banco» acabó: %s).\n' \
+              "$GITHUB_RUN_ID" "$RESULTADO_DEL_BANCO" > informe.md
+          fi
+          printf '%s\n' "$GITHUB_RUN_ID" > ejecucion.txt
+          printf 'Resultados del banco de pruebas (rama banco-pruebas). Esta rama se sustituye entera en cada ejecución.\nEjecución: %s · job «banco»: %s\n' \
+            "$GITHUB_RUN_ID" "$RESULTADO_DEL_BANCO" > LEEME.txt
+          git add -A
+          git -c user.name="banco-de-pruebas" -c user.email="banco-de-pruebas@users.noreply.github.com" \
+            commit --quiet -m "Resultados del banco: ejecución $GITHUB_RUN_ID"
+          git push --force origin HEAD:refs/heads/banco-resultados

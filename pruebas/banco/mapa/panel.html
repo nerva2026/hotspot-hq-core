@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="utf-8" />
+        <title>Panel de prueba</title>
+        <style>
+            html {
+                color-scheme: dark;
+            }
+            body {
+                margin: 0;
+                padding: 24px;
+                background: #1c1715;
+                color: #f3e6d8;
+                font: 16px/1.4 monospace;
+            }
+            h1 {
+                color: #e0562a;
+                font-size: 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1 id="titulo">Panel de prueba</h1>
+        <p>Página genérica del banco de pruebas. Dirección: <span id="direccion"></span></p>
+        <script>
+            document.getElementById("direccion").textContent = location.pathname + location.search;
+        </script>
+    </body>
+</html>
