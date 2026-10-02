@@ -107,6 +107,8 @@ export type Jugador = {
     pagina: Page;
     contexto: BrowserContext;
     consola: string[];
+    /** Lo que ha pedido la página que interesa al banco (las letras de la casa y lo que va junto al mapa): «200 dirección». */
+    respuestas: string[];
     muneco: string;
 };
 
@@ -147,6 +149,11 @@ export async function entrar(browser: Browser, nombre: string, opciones: Opcione
         if (consola.length > 600) consola.shift();
     });
     pagina.on("pageerror", (e) => consola.push(`[excepción] ${e.message}`.slice(0, 500)));
+    const respuestas: string[] = [];
+    pagina.on("response", (r) => {
+        const direccion = r.url();
+        if (direccion.includes("/static/fonts/") || direccion.includes("/tests/banco/")) respuestas.push(`${r.status()} ${direccion}`);
+    });
 
     await pagina.goto(direccionDelMapa(sala));
 
@@ -188,7 +195,7 @@ export async function entrar(browser: Browser, nombre: string, opciones: Opcione
     if (await saltar.isVisible()) await saltar.click();
     await expect(micro).toBeVisible({ timeout: 120_000 });
 
-    const jugador: Jugador = { nombre, pagina, contexto, consola, muneco };
+    const jugador: Jugador = { nombre, pagina, contexto, consola, respuestas, muneco };
     await marcoDelScript(pagina);
     return jugador;
 }
@@ -437,4 +444,67 @@ export async function letraDe(pagina: Page, selector: string): Promise<Record<st
             fondo: c.backgroundColor,
         };
     }, selector);
+}
+
+// ---------- comparar capturas ----------
+
+export type Diferencia = {
+    /** Píxeles que cambian entre las dos capturas. */
+    distintos: number;
+    total: number;
+    /** El rectángulo que encierra lo que cambia, en píxeles de la captura (o nada, si son iguales). */
+    caja: { x0: number; y0: number; x1: number; y1: number } | null;
+    /** Si no se han podido comparar (tamaños distintos…). */
+    error?: string;
+};
+
+/**
+ * Compara dos capturas píxel a píxel (lo hace el navegador, que ya sabe leer PNG). Sirve para saber si algo se ha
+ * dibujado, si se mueve y DÓNDE cambia la imagen, sin fiarse solo de mirarlas.
+ */
+export async function diferencia(pagina: Page, a: string, b: string): Promise<Diferencia> {
+    const leer = (f: string): string => fs.readFileSync(path.join(RESULTADOS, f)).toString("base64");
+    return pagina.evaluate(
+        async ([x, y]) => {
+            const imagen = async (base64: string): Promise<ImageData> => {
+                const binario = atob(base64);
+                const octetos = new Uint8Array(binario.length);
+                for (let i = 0; i < binario.length; i++) octetos[i] = binario.charCodeAt(i);
+                const mapa = await createImageBitmap(new Blob([octetos], { type: "image/png" }));
+                const lienzo = new OffscreenCanvas(mapa.width, mapa.height);
+                const pincel = lienzo.getContext("2d");
+                if (!pincel) throw new Error("sin lienzo");
+                pincel.drawImage(mapa, 0, 0);
+                return pincel.getImageData(0, 0, mapa.width, mapa.height);
+            };
+            const p = await imagen(x);
+            const q = await imagen(y);
+            if (p.width !== q.width || p.height !== q.height) {
+                return { distintos: -1, total: p.width * p.height, caja: null, error: `tamaños distintos: ${p.width}×${p.height} y ${q.width}×${q.height}` };
+            }
+            let distintos = 0;
+            let x0 = p.width;
+            let y0 = p.height;
+            let x1 = -1;
+            let y1 = -1;
+            for (let i = 0; i < p.data.length; i += 4) {
+                if (p.data[i] !== q.data[i] || p.data[i + 1] !== q.data[i + 1] || p.data[i + 2] !== q.data[i + 2]) {
+                    distintos++;
+                    const px = (i / 4) % p.width;
+                    const py = Math.floor(i / 4 / p.width);
+                    if (px < x0) x0 = px;
+                    if (px > x1) x1 = px;
+                    if (py < y0) y0 = py;
+                    if (py > y1) y1 = py;
+                }
+            }
+            return { distintos, total: p.width * p.height, caja: distintos > 0 ? { x0, y0, x1, y1 } : null };
+        },
+        [leer(a), leer(b)],
+    );
+}
+
+/** Las excepciones y errores de consola que han salido desde una marca (para ver que algo «no hace nada raro»). */
+export function erroresDesde(jugador: Jugador, desde: number): string[] {
+    return jugador.consola.slice(desde).filter((l) => l.startsWith("[excepción]") || l.startsWith("[error]"));
 }

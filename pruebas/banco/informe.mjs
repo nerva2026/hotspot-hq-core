@@ -16,26 +16,46 @@ import path from "node:path";
 const [carpeta = "resultados", orden = "escribir", cuales = ""] = process.argv.slice(2);
 
 /** Los puntos del encargo, por orden, con las comprobaciones que tiene que haber en cada uno. */
+const ACCIONES = ["bailar", "sentado-abajo", "sentado-izquierda", "saludar", "aplaudir", "sentado-abajo-gotas", "sentado-abajo-nube", "quieto-burbujas", "sentado-abajo-zetas", "quieto-corazones", "quieto-chispas"];
+const OBJETOS = ["lata", "cafe", "agua", "cana", "snack", "disco"];
+const TAMANOS = ["1280x800", "1024x768", "1440x900"];
 const PUNTOS = [
     { punto: "0", titulo: "SONDA (el banco monta una llamada)", claves: ["llamada"] },
     { punto: "1", titulo: "ARRANCA", claves: ["entra", "aviso", "aviso-cierra", "version", "aviso-vuelve", "medidas"] },
-    { punto: "2", titulo: "TECLAS (parche 11)", claves: [] },
-    { punto: "3", titulo: "ACCIONES (parche 08)", claves: [] },
-    { punto: "4", titulo: "LO VEN LOS DEMÁS", claves: [] },
-    { punto: "5", titulo: "LLAMADA Y ACCIONES", claves: [] },
-    { punto: "6", titulo: "BARRA DE BOTONES EN LLAMADA", claves: [] },
-    { punto: "7", titulo: "VOLVER A HABLAR (parche 12)", claves: [] },
-    { punto: "8", titulo: "LETRAS", claves: [] },
-    { punto: "9a", titulo: "SONDEO moveTo", claves: [] },
-    { punto: "9b", titulo: "SONDEO proximityMeeting", claves: [] },
-    { punto: "9c", titulo: "SONDEO ui.website", claves: [] },
-    { punto: "9d", titulo: "SONDEO banner", claves: [] },
-    { punto: "9e", titulo: "SONDEO sonido", claves: [] },
-    { punto: "9f", titulo: "SONDEO capas (velo)", claves: [] },
-    { punto: "9g", titulo: "SONDEO setTiles", claves: [] },
-    { punto: "9h", titulo: "SONDEO room.website", claves: [] },
-    { punto: "9i", titulo: "SONDEO zona con panel", claves: [] },
-    { punto: "9j", titulo: "SONDEO zona silenciosa", claves: [] },
+    { punto: "2", titulo: "TECLAS (parche 11)", claves: ["llegan", "e-no", "con-ctrl", "repeticion", "decir", "vuelven", "chat"] },
+    {
+        punto: "3",
+        titulo: "ACCIONES (parche 08)",
+        claves: [
+            "referencia",
+            ...ACCIONES.map((a) => "accion-" + a),
+            ...OBJETOS.map((o) => "lleva-" + o),
+            "beber",
+            "no-existe-volar",
+            "no-existe-sentado-abajo-nada",
+            "no-existe-lleva",
+            "andando",
+        ],
+    },
+    { punto: "4", titulo: "LO VEN LOS DEMÁS", claves: ["entra-despues", "saludar", "lata", "bailar-en-directo"] },
+    { punto: "5", titulo: "LLAMADA Y ACCIONES", claves: ["se-forma", "bailar", "saludar", "lleva", "quitar", "tras-el-chat"] },
+    {
+        punto: "6",
+        titulo: "BARRA DE BOTONES EN LLAMADA",
+        claves: ["sin-invitar", ...TAMANOS.map((t) => "sin-llamada-" + t), "callback", "sustituir", "llamada", ...TAMANOS.map((t) => "en-llamada-" + t), "callback-en-llamada"],
+    },
+    { punto: "7", titulo: "VOLVER A HABLAR (parche 12)", claves: ["se-forma", "proximidad-corta", "proximidad-vuelve", "no-molestar-corta", "no-molestar-vuelve"] },
+    { punto: "8", titulo: "LETRAS", claves: ["decir", "pensar", "chat", "nombre", "aviso-de-zona", "aviso-del-mapa", "fuentes"] },
+    { punto: "9a", titulo: "SONDEO moveTo", claves: ["libre", "pared", "sin-camino"] },
+    { punto: "9b", titulo: "SONDEO proximityMeeting", claves: ["avisos"] },
+    { punto: "9c", titulo: "SONDEO ui.website", claves: ["abrir"] },
+    { punto: "9d", titulo: "SONDEO banner", claves: ["banner"] },
+    { punto: "9e", titulo: "SONDEO sonido", claves: ["sonido"] },
+    { punto: "9f", titulo: "SONDEO capas (velo)", claves: ["velo"] },
+    { punto: "9g", titulo: "SONDEO setTiles", claves: ["casillas"] },
+    { punto: "9h", titulo: "SONDEO room.website", claves: ["cartel"] },
+    { punto: "9i", titulo: "SONDEO zona con panel", claves: ["zona-panel"] },
+    { punto: "9j", titulo: "SONDEO zona silenciosa", claves: ["silencio"] },
 ];
 
 const ORDEN_ESTADOS = ["mal", "no se pudo", "bien", "dato"];
@@ -114,7 +134,16 @@ function montar() {
                 comprobaciones.push({ punto: p.punto, clave, titulo: clave, estado: "no se pudo", dato: "la prueba no llegó a esta comprobación", capturas: [] });
             }
         }
-        const prueba = playwright.pruebas.find((t) => t.titulo.startsWith(p.punto + " ·"));
+        // la prueba de Playwright de este punto (las del 9 son dos): si alguna acabó mal, esa
+        const prefijo = (p.punto.startsWith("9") ? "9" : p.punto) + " ·";
+        const suyas = playwright.pruebas.filter((t) => t.titulo.startsWith(prefijo));
+        const prueba = suyas.find((t) => t.estado !== "passed") ?? suyas[0];
+        // las comprobaciones, en el orden en que se pidieron
+        comprobaciones.sort((x, y) => {
+            const i = p.claves.indexOf(x.clave);
+            const j = p.claves.indexOf(y.clave);
+            return (i < 0 ? 999 : i) - (j < 0 ? 999 : j);
+        });
         return { ...p, estado: estadoDelPunto(comprobaciones), comprobaciones, prueba: prueba ?? null };
     });
     const cuenta = { bien: 0, mal: 0, "no se pudo": 0, dato: 0 };
@@ -191,13 +220,19 @@ function anotar() {
     const puntos = informe.puntos.filter((p) => (cuales === "9" ? p.punto.startsWith("9") : !p.punto.startsWith("9")));
     for (const p of puntos) {
         const clase = p.estado === "mal" ? "error" : p.estado === "no se pudo" ? "warning" : "notice";
-        const partes = p.comprobaciones
-            .slice()
-            .sort((a, b) => ORDEN_ESTADOS.indexOf(a.estado) - ORDEN_ESTADOS.indexOf(b.estado))
-            .map((c) => `[${c.estado}] ${c.clave}: ${corto(c.dato, 220)}`);
+        // Primero lo que ha ido mal y lo que no se pudo (con su dato), luego los datos de los sondeos y, al final, solo
+        // los nombres de lo que ha ido bien (el detalle está en informe.md).
+        const de = (estado) => p.comprobaciones.filter((c) => c.estado === estado);
+        const partes = [];
+        for (const c of de("mal")) partes.push(`[MAL] ${c.clave}: ${corto(c.dato, 420)}`);
+        for (const c of de("no se pudo")) partes.push(`[NO SE PUDO] ${c.clave}: ${corto(c.dato, 320)}`);
+        for (const c of de("dato")) partes.push(`[dato] ${c.clave}: ${corto(c.dato, cuales === "9" ? 1500 : 300)}`);
+        const bien = de("bien");
+        if (cuales === "9") for (const c of bien) partes.push(`[bien] ${c.clave}: ${corto(c.dato, 1500)}`);
+        else if (bien.length > 0) partes.push(`[bien] ${bien.length}: ${bien.map((c) => c.clave).join(", ")}`);
         let texto = partes.join("\n");
         if (p.prueba && p.prueba.estado !== "passed") texto = `Playwright: ${p.prueba.estado} · ${corto(p.prueba.error, 300)}\n` + texto;
-        if (texto.length > 3500) texto = texto.slice(0, 3500) + "…";
+        if (texto.length > 3800) texto = texto.slice(0, 3800) + "…";
         anotacion(clase, `${p.punto} · ${p.titulo} · ${p.estado.toUpperCase()}`, texto || "sin comprobaciones");
     }
 }
