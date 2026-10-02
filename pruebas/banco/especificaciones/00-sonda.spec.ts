@@ -5,10 +5,12 @@
 import { test } from "@playwright/test";
 import {
     banco,
+    cajasClaras,
     capturaEntera,
     centro,
     comprobar,
     entrar,
+    espera,
     esperarLlamada,
     estadoDeLlamada,
     guardarDiagnostico,
@@ -41,6 +43,12 @@ test("0 · sonda: dos jugadores se juntan", async ({ browser }) => {
             }
             const capturas = [await capturaEntera(a.pagina, "0-llamada-alicia"), await capturaEntera(b.pagina, "0-llamada-benito")];
             guardarDiagnostico("llamada-cuerpo-alicia.html", await a.pagina.evaluate(() => document.body.outerHTML));
+            // Un rato en llamada: ¿sale algo que no debería (una caja blanca, un aviso…)?
+            await espera(9000);
+            const avisoDelMicrofono = await a.pagina.getByTestId("no-microphone-sound-ignore").isVisible().catch(() => false);
+            capturas.push(await capturaEntera(a.pagina, "0-llamada-alicia-a-los-10-s"));
+            const cajas = await cajasClaras(a.pagina);
+            guardarDiagnostico("llamada-cuerpo-alicia-a-los-10-s.html", await a.pagina.evaluate(() => document.body.outerHTML));
             return {
                 estado: error === "" ? "bien" : "no se pudo",
                 dato: {
@@ -50,6 +58,7 @@ test("0 · sonda: dos jugadores se juntan", async ({ browser }) => {
                     benito: await estadoDeLlamada(b.pagina),
                     posiciones: { alicia: await posicion(a.pagina), benito: await posicion(b.pagina) },
                     scriptAlicia: (await banco(a.pagina)).llamada,
+                    aLos10Segundos: { saleElAvisoDeQueNoSeOyeElMicrofono: avisoDelMicrofono, cajasClarasOMarcosALaVista: cajas },
                 },
                 capturas,
             };

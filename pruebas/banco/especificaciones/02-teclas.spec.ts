@@ -14,7 +14,7 @@ test("2 · teclas del mapa (parche 11)", async ({ browser }) => {
     try {
         a = await entrar(browser, "Alicia", { sala: "teclas" });
         const pagina = a.pagina;
-        const teclas = async (): Promise<{ name: string; data: { code?: string }; senderId: unknown; conSenderId: boolean }[]> =>
+        const teclas = async (): Promise<{ name: string; data: { code?: string }; senderId: unknown; conSenderId: boolean; t: number }[]> =>
             (await banco(pagina)).teclas;
         const pulsar = async (tecla: string): Promise<void> => {
             await pagina.keyboard.press(tecla);
@@ -64,14 +64,40 @@ test("2 · teclas del mapa (parche 11)", async ({ browser }) => {
         });
 
         await comprobar(P, "repeticion", "Dejar la tecla pulsada no repite el evento", [pagina], async () => {
+            // 1) Con el protocolo del navegador: una pulsación y cuatro repeticiones marcadas como tales (autoRepeat),
+            //    que es lo que manda un teclado de verdad al dejar la tecla pulsada.
             const antes = (await teclas()).length;
+            const cdp = await pagina.context().newCDPSession(pagina);
+            const tecla = { key: "x", code: "KeyX", windowsVirtualKeyCode: 88, nativeVirtualKeyCode: 88, text: "x", unmodifiedText: "x" };
+            await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", ...tecla, autoRepeat: false });
+            for (let i = 0; i < 4; i++) {
+                await espera(90);
+                await cdp.send("Input.dispatchKeyEvent", { type: "keyDown", ...tecla, autoRepeat: true });
+            }
+            await espera(90);
+            await cdp.send("Input.dispatchKeyEvent", { type: "keyUp", key: "x", code: "KeyX", windowsVirtualKeyCode: 88, nativeVirtualKeyCode: 88 });
+            await espera(300);
+            const trasElProtocolo = await teclas();
+            const conRepeticionesMarcadas = trasElProtocolo.length - antes;
+            // 2) Con Playwright (keyboard.down varias veces seguidas): se apunta lo que llega, como dato
             await pagina.keyboard.down("x");
-            await pagina.keyboard.down("x"); // Playwright manda la segunda como repetición
+            await espera(90);
             await pagina.keyboard.down("x");
+            await espera(90);
+            await pagina.keyboard.down("x");
+            await espera(90);
             await pagina.keyboard.up("x");
-            await espera(200);
-            const despues = (await teclas()).length;
-            return { estado: despues - antes === 1 ? "bien" : "mal", dato: { eventosNuevos: despues - antes } };
+            await espera(300);
+            const alFinal = await teclas();
+            const t0 = alFinal[antes]?.t ?? 0;
+            return {
+                estado: conRepeticionesMarcadas === 1 ? "bien" : "mal",
+                dato: {
+                    conUnaPulsacionYCuatroRepeticiones: conRepeticionesMarcadas,
+                    conTresKeyboardDownDePlaywright: alFinal.length - trasElProtocolo.length,
+                    eventos: alFinal.slice(antes).map((e) => ({ code: e.data?.code, ms: e.t - t0 })),
+                },
+            };
         });
 
         await comprobar(P, "decir", "Escribiendo en el campo de «decir» no llegan", [pagina], async () => {

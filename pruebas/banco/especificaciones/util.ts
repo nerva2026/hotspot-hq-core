@@ -189,6 +189,14 @@ export async function entrar(browser: Browser, nombre: string, opciones: Opcione
             // se ha ido solo
         }
     });
+    // El micrófono de mentira no «suena» y, en llamada, WorkAdventure avisa de ello: se le dice que lo ignore
+    await pagina.addLocatorHandler(pagina.getByTestId("no-microphone-sound-ignore"), async (boton) => {
+        try {
+            await boton.click({ force: true, timeout: 5_000 });
+        } catch {
+            // se ha ido solo
+        }
+    });
     const saltar = pagina.getByTestId("pwa-install-skip");
     const micro = pagina.getByTestId("microphone-button");
     await saltar.or(micro).first().waitFor({ state: "visible", timeout: 120_000 });
@@ -523,4 +531,48 @@ export async function cajaDe(pagina: Page, selector: string): Promise<{ x: numbe
     const elemento = pagina.locator(selector).first();
     if ((await elemento.count()) === 0) return null;
     return elemento.boundingBox();
+}
+
+/** Quita el aviso de «no se detecta sonido de tu micrófono» (cosa del micrófono de mentira del banco) si está puesto. */
+export async function quitarAvisoDelMicrofono(pagina: Page): Promise<boolean> {
+    const ignorar = pagina.getByTestId("no-microphone-sound-ignore");
+    if (!(await ignorar.isVisible().catch(() => false))) return false;
+    await ignorar.click({ force: true }).catch(() => undefined);
+    await espera(400);
+    return true;
+}
+
+/**
+ * Los elementos grandes y de fondo claro y opaco que hay a la vista (diagnóstico: una caja blanca en mitad del mapa no
+ * debería estar). De cada uno: qué es, sus clases, dónde está y el camino de sus padres.
+ */
+export async function cajasClaras(pagina: Page): Promise<Record<string, unknown>[]> {
+    return pagina.evaluate(() => {
+        const cajas: Record<string, unknown>[] = [];
+        for (const e of Array.from(document.querySelectorAll("body *"))) {
+            const r = e.getBoundingClientRect();
+            if (r.width < 120 || r.height < 70 || r.width * r.height < 15000) continue;
+            if (r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth) continue;
+            const estilo = getComputedStyle(e);
+            if (estilo.visibility === "hidden" || estilo.display === "none" || Number(estilo.opacity) < 0.5) continue;
+            const m = estilo.backgroundColor.match(/rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/);
+            const esMarco = e.tagName === "IFRAME" || e.tagName === "VIDEO" || e.tagName === "CANVAS";
+            const claro = !!m && Number(m[1]) > 225 && Number(m[2]) > 225 && Number(m[3]) > 225 && (m[4] === undefined || Number(m[4]) > 0.8);
+            if (!claro && !(esMarco && e.tagName !== "CANVAS")) continue;
+            const camino: string[] = [];
+            for (let p: Element | null = e; p && p !== document.body && camino.length < 7; p = p.parentElement) {
+                camino.push(p.tagName.toLowerCase() + (p.id ? "#" + p.id : "") + (p.getAttribute("data-testid") ? `[${p.getAttribute("data-testid")}]` : ""));
+            }
+            cajas.push({
+                que: e.tagName.toLowerCase(),
+                id: e.id,
+                clases: String(e.getAttribute("class") ?? "").slice(0, 160),
+                fondo: estilo.backgroundColor,
+                caja: { x: Math.round(r.x), y: Math.round(r.y), ancho: Math.round(r.width), alto: Math.round(r.height) },
+                src: (e as HTMLIFrameElement).src ? String((e as HTMLIFrameElement).src).slice(0, 120) : undefined,
+                camino: camino.join(" < "),
+            });
+        }
+        return cajas;
+    });
 }

@@ -52,6 +52,7 @@ const PUNTOS = [
             "llamada",
             ...TAMANOS.map((t) => "en-llamada-" + t),
             "en-llamada-anchos",
+            "en-llamada-con-chat-1280x800",
             "callback-en-llamada",
         ],
     },

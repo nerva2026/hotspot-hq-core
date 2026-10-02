@@ -18,6 +18,7 @@ import {
     estadoDeLlamada,
     guardarDiagnostico,
     mensajeDe,
+    quitarAvisoDelMicrofono,
     salir,
     teletransportar,
     type Jugador,
@@ -122,6 +123,7 @@ async function medirEnCadaTamano(pagina: Page, cuando: "sin-llamada" | "en-llama
             await espera(2500); // la barra se recoloca sola (y tarda un poco en decidir qué cabe)
             const llamada = await estadoDeLlamada(pagina);
             if (cuando === "en-llamada" && !enLlamada(llamada)) throw new Error("La llamada se ha cortado al cambiar el tamaño: " + JSON.stringify(llamada));
+            await quitarAvisoDelMicrofono(pagina);
             const m = await medir(pagina);
             const capturas = [
                 await captura(pagina, `6-barra-${clave}`, { x: 0, y: 0, width: tamano.width, height: 110 }),
@@ -248,6 +250,33 @@ test("6 · la barra de botones, sin llamada y en llamada", async ({ browser }) =
         if (montada.estado === "no se pudo") return;
 
         await medirEnCadaTamano(alicia, "en-llamada");
+
+        // Con el chat abierto la barra tiene menos sitio (el chat ocupa un lado de la ventana): es fácil que pase en una
+        // llamada, porque el chat de la conversación se abre para escribirse.
+        await comprobar(P, "en-llamada-con-chat-1280x800", "EN llamada y con el chat abierto, 1280×800: botones del mapa a la vista", [alicia], async () => {
+            await alicia.setViewportSize({ width: 1280, height: 800 });
+            await espera(1500);
+            await alicia.getByTestId("chat-btn").click();
+            await expect(alicia.getByTestId("closeChatButton")).toBeVisible();
+            await espera(2500);
+            const barraVisible = await alicia.locator("#action-wrapper").count();
+            const m = barraVisible > 0 ? await medir(alicia) : null;
+            const chat = await alicia.evaluate(() => {
+                const c = document.querySelector("#chat");
+                const r = c?.getBoundingClientRect();
+                return r ? { x: Math.round(r.x), ancho: Math.round(r.width) } : null;
+            });
+            const capturas = [await capturaEntera(alicia, "6-pantalla-en-llamada-con-chat-1280x800"), await captura(alicia, "6-barra-en-llamada-con-chat-1280x800", { x: 0, y: 0, width: 1280, height: 110 })];
+            await alicia.getByTestId("closeChatButton").click();
+            await espera(1500);
+            return {
+                estado: m && m.delMapaALaVista.length === 5 ? "bien" : "mal",
+                dato: m
+                    ? { aLaVista: m.delMapaALaVista, escondidos: m.delMapaEscondidos, anchoDeLaBarra: m.anchoDeLaBarra, chat }
+                    : { nota: "con el chat abierto la barra entera desaparece", chat },
+                capturas,
+            };
+        });
 
         await comprobar(P, "callback-en-llamada", "En llamada, pulsar un botón del mapa sigue llamando a su `callback`", [alicia], async () => {
             const antes = (await banco(alicia)).pulsados.length;

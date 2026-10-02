@@ -81,18 +81,30 @@ test("3 · acciones y cosas en la mano (parche 08)", async ({ browser }) => {
                 const otra = await captura(pagina, `3-accion-${archivo(valor)}-2`, recorte);
                 const conNada = await diferencia(pagina, referencia, una);
                 const entreLasDos = await diferencia(pagina, una, otra);
+                // Dos capturas pueden caer por casualidad en el mismo momento de un vaivén corto (el aplauso da dos
+                // botes por tiempo): si salen iguales, se sacan unas cuantas más, a destiempo, antes de decir que no se mueve.
+                const capturas = [una, otra];
+                let seHaVistoMoverse = entreLasDos.distintos > 0;
+                for (let i = 3; seMueve && !seHaVistoMoverse && i <= 7; i++) {
+                    await espera(70 + i * 23);
+                    const mas = await captura(pagina, `3-accion-${archivo(valor)}-${i}`, recorte);
+                    capturas.push(mas);
+                    seHaVistoMoverse = (await diferencia(pagina, una, mas)).distintos > 0;
+                }
                 const errores = erroresDesde(jugador, marca);
                 const seVe = conNada.distintos > 0;
-                const bien = seVe && (seMueve ? entreLasDos.distintos > 0 : entreLasDos.distintos === 0) && errores.length === 0;
+                const bien = seVe && (seMueve ? seHaVistoMoverse : entreLasDos.distintos === 0) && errores.length === 0;
                 return {
                     estado: bien ? "bien" : "mal",
                     dato: {
                         cambiaRespectoANada: conNada,
                         cambiaEntreLasDosCapturas: entreLasDos,
                         teniaQueMoverse: seMueve,
+                        seHaVistoMoverse,
+                        capturasHechas: capturas.length,
                         errores,
                     },
-                    capturas: [una, otra],
+                    capturas,
                 };
             });
         }
