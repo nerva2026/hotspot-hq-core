@@ -3,6 +3,12 @@
 //   /            portada (CREW o INVITADO)                          → carpeta portada/
 //   /cuentas/    entrar con Google y proveedor de identidad         → servidor/crew.js
 //   /tareas/     tablón de tareas (aplicación y API)                → carpeta publico/
+//   /tareas/libro/   libro de cuentas de Don Balance (misma API)    → publico/libro/, servidor/libro.js
+//   /tareas/pizarra/ pizarras compartidas (reuniones…)              → publico/pizarra/, servidor/pizarra.js
+//   /tareas/oficina/ puente invisible de la oficina (para el mapa)  → publico/oficina/, publico/app/oficina.js
+//                    tareas y cumpleaños de quien juega               (y /api/oficina: servidor/perfil.js)
+//   /tareas/musica/  música con Spotify (la cabina del estudio)     → publico/musica/, servidor/musica.js
+//   /tareas/archivo/ archivo de documentos (la sala ARCHIVO)         → publico/archivo/, servidor/archivo.js
 //
 // Sin dependencias: solo Node.
 //
@@ -14,6 +20,11 @@
 //   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET     cliente OAuth de Google (entrar con Google)
 //   OIDC_SECRETO, OIDC_CLIENTE, OIDC_EMISOR    acceso de la oficina (WorkAdventure) a /cuentas
 //   CREW_ADMIN      correo de Google del primer administrador
+//   TAREAS_ZONA     zona horaria de la oficina, para saber qué día es hoy (Europe/Madrid)
+//   TAREAS_HOY      SOLO PARA PRUEBAS: fija el día de hoy («2027-02-28») o el instante («2027-02-27T23:30:00Z»);
+//                   con NODE_ENV=production (la imagen de Docker) se ignora
+//   SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET   aplicación de Spotify (la música; ver servidor/musica.js)
+//   ARCHIVO_MAXIMO_MB  lo que pueden ocupar entre todos los documentos del archivo (1024)
 //
 // Órdenes (dentro del contenedor):
 //   node servidor/principal.js enlace   → imprime un enlace nuevo para dar de alta a alguien (con permisos
@@ -26,9 +37,14 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { abrirAlmacen } from "./almacen.js";
 import * as cuentas from "./cuentas.js";
-import { aplicarCambios, crearTarea, publica, ErrorDeDatos, ESTADOS, NOMBRES_ESTADO, NOMBRES_PRIORIDAD, PRIORIDADES } from "./tareas.js";
+import { aplicarCambios, camposEnConflicto, crearTarea, publica, ErrorDeDatos, ESTADOS, NOMBRES_ESTADO, NOMBRES_PRIORIDAD, PRIORIDADES } from "./tareas.js";
 import { crearExcel, leerExcel, fechaDeCelda } from "./excel.js";
 import { crearCrew, correoValido, limpiarCorreo } from "./crew.js";
+import * as libro from "./libro.js";
+import { abrirPizarras, idValido as pizarraValida, COLORES_TRAZO, GROSORES, ANCHO as ANCHO_PIZARRA, ALTO as ALTO_PIZARRA } from "./pizarra.js";
+import * as perfil from "./perfil.js";
+import { crearMusica } from "./musica.js";
+import { abrirArchivo } from "./archivo.js";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const PUBLICO = path.join(RAIZ, "publico");
@@ -38,6 +54,7 @@ const CARPETA_DATOS = process.env.TAREAS_DATOS || "/datos";
 const BASE = (process.env.TAREAS_BASE || "/tareas").replace(/\/$/, "");
 const URL_PUBLICA = process.env.TAREAS_URL || `http://localhost:${PUERTO}${BASE}/`;
 const ARCHIVO_INTERNO = path.join(CARPETA_DATOS, ".interno");
+const CARPETA_TIQUES = path.join(CARPETA_DATOS, "tiques");
 
 // ---------- orden «enlace» (se ejecuta junto al servidor que ya está en marcha) ----------
 
@@ -57,6 +74,8 @@ if (process.argv[2] === "enlace") {
 
 const almacen = abrirAlmacen(CARPETA_DATOS);
 const datos = () => almacen.datos;
+const pizarras = abrirPizarras(CARPETA_DATOS);
+const elArchivo = abrirArchivo(CARPETA_DATOS, { emitir: (evento, origen) => emitir(evento, origen), maximoTotal: (Number(process.env.ARCHIVO_MAXIMO_MB) || 1024) * 1024 * 1024 });
 const crew = crearCrew({
     almacen,
     cuentas,
@@ -65,6 +84,22 @@ const crew = crearCrew({
     urlPublica: URL_PUBLICA,
     alCambiarUsuarios: () => emitir({ tipo: "usuarios", usuarios: datos().usuarios.map(cuentas.usuarioPublico) }),
 });
+
+// Qué día es hoy en la oficina (el servidor va en UTC). TAREAS_HOY es solo para las pruebas.
+let ZONA = process.env.TAREAS_ZONA || perfil.ZONA_POR_DEFECTO;
+if (!perfil.zonaValida(ZONA)) {
+    console.error(`[tablón] TAREAS_ZONA=${ZONA} no es una zona horaria válida: se usa ${perfil.ZONA_POR_DEFECTO}.`);
+    ZONA = perfil.ZONA_POR_DEFECTO;
+}
+// En la imagen de Docker (NODE_ENV=production) se ignora: así no se puede quedar la oficina parada en un día.
+let HOY_FIJO = perfil.leerHoyFijo(process.env.TAREAS_HOY);
+if (HOY_FIJO && process.env.NODE_ENV === "production") {
+    console.error(`[tablón] TAREAS_HOY=${process.env.TAREAS_HOY} es solo para pruebas: con NODE_ENV=production no se usa.`);
+    HOY_FIJO = null;
+}
+if (HOY_FIJO === undefined) console.error(`[tablón] TAREAS_HOY=${process.env.TAREAS_HOY} no se entiende (AAAA-MM-DD o AAAA-MM-DDTHH:MM:SSZ): no se usa.`);
+const hoyOficina = () => perfil.hoyEnLaOficina(ZONA, HOY_FIJO || null);
+if (HOY_FIJO) console.warn(`[tablón] OJO: TAREAS_HOY=${process.env.TAREAS_HOY} es solo para pruebas. Para la oficina, hoy es ${hoyOficina()} (${ZONA}).`);
 
 const claveInterna = crypto.randomBytes(24).toString("hex");
 const CLAVE_FALSA = await cuentas.cifrarClave(crypto.randomBytes(12).toString("hex"));
@@ -107,6 +142,58 @@ function emitir(evento, origen = null) {
     escribirATodos(`data: ${JSON.stringify({ ...evento, origen })}\n\n`);
 }
 
+// Lo de una pizarra (trazos, fotos, dónde está el lápiz de cada uno) solo a quien la tiene abierta.
+function emitirPizarra(id, evento, origen = null) {
+    const linea = `data: ${JSON.stringify({ ...evento, pizarra: id, origen })}\n\n`;
+    for (const o of [...oyentes]) {
+        if (o.pizarra !== id) continue;
+        try {
+            o.res.write(linea);
+        } catch {
+            oyentes.delete(o);
+        }
+    }
+}
+
+function avisarPresentes(id) {
+    if (!id) return;
+    const usuarios = [...new Set([...oyentes].filter((o) => o.pizarra === id).map((o) => o.usuario.id))];
+    emitirPizarra(id, { tipo: "pizarra-presentes", usuarios });
+}
+
+// Lo de la música (qué suena, la cabina, quién escucha) solo a quien tiene abierta la cabina o el reproductor.
+function emitirMusica(evento, condicion = () => true) {
+    const linea = `data: ${JSON.stringify(evento)}\n\n`;
+    for (const o of [...oyentes]) {
+        if (!o.musica || !condicion(o)) continue;
+        try {
+            o.res.write(linea);
+        } catch {
+            oyentes.delete(o);
+        }
+    }
+}
+
+const quienesEscuchan = () => [...new Set([...oyentes].filter((o) => o.musica && o.escucha).map((o) => o.usuario.id))];
+let escuchabanAntes = "[]";
+function avisarEscuchando() {
+    const ahora = quienesEscuchan();
+    if (JSON.stringify(ahora) === escuchabanAntes) return;
+    escuchabanAntes = JSON.stringify(ahora);
+    emitirMusica({ tipo: "musica-oyentes", escuchando: ahora });
+}
+
+const musica = crearMusica({
+    carpetaDatos: CARPETA_DATOS,
+    urlPublica: URL_PUBLICA,
+    base: BASE,
+    usuarioDe: (id) => datos().usuarios.find((u) => u.id === id) || null,
+    emitir: (evento) => emitirMusica(evento),
+    emitirA: (id, evento) => emitirMusica(evento, (o) => o.usuario.id === id),
+    hayOyentes: () => [...oyentes].some((o) => o.musica),
+    escuchando: quienesEscuchan,
+});
+
 function cerrarOyentes(condicion) {
     for (const o of [...oyentes]) {
         if (!condicion(o)) continue;
@@ -128,6 +215,21 @@ setInterval(() => {
     const antes = datos().tareas.length;
     datos().tareas = datos().tareas.filter((t) => !t.borrada || Date.parse(t.borrada) > limite);
     if (datos().tareas.length !== antes) almacen.guardar();
+    // Las pizarras: papelera y lo vaciado, 30 días; las fotos que ya no usa nadie, fuera.
+    pizarras.limpiarViejo(limite);
+    // El archivo de documentos: lo de la papelera, a los 30 días, fuera (con su archivo).
+    elArchivo.limpiarViejo(limite);
+    for (const archivo of pizarras.fotosHuerfanas()) fs.rm(path.join(pizarras.carpetaImagenes, archivo), { force: true }, () => {});
+    // Lo mismo con los movimientos del libro de cuentas (y la foto de su tique).
+    if (datos().libro) {
+        const l = libro.libroDe(datos());
+        const caducados = l.movimientos.filter((m) => m.borrado && Date.parse(m.borrado) <= limite);
+        if (caducados.length) {
+            for (const m of caducados) if (m.tique) borrarTique(m.tique.archivo);
+            l.movimientos = l.movimientos.filter((m) => !caducados.includes(m));
+            almacen.guardar();
+        }
+    }
 }, 3600 * 1000).unref();
 
 // ---------- utilidades HTTP ----------
@@ -145,7 +247,15 @@ const TIPOS = {
 };
 
 const CSP =
-    "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; " +
+    "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; " +
+    "font-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; object-src 'none'";
+// El archivo enseña dentro las vistas previas de Google (Docs, Hojas, Presentaciones y Drive).
+const CSP_ARCHIVO = `${CSP}; frame-src 'self' https://docs.google.com https://drive.google.com`;
+
+// La música (/tareas/musica/) además carga el reproductor oficial de Spotify (su script y su marco) y las portadas.
+const CSP_MUSICA =
+    "default-src 'self'; img-src 'self' data: https://i.scdn.co https://*.scdn.co https://*.spotifycdn.com; style-src 'self' 'unsafe-inline'; " +
+    "script-src 'self' https://open.spotify.com https://*.spotifycdn.com; frame-src https://open.spotify.com; connect-src 'self'; " +
     "font-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'self'; object-src 'none'";
 
 function cabecerasComunes(res) {
@@ -198,7 +308,8 @@ const ipDe = (req) => String(req.headers["x-forwarded-for"] || req.socket.remote
 // ---------- archivos de la aplicación ----------
 
 function servirArchivo(req, res, ruta) {
-    const relativa = ruta === "/" ? "/index.html" : ruta;
+    // Cada aplicación es una carpeta con su index.html: /tareas/ (el tablón), /tareas/libro/…
+    const relativa = ruta.endsWith("/") ? `${ruta}index.html` : ruta;
     const archivo = path.normalize(path.join(PUBLICO, relativa));
     if (!archivo.startsWith(PUBLICO + path.sep)) return fallo(res, 404, "No existe");
     let info;
@@ -207,6 +318,10 @@ function servirArchivo(req, res, ruta) {
     } catch {
         return fallo(res, 404, "No existe");
     }
+    if (info.isDirectory() && fs.existsSync(path.join(archivo, "index.html"))) {
+        res.writeHead(301, { Location: `${BASE}${ruta}/` });
+        return res.end();
+    }
     if (!info.isFile()) return fallo(res, 404, "No existe");
     const etag = `"${info.size.toString(36)}-${Math.floor(info.mtimeMs).toString(36)}"`;
     const cabeceras = {
@@ -214,7 +329,13 @@ function servirArchivo(req, res, ruta) {
         "Cache-Control": "no-cache",
         ETag: etag,
     };
-    if (archivo.endsWith(".html")) cabeceras["Content-Security-Policy"] = CSP;
+    if (archivo.endsWith(".html")) {
+        const deMusica = relativa.startsWith("/musica/");
+        const deArchivo = relativa.startsWith("/archivo/");
+        cabeceras["Content-Security-Policy"] = deMusica ? CSP_MUSICA : deArchivo ? CSP_ARCHIVO : CSP;
+        // El reproductor de Spotify recibe solo el origen (como hace el navegador por defecto), nunca la ruta.
+        if (deMusica) cabeceras["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    }
     if (req.headers["if-none-match"] === etag) {
         res.writeHead(304, cabeceras);
         return res.end();
@@ -241,7 +362,7 @@ function servirPortada(req, res) {
 
 function datosPara(usuario) {
     return {
-        yo: { ...cuentas.usuarioPublico(usuario), tieneClave: Boolean(usuario.clave), email: usuario.email || null },
+        yo: { ...cuentas.usuarioPublico(usuario), tieneClave: Boolean(usuario.clave), email: usuario.email || null, libro: puedeVerLibro(usuario) },
         usuarios: datos().usuarios.map(cuentas.usuarioPublico),
         tareas: datos().tareas.filter((t) => !t.borrada).map(publica),
     };
@@ -413,6 +534,113 @@ function importar(buf, usuario) {
     return { importadas, repetidas, hoja: hoja.nombre, nuevas };
 }
 
+// ---------- libro de cuentas ----------
+
+// Fotos o PDF del tique de un gasto: se guardan en datos/tiques/ y solo se sirven al crew.
+const TIPOS_TIQUE = [
+    { tipo: "image/jpeg", ext: "jpg", firma: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+    { tipo: "image/png", ext: "png", firma: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
+    { tipo: "image/webp", ext: "webp", firma: (b) => b.subarray(0, 4).toString("latin1") === "RIFF" && b.subarray(8, 12).toString("latin1") === "WEBP" },
+    { tipo: "application/pdf", ext: "pdf", firma: (b) => b.subarray(0, 5).toString("latin1") === "%PDF-" },
+];
+const MAXIMO_TIQUE = 12 * 1024 * 1024;
+
+const TIPOS_FOTO_PIZARRA = [
+    ...TIPOS_TIQUE.filter((t) => t.tipo !== "application/pdf"),
+    { tipo: "image/gif", ext: "gif", firma: (b) => b.subarray(0, 4).toString("latin1") === "GIF8" },
+];
+const MAXIMO_FOTO_PIZARRA = 10 * 1024 * 1024;
+const vivoPorUsuario = new Map();
+
+function borrarTique(archivo) {
+    if (!/^[\w-]+\.(jpg|png|webp|pdf)$/.test(archivo || "")) return;
+    fs.rm(path.join(CARPETA_TIQUES, archivo), { force: true }, () => {});
+}
+
+function puedeVerLibro(usuario) {
+    if (!usuario || usuario.baja) return false;
+    return Boolean(usuario.admin) || (libro.partesDe(datos())[usuario.id] || 0) > 0;
+}
+
+function datosLibro(usuario) {
+    const l = libro.libroDe(datos());
+    return {
+        yo: { ...cuentas.usuarioPublico(usuario), tieneClave: Boolean(usuario.clave), email: usuario.email || null },
+        usuarios: datos().usuarios.map(cuentas.usuarioPublico),
+        partes: libro.partesDe(datos()),
+        partesFijas: Boolean(l.partes),
+        categorias: l.categorias,
+        movimientos: libro.ordenar(l.movimientos.filter((m) => !m.borrado)).map(libro.publico),
+        resumen: libro.resumen(l, datos().usuarios),
+    };
+}
+
+function excelLibro() {
+    const l = libro.libroDe(datos());
+    const nombre = (id) => datos().usuarios.find((u) => u.id === id)?.nombre || "";
+    const r = libro.resumen(l, datos().usuarios);
+    const e = (c) => c / 100;
+    return crearExcel({
+        hojas: [
+            {
+                nombre: "Movimientos",
+                columnas: [
+                    { titulo: "Fecha", ancho: 12, tipo: "fecha" },
+                    { titulo: "Tipo", ancho: 10 },
+                    { titulo: "Concepto", ancho: 40, tipo: "largo" },
+                    { titulo: "Categoría", ancho: 20 },
+                    { titulo: "Quién", ancho: 14 },
+                    { titulo: "Para quién", ancho: 14 },
+                    { titulo: "Importe (€)", ancho: 14, tipo: "euros" },
+                    { titulo: "Notas", ancho: 40, tipo: "largo" },
+                    { titulo: "Tique", ancho: 8 },
+                ],
+                filas: libro.ordenar(l.movimientos.filter((m) => !m.borrado)).map((m) => [
+                    m.fecha,
+                    libro.NOMBRES_TIPO[m.tipo],
+                    m.tipo === "pago" ? m.concepto || "Pago" : m.concepto,
+                    m.categoria,
+                    nombre(m.persona),
+                    nombre(m.para),
+                    e(m.importe),
+                    m.notas,
+                    m.tique ? "Sí" : "",
+                ]),
+            },
+            {
+                nombre: "Balance",
+                columnas: [
+                    { titulo: "Persona", ancho: 16 },
+                    { titulo: "Parte", ancho: 9, tipo: "porcentaje" },
+                    { titulo: "Ha pagado", ancho: 13, tipo: "euros" },
+                    { titulo: "Le toca pagar", ancho: 14, tipo: "euros" },
+                    { titulo: "Ha cobrado", ancho: 13, tipo: "euros" },
+                    { titulo: "Le corresponde", ancho: 15, tipo: "euros" },
+                    { titulo: "Pagos hechos", ancho: 13, tipo: "euros" },
+                    { titulo: "Pagos recibidos", ancho: 15, tipo: "euros" },
+                    { titulo: "Balance", ancho: 13, tipo: "euros" },
+                ],
+                filas: [
+                    ...r.personas.map((p) => [nombre(p.id), p.parte, e(p.haPagado), e(p.leToca), e(p.haCobrado), e(p.leCorresponde), e(p.pagosHechos), e(p.pagosRecibidos), e(p.balance)]),
+                    [],
+                    ["Total gastado", null, e(r.totalGastos)],
+                    ["Total ingresado", null, e(r.totalIngresos)],
+                    ["Balance: positivo = se le debe dinero; negativo = debe dinero."],
+                    ...r.deudas.map((d) => [`${nombre(d.de)} le debe ${(d.importe / 100).toFixed(2).replace(".", ",")} € a ${nombre(d.a)}.`]),
+                ],
+            },
+            {
+                nombre: "Por categoría",
+                columnas: [
+                    { titulo: "Categoría", ancho: 24 },
+                    { titulo: "Gastado", ancho: 14, tipo: "euros" },
+                ],
+                filas: r.porCategoria.map((c) => [c.categoria, e(c.total)]),
+            },
+        ],
+    });
+}
+
 async function api(req, res, ruta) {
     const metodo = req.method;
     const encontrada = crew.sesionDe(req);
@@ -503,6 +731,10 @@ async function api(req, res, ruta) {
         return json(res, 200, datosPara(persona));
     }
 
+    // Ida y vuelta a Spotify para conectar la cuenta: se abren en una pestaña y contestan con una página.
+    if (ruta === "/api/musica/conectar" && metodo === "GET") return musica.conectar(req, res, encontrada, new URL(req.url, "http://x"));
+    if (ruta === "/api/musica/vuelta" && metodo === "GET") return await musica.vuelta(req, res, encontrada, new URL(req.url, "http://x"));
+
     // --- con sesión ---
     if (!usuario) return fallo(res, 401, "Tienes que entrar con tu cuenta.");
 
@@ -581,6 +813,7 @@ async function api(req, res, ruta) {
             if (persona.baja) {
                 // Fuera del crew: se le cierran la oficina y el tablón al momento.
                 crew.revocarTodo(persona.id);
+                musica.olvidar(persona.id);
                 cerrarOyentes((o) => o.usuario.id === persona.id);
             }
         }
@@ -591,6 +824,16 @@ async function api(req, res, ruta) {
 
     if (ruta === "/api/datos" && metodo === "GET") return json(res, 200, datosPara(usuario));
 
+    // --- archivo de documentos (todo en servidor/archivo.js) ---
+    if (ruta === "/api/archivo" || ruta.startsWith("/api/archivo/")) {
+        return await elArchivo.manejar(req, res, ruta, {
+            usuario,
+            origen,
+            yo: { ...cuentas.usuarioPublico(usuario), libro: puedeVerLibro(usuario) },
+            usuarios: datos().usuarios.map(cuentas.usuarioPublico),
+        });
+    }
+
     if (ruta === "/api/eventos" && metodo === "GET") {
         res.writeHead(200, {
             "Content-Type": "text/event-stream; charset=utf-8",
@@ -599,16 +842,40 @@ async function api(req, res, ruta) {
             "X-Accel-Buffering": "no",
         });
         res.write("retry: 3000\n\n");
-        const oyente = { res, usuario, sesion: encontrada.sesion };
+        const parametros = new URL(req.url, "http://x").searchParams;
+        const pizarra = parametros.get("pizarra");
+        const oyente = {
+            res,
+            usuario,
+            sesion: encontrada.sesion,
+            pizarra: pizarraValida(pizarra) ? pizarra : null,
+            // La música: «cliente» es la pestaña, para saber quién está escuchando (POST /api/musica/escucho).
+            musica: parametros.get("musica") === "1",
+            cliente: String(parametros.get("cliente") || "").slice(0, 40),
+            escucha: false,
+        };
         oyentes.add(oyente);
-        req.on("close", () => oyentes.delete(oyente));
-        res.on("close", () => oyentes.delete(oyente));
-        res.on("error", () => oyentes.delete(oyente));
+        let fuera = false;
+        const quitar = () => {
+            if (fuera) return;
+            fuera = true;
+            oyentes.delete(oyente);
+            avisarPresentes(oyente.pizarra);
+            if (oyente.escucha) avisarEscuchando();
+        };
+        req.on("close", quitar);
+        res.on("close", quitar);
+        res.on("error", quitar);
+        avisarPresentes(oyente.pizarra);
+        // Con la música abierta, el servidor mira qué suena (si estaba parado porque no había nadie).
+        if (oyente.musica) musica.despertar();
         return;
     }
 
     if (ruta === "/api/yo" && metodo === "PATCH") {
-        const { color, clave, claveActual, nombre } = await leerJson(req);
+        const { color, clave, claveActual, nombre, cumple } = await leerJson(req);
+        // El cumpleaños se comprueba antes de cambiar nada: «MM-DD», o null para quitarlo.
+        const cumpleNuevo = cumple === undefined ? undefined : perfil.validarCumple(cumple);
         if (color !== undefined) {
             if (!cuentas.COLORES.includes(color)) return fallo(res, 400, "Color no válido");
             usuario.color = color;
@@ -624,9 +891,23 @@ async function api(req, res, ruta) {
             if (e) return fallo(res, 400, e);
             usuario.clave = await cuentas.cifrarClave(clave);
         }
+        if (cumpleNuevo) usuario.cumple = cumpleNuevo;
+        else if (cumpleNuevo === null) delete usuario.cumple;
         almacen.guardar();
         emitir({ tipo: "usuarios", usuarios: datos().usuarios.map(cuentas.usuarioPublico) });
         return json(res, 200, { yo: cuentas.usuarioPublico(usuario) });
+    }
+
+    // --- la oficina: cumpleaños de hoy y de los próximos 30 días (para el mapa, los paneles y el tablón) ---
+    if (ruta === "/api/oficina" && metodo === "GET") return json(res, 200, perfil.resumenOficina(datos().usuarios, hoyOficina()));
+
+    // --- el personaje de cada uno en la oficina (WorkAdventure lo guarda aquí para tenerlo en todos sus aparatos) ---
+    if (ruta === "/api/yo/personaje" && metodo === "GET") return json(res, 200, perfil.personajeDe(usuario));
+    if (ruta === "/api/yo/personaje" && metodo === "PUT") {
+        const { texturas, companero } = perfil.validarPersonaje(await leerJson(req));
+        usuario.personaje = { texturas, companero, actualizado: new Date().toISOString() };
+        almacen.guardar();
+        return json(res, 200, perfil.personajeDe(usuario));
     }
 
     if (ruta === "/api/invitar" && metodo === "POST") {
@@ -690,7 +971,11 @@ async function api(req, res, ruta) {
         }
         if (tarea.borrada) return fallo(res, 404, "Esa tarea está borrada.");
         if (metodo === "PATCH") {
-            const cambiados = aplicarCambios(tarea, await leerJson(req), datos().usuarios);
+            const cambios = await leerJson(req);
+            // Sin ningún «await» entre comprobar y aplicar: de dos guardados a la vez, el primero se guarda y el segundo recibe esto.
+            const choque = camposEnConflicto(tarea, cambios);
+            if (choque.length) return json(res, 409, { error: "Las notas han cambiado (o falta «antes», el texto en el que te basas): no se ha guardado.", conflicto: choque, tarea: publica(tarea) });
+            const cambiados = aplicarCambios(tarea, cambios, datos().usuarios);
             if (!tarea.titulo) throw new ErrorDeDatos("La tarea necesita un título");
             if (cambiados.length) {
                 tocar(tarea, usuario);
@@ -708,7 +993,288 @@ async function api(req, res, ruta) {
         }
     }
 
+    // --- libro de cuentas (Don Balance) ---
+    // Son las cuentas de los socios: solo las ven quienes tienen parte en el reparto y quien administra.
+    if (ruta.startsWith("/api/libro") && !puedeVerLibro(usuario)) {
+        return fallo(res, 403, "El libro de cuentas solo lo ven quienes tienen parte en el reparto. Si te hace falta, pídeselo a quien administra el tablón.");
+    }
+    if (ruta === "/api/libro" && metodo === "GET") return json(res, 200, datosLibro(usuario));
+
+    if (ruta === "/api/libro/movimientos" && metodo === "POST") {
+        const m = libro.crearMovimiento(await leerJson(req), usuario, datos());
+        libro.fijarPartes(datos());
+        libro.libroDe(datos()).movimientos.push(m);
+        almacen.guardar();
+        emitir({ tipo: "libro", autor: usuario.id }, origen);
+        return json(res, 201, libro.publico(m));
+    }
+
+    const ml = /^\/api\/libro\/movimientos\/([\w-]+)(\/restaurar|\/tique)?$/.exec(ruta);
+    if (ml) {
+        const m = libro.libroDe(datos()).movimientos.find((x) => x.id === ml[1]);
+        if (!m) return fallo(res, 404, "Ese movimiento no existe.");
+        const tocarMovimiento = () => {
+            m.actualizado = new Date().toISOString();
+            m.actualizadoPor = usuario.id;
+            almacen.guardar();
+            emitir({ tipo: "libro", autor: usuario.id }, origen);
+        };
+        if (ml[2] === "/restaurar" && metodo === "POST") {
+            m.borrado = null;
+            tocarMovimiento();
+            return json(res, 200, libro.publico(m));
+        }
+        if (m.borrado) return fallo(res, 404, "Ese movimiento está borrado.");
+        if (ml[2] === "/tique" && metodo === "POST") {
+            const buf = await leerCuerpo(req, MAXIMO_TIQUE);
+            const tipo = TIPOS_TIQUE.find((t) => buf.length > 12 && t.firma(buf));
+            if (!tipo) throw new ErrorDeDatos("El tique tiene que ser una foto (JPG, PNG o WebP) o un PDF.");
+            fs.mkdirSync(CARPETA_TIQUES, { recursive: true });
+            const archivo = `${m.id}-${crypto.randomBytes(4).toString("hex")}.${tipo.ext}`;
+            fs.writeFileSync(path.join(CARPETA_TIQUES, archivo), buf);
+            if (m.tique) borrarTique(m.tique.archivo);
+            let nombreOriginal = "";
+            try {
+                nombreOriginal = decodeURIComponent(String(req.headers["x-nombre"] || "")).slice(0, 120);
+            } catch {
+                /* nombre mal escrito: se queda sin nombre */
+            }
+            m.tique = { archivo, tipo: tipo.tipo, tamano: buf.length, nombre: nombreOriginal };
+            tocarMovimiento();
+            return json(res, 200, libro.publico(m));
+        }
+        if (ml[2] === "/tique" && metodo === "DELETE") {
+            if (m.tique) borrarTique(m.tique.archivo);
+            m.tique = null;
+            tocarMovimiento();
+            return json(res, 200, libro.publico(m));
+        }
+        if (!ml[2] && metodo === "PATCH") {
+            const cambiados = libro.aplicarCambios(m, await leerJson(req), datos());
+            if (cambiados.length) tocarMovimiento();
+            return json(res, 200, libro.publico(m));
+        }
+        if (!ml[2] && metodo === "DELETE") {
+            m.borrado = new Date().toISOString();
+            tocarMovimiento();
+            return json(res, 200, { ok: true });
+        }
+    }
+
+    const mt = /^\/api\/libro\/tiques\/([\w-]+\.(jpg|png|webp|pdf))$/.exec(ruta);
+    if (mt && (metodo === "GET" || metodo === "HEAD")) {
+        const m = libro.libroDe(datos()).movimientos.find((x) => x.tique?.archivo === mt[1]);
+        if (!m) return fallo(res, 404, "Ese tique no existe.");
+        let info;
+        try {
+            info = fs.statSync(path.join(CARPETA_TIQUES, mt[1]));
+        } catch {
+            return fallo(res, 404, "Ese tique no existe.");
+        }
+        const cabeceras = { "Content-Type": m.tique.tipo, "Content-Length": info.size, "Cache-Control": "private, max-age=3600", "Content-Disposition": "inline" };
+        // Una foto no necesita ejecutar nada: si alguien sube algo raro, el navegador no lo ejecuta en nuestra web.
+        if (m.tique.tipo !== "application/pdf") cabeceras["Content-Security-Policy"] = "sandbox; default-src 'none'; img-src 'self'";
+        res.writeHead(200, cabeceras);
+        if (metodo === "HEAD") return res.end();
+        return fs.createReadStream(path.join(CARPETA_TIQUES, mt[1])).pipe(res);
+    }
+
+    if (ruta === "/api/libro/ajustes" && metodo === "PATCH") {
+        if (!usuario.admin) return fallo(res, 403, "Solo quien administra puede cambiar las partes y las categorías.");
+        const { partes, categorias } = await leerJson(req);
+        const l = libro.libroDe(datos());
+        if (partes !== undefined) l.partes = libro.partesValidas(partes, datos().usuarios);
+        if (categorias !== undefined) l.categorias = libro.categoriasValidas(categorias);
+        almacen.guardar();
+        emitir({ tipo: "libro", autor: usuario.id }, origen);
+        return json(res, 200, datosLibro(usuario));
+    }
+
+    if (ruta === "/api/libro/csv" && metodo === "GET") {
+        const hoy = new Date().toISOString().slice(0, 10);
+        const texto = Buffer.from(libro.csv(libro.libroDe(datos()), datos().usuarios), "utf8");
+        res.writeHead(200, {
+            "Content-Type": "text/csv; charset=utf-8",
+            "Content-Disposition": `attachment; filename="Cuentas HOT SPOT ${hoy}.csv"; filename*=UTF-8''Cuentas%20HOT%20SPOT%20${hoy}.csv`,
+            "Content-Length": texto.length,
+            "Cache-Control": "no-store",
+        });
+        return res.end(texto);
+    }
+
+    if (ruta === "/api/libro/excel" && metodo === "GET") {
+        const hoy = new Date().toISOString().slice(0, 10);
+        const buf = excelLibro();
+        res.writeHead(200, {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Content-Disposition": `attachment; filename="Cuentas HOT SPOT ${hoy}.xlsx"; filename*=UTF-8''Cuentas%20HOT%20SPOT%20${hoy}.xlsx`,
+            "Content-Length": buf.length,
+            "Cache-Control": "no-store",
+        });
+        return res.end(buf);
+    }
+
+    if (ruta === "/api/libro/importar" && metodo === "POST") {
+        const buf = await leerCuerpo(req, 15 * 1024 * 1024);
+        let hojas;
+        try {
+            hojas = leerExcel(buf);
+        } catch (error) {
+            throw new ErrorDeDatos(`No he podido leer ese Excel (${error.message}).`);
+        }
+        const r = libro.importar(hojas, usuario, datos(), cuentas.normalizar, fechaDeCelda);
+        almacen.guardar();
+        if (r.importados) emitir({ tipo: "libro", autor: usuario.id }, origen);
+        return json(res, 200, { importados: r.importados, repetidos: r.repetidos, sinPersona: r.sinPersona, hoja: r.hoja });
+    }
+
+    // --- pizarras ---
+    if (ruta === "/api/pizarras" && metodo === "GET") return json(res, 200, { pizarras: pizarras.lista() });
+
+    const mf = /^\/api\/pizarras\/imagenes\/([\w-]+\.(jpg|png|webp|gif))$/.exec(ruta);
+    if (mf && (metodo === "GET" || metodo === "HEAD")) {
+        if (!pizarras.tieneImagen(mf[1])) return fallo(res, 404, "Esa foto no está en ninguna pizarra.");
+        const archivo = path.join(pizarras.carpetaImagenes, mf[1]);
+        let info;
+        try {
+            info = fs.statSync(archivo);
+        } catch {
+            return fallo(res, 404, "Esa foto no existe.");
+        }
+        const tipo = { jpg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif" }[mf[2]];
+        res.writeHead(200, { "Content-Type": tipo, "Content-Length": info.size, "Cache-Control": "private, max-age=86400, immutable", "Content-Security-Policy": "sandbox; default-src 'none'" });
+        if (metodo === "HEAD") return res.end();
+        return fs.createReadStream(archivo).pipe(res);
+    }
+
+    const mp = /^\/api\/pizarras\/([a-z0-9-]{1,30})(?:\/(elementos|quitar|restaurar|vaciar|recuperar|imagenes|vivo)(?:\/([\w-]{8,24}))?)?$/.exec(ruta);
+    if (mp) {
+        const [, id, accion, idElemento] = mp;
+        const avisar = (evento) => emitirPizarra(id, { ...evento, autor: usuario.id }, origen);
+        if (!accion && metodo === "GET") {
+            return json(res, 200, {
+                pizarra: pizarras.ver(id),
+                yo: { ...cuentas.usuarioPublico(usuario), libro: puedeVerLibro(usuario) },
+                usuarios: datos().usuarios.map(cuentas.usuarioPublico),
+                presentes: [...new Set([...oyentes].filter((o) => o.pizarra === id).map((o) => o.usuario.id))],
+            });
+        }
+        if (accion === "elementos" && !idElemento && metodo === "POST") {
+            const e = pizarras.anadir(id, await leerJson(req), usuario);
+            avisar({ tipo: "pizarra", accion: "poner", elementos: [e] });
+            return json(res, 201, e);
+        }
+        if (accion === "elementos" && idElemento && metodo === "PATCH") {
+            const e = pizarras.cambiar(id, idElemento, await leerJson(req), usuario);
+            avisar({ tipo: "pizarra", accion: "cambiar", elementos: [e] });
+            return json(res, 200, e);
+        }
+        if (accion === "quitar" && metodo === "POST") {
+            const { ids } = await leerJson(req);
+            const quitados = pizarras.quitar(id, Array.isArray(ids) ? ids.slice(0, 500) : [], usuario);
+            if (quitados.length) avisar({ tipo: "pizarra", accion: "quitar", ids: quitados });
+            return json(res, 200, { ids: quitados });
+        }
+        if (accion === "restaurar" && metodo === "POST") {
+            const { ids } = await leerJson(req);
+            const vueltos = pizarras.restaurar(id, Array.isArray(ids) ? ids.slice(0, 500) : [], usuario);
+            if (vueltos.length) avisar({ tipo: "pizarra", accion: "poner", elementos: vueltos });
+            return json(res, 200, { elementos: vueltos });
+        }
+        if (accion === "vaciar" && metodo === "POST") {
+            if (pizarras.vaciar(id, usuario)) avisar({ tipo: "pizarra", accion: "vaciar" });
+            return json(res, 200, { ok: true });
+        }
+        if (accion === "recuperar" && metodo === "POST") {
+            const elementos = pizarras.recuperar(id, usuario);
+            avisar({ tipo: "pizarra", accion: "todo", elementos });
+            return json(res, 200, { elementos });
+        }
+        if (accion === "imagenes" && metodo === "POST") {
+            const buf = await leerCuerpo(req, MAXIMO_FOTO_PIZARRA);
+            const tipo = TIPOS_FOTO_PIZARRA.find((t) => buf.length > 12 && t.firma(buf));
+            if (!tipo) throw new ErrorDeDatos("Solo se pueden pegar fotos (JPG, PNG, WebP o GIF).");
+            const cabecera = (n) => req.headers[`x-${n}`];
+            const idNuevo = String(cabecera("id") || "");
+            fs.mkdirSync(pizarras.carpetaImagenes, { recursive: true });
+            const archivo = `${/^[\w-]{8,24}$/.test(idNuevo) ? idNuevo : crypto.randomBytes(6).toString("hex")}-${crypto.randomBytes(4).toString("hex")}.${tipo.ext}`;
+            fs.writeFileSync(path.join(pizarras.carpetaImagenes, archivo), buf);
+            let e;
+            try {
+                e = pizarras.anadirImagen(id, { archivo, x: cabecera("x"), y: cabecera("y"), ancho: cabecera("ancho"), alto: cabecera("alto"), idElemento: idNuevo }, usuario);
+            } catch (error) {
+                fs.rm(path.join(pizarras.carpetaImagenes, archivo), { force: true }, () => {});
+                throw error;
+            }
+            avisar({ tipo: "pizarra", accion: "poner", elementos: [e] });
+            return json(res, 201, e);
+        }
+        if (accion === "vivo" && metodo === "POST") {
+            // Lo que se está pintando ahora mismo y dónde está el lápiz: no se guarda, solo se reparte.
+            const ahora = Date.now();
+            const cuenta = vivoPorUsuario.get(usuario.id) || { desde: ahora, n: 0 };
+            if (ahora - cuenta.desde > 1000) Object.assign(cuenta, { desde: ahora, n: 0 });
+            cuenta.n += 1;
+            vivoPorUsuario.set(usuario.id, cuenta);
+            if (cuenta.n > 30) return json(res, 200, { ok: false });
+            const { cursor, trazo } = await leerJson(req);
+            const evento = { tipo: "pizarra-vivo" };
+            const dentro = (v, i) => Math.min((i % 2 ? ALTO_PIZARRA : ANCHO_PIZARRA) + 100, Math.max(-100, Math.round(Number(v)) || 0));
+            if (Array.isArray(cursor) && cursor.length === 2 && cursor.every(Number.isFinite)) evento.cursor = cursor.map(dentro);
+            if (cursor === null) evento.cursor = null; // ha sacado el ratón de la pizarra
+            if (trazo && typeof trazo === "object" && typeof trazo.id === "string" && Array.isArray(trazo.puntos)) {
+                evento.trazo = {
+                    id: trazo.id.slice(0, 24),
+                    color: COLORES_TRAZO.includes(trazo.color) ? trazo.color : COLORES_TRAZO[0],
+                    grosor: GROSORES.includes(Number(trazo.grosor)) ? Number(trazo.grosor) : GROSORES[1],
+                    puntos: trazo.puntos.slice(0, Math.min(400, trazo.puntos.length) & ~1).map(dentro),
+                    desde: Math.max(0, Math.round(Number(trazo.desde)) || 0),
+                };
+            }
+            if (trazo === null) evento.trazo = null;
+            avisar(evento);
+            return json(res, 200, { ok: true });
+        }
+    }
+
+    // --- música (Spotify): la cabina del estudio ---
+    if (ruta === "/api/musica" && metodo === "GET") return json(res, 200, datosMusica(usuario));
+
+    if (ruta === "/api/musica/cabina" && metodo === "POST") {
+        musica.tomar(usuario);
+        return json(res, 200, datosMusica(usuario));
+    }
+    if (ruta === "/api/musica/cabina" && metodo === "DELETE") {
+        musica.dejar(usuario);
+        return json(res, 200, datosMusica(usuario));
+    }
+    if (ruta === "/api/musica/desconectar" && metodo === "POST") {
+        musica.desconectar(usuario);
+        return json(res, 200, datosMusica(usuario));
+    }
+    if (ruta === "/api/musica/escucho" && metodo === "POST") {
+        // Esta pestaña (x-cliente) se pone a escuchar o lo deja: los demás ven quién está escuchando.
+        const { si } = await leerJson(req);
+        let encontrado = false;
+        for (const o of oyentes) {
+            if (o.musica && o.usuario.id === usuario.id && origen && o.cliente === origen) {
+                o.escucha = Boolean(si);
+                encontrado = true;
+            }
+        }
+        avisarEscuchando();
+        return json(res, 200, { ok: encontrado, escuchando: quienesEscuchan() });
+    }
+
     return fallo(res, 404, "No existe");
+}
+
+function datosMusica(usuario) {
+    return {
+        ...musica.estadoPara(usuario),
+        yo: { ...cuentas.usuarioPublico(usuario), libro: puedeVerLibro(usuario) },
+        usuarios: datos().usuarios.map(cuentas.usuarioPublico),
+    };
 }
 
 // ---------- servidor ----------
@@ -756,6 +1322,9 @@ servidor.listen(PUERTO, () => console.log(`[tablón] En marcha en el puerto ${PU
 function apagar() {
     try {
         if (almacen.pendiente()) almacen.guardarYa();
+        if (pizarras.pendiente()) pizarras.guardarYa();
+        if (musica.pendiente()) musica.guardarYa();
+        if (elArchivo.pendiente()) elArchivo.guardarYa();
     } catch (error) {
         console.error("[tablón] Error al guardar antes de salir:", error);
     }
@@ -770,6 +1339,9 @@ process.on("uncaughtException", (error) => {
     console.error("[tablón] Error inesperado:", error);
     try {
         if (almacen.pendiente()) almacen.guardarYa();
+        if (pizarras.pendiente()) pizarras.guardarYa();
+        if (musica.pendiente()) musica.guardarYa();
+        if (elArchivo.pendiente()) elArchivo.guardarYa();
     } finally {
         process.exit(1);
     }

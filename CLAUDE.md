@@ -21,11 +21,11 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
 
 | Ruta | Qué es |
 | --- | --- |
-| `parches/01…07-*.patch` | Cambios sobre WorkAdventure, en orden (tabla en `README.md`). |
+| `parches/01…10-*.patch` | Cambios sobre WorkAdventure, en orden (tabla en `README.md`). |
 | `archivos/` | Archivos propios que se copian encima (estilo retro, letras, marca, muñecos `hs-…`). |
 | `.github/workflows/hotspot-imagen.yml` | Construye la imagen `ghcr.io/nerva2026/hotspot-hq-play` (~7 min). |
-| `tareas/` | Servicio propio (Node sin dependencias): portada `/`, cuentas del crew `/cuentas` y tablón `/tareas`. Detalles en `tareas/README.md`. |
-| `.github/workflows/hotspot-tareas.yml` | Prueba y construye `ghcr.io/nerva2026/hotspot-hq-tareas` (~1 min), incluida una prueba con `openid-client` 5 (la librería de WorkAdventure). |
+| `tareas/` | Servicio propio (Node sin dependencias): portada `/`, cuentas del crew `/cuentas`, tablón `/tareas` (con el cumpleaños y el personaje de cada uno: `/tareas/api/oficina`, `/tareas/api/yo/personaje`), libro de cuentas `/tareas/libro/`, pizarra `/tareas/pizarra/`, archivo de documentos `/tareas/archivo/`, música `/tareas/musica/` (cabina del DJ con Spotify, «escuchar a la vez» con el reproductor oficial; `musica/mini/` es la barra pequeña de 360×128 para la oficina; hace falta crear la aplicación de Spotify, ver «Música (Spotify)») y el puente invisible de la oficina `/tareas/oficina/` (la abre el mapa y deja las tareas y los cumpleaños de quien juega en las variables privadas `hsSesion`, `hsTareas`, `hsCumples` y `hsMusica`; esta última dice si Spotify está conectado y de ella depende el botón «Música» y la línea de la música en las novedades). Detalles en `tareas/README.md`. |
+| `.github/workflows/hotspot-tareas.yml` | Prueba y construye `ghcr.io/nerva2026/hotspot-hq-tareas` (~1 min): una prueba por pantalla (cada paso con su servidor y su puerto, ver «Las pruebas de `tareas/`») e incluye una con `openid-client` 5 (la librería de WorkAdventure). |
 
 ### Hacer o cambiar un parche
 
@@ -48,6 +48,27 @@ node servidor/principal.js
 # http://localhost:8412/usar?correo=… cambia con qué correo «entra» el Google de mentira
 ```
 
+### Las pruebas de `tareas/`
+
+Una por pantalla, en `tareas/pruebas/`. En el workflow cada paso arranca su propio servidor (con su carpeta de
+datos y su puerto, ninguno repetido) y lo para al acabar; los comandos exactos están en
+`.github/workflows/hotspot-tareas.yml` y la tabla, en `tareas/README.md` («Las pruebas»).
+
+| Paso | Archivo | Puerto |
+| --- | --- | --- |
+| Probar el servidor | `curl` | 3999 |
+| Probar el libro de cuentas | `libro.mjs` | 3991 |
+| Probar el archivo | `archivo.mjs` | 3992 |
+| Probar el tablón | `tablon.mjs` | 3993 |
+| Probar cumpleaños y personaje | `cumple.mjs` (con `TAREAS_HOY` fijo) | 3994 |
+| Probar la música | `musica.mjs` + `spotify-falso.mjs` | 3995 (3996 lo arranca la prueba) y 8614 |
+| Probar la pizarra | `pizarra.mjs` | 3997 |
+| Probar el acceso de la oficina | `oficina-oidc.mjs` + `google-falso.mjs` (instala `openid-client`) | 3998 y 8412 |
+
+Una prueba nueva lleva su puerto, su carpeta de datos y su registro propios. Y una pantalla nueva se enlaza en las
+demás (pestañas de arriba y menú de la cuenta, con los nombres de siempre: «Tablón de tareas», «Libro de cuentas»,
+«Pizarra», «Archivo» y «Música»).
+
 ## El servidor (VPS en Hostinger)
 
 - `/opt/workadventure`: WorkAdventure oficial con Docker Compose y Traefik v3 (`docker-compose.yaml`, `.env`).
@@ -59,8 +80,9 @@ node servidor/principal.js
   - Traefik: el router `hq-entrada` (prioridad 1000) manda `/_/…` a la calle; la portada `/` la sirve
     `tareas` con prioridad 1100.
 - `/opt/hotspot-tareas`: `docker-compose.yaml` del servicio `tareas` (en la red de Traefik, rutas `/`,
-  `/cuentas`, `/tareas`), `.env` con las claves (Google, OIDC, primer admin; permisos 600) y `datos/`
-  (`tablon.json`, copias diarias en `copias/`, `clave-oidc.pem`).
+  `/cuentas`, `/tareas`), `.env` con las claves (Google, Spotify, OIDC, primer admin; permisos 600) y `datos/`
+  (`tablon.json`, copias diarias en `copias/`, `clave-oidc.pem`, y de las pantallas: `pizarras.json` y `pizarra/`,
+  `musica.json` y `archivo/`).
 - Actualización sola cada 5 minutos: `/etc/cron.d/hotspot-oficina` (imagen `play`) y
   `/etc/cron.d/hotspot-tareas` (imagen `tareas`). Un push a esta rama llega solo a la oficina.
 - Los paquetes de `ghcr.io` son públicos (si no, el servidor no puede descargarlos).

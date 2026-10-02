@@ -30,6 +30,7 @@
     --papel: #fffaf3;
     --naranja: #e0562a;
     --naranja-osc: #b8431f;
+    --acento: #c4461f;
     --amarillo: #ffd84a;
     --rojo: #e0303a;
     --verde: #3a9d5d;
@@ -76,6 +77,17 @@ button {
 [hidden] {
     display: none !important;
 }
+.oculto {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
 :focus-visible {
     outline: 3px solid var(--amarillo);
     outline-offset: 1px;
@@ -83,6 +95,10 @@ button {
 ::selection {
     background: var(--amarillo);
     color: var(--tinta);
+}
+::placeholder {
+    color: var(--tinta-suave);
+    opacity: 1;
 }
 h1,
 h2,
@@ -96,7 +112,7 @@ h3 {
     flex: 1;
 }
 .tenue {
-    color: var(--tenue);
+    color: var(--tinta-suave);
 }
 .nota {
     color: var(--tinta-suave);
@@ -110,7 +126,7 @@ h3 {
 }
 .tachado {
     text-decoration: line-through;
-    color: var(--tenue);
+    color: var(--tinta-suave);
 }
 .error {
     color: #b3121d;
@@ -167,7 +183,7 @@ h3 {
     cursor: default;
 }
 .btn.primario {
-    background: var(--naranja);
+    background: var(--acento);
     color: #fff;
 }
 .btn.primario:hover {
@@ -175,7 +191,7 @@ h3 {
 }
 .btn.pequeno {
     padding: 5px 8px 4px;
-    font-size: 11px;
+    font-size: 12px;
 }
 .btn.peligro:hover {
     background: var(--rojo);
@@ -188,13 +204,15 @@ h3 {
     background: none;
     border: 0;
     padding: 2px 4px;
-    color: var(--naranja-osc);
+    color: var(--tinta);
     text-decoration: underline;
+    text-decoration-color: var(--acento);
     text-underline-offset: 3px;
     font-size: 14px;
 }
 .enlace:hover {
     color: var(--tinta);
+    text-decoration-thickness: 2px;
 }
 .boton-icono {
     width: 26px;
@@ -236,7 +254,7 @@ textarea.campo {
     gap: 5px;
 }
 .etiqueta-campo > span {
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--tinta-suave);
@@ -301,7 +319,7 @@ textarea.campo {
     background: #fff;
 }
 kbd {
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     background: var(--papel);
     border: 2px solid var(--tinta);
     box-shadow: 1px 1px 0 var(--tinta);
@@ -321,7 +339,7 @@ kbd {
     white-space: nowrap;
 }
 .chip.prioridad {
-    font: 400 10px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     padding: 4px 5px 3px;
@@ -366,7 +384,7 @@ kbd {
     flex: none;
     display: inline-grid;
     place-items: center;
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     color: #fff;
     border: 2px solid var(--tinta);
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
@@ -374,12 +392,12 @@ kbd {
 .avatar.mini {
     width: 16px;
     height: 16px;
-    font-size: 9px;
+    font-size: 12px;
     border-width: 1px;
 }
 .avatar.vacio {
     background: var(--crema-osc);
-    color: var(--tenue);
+    color: var(--tinta-suave);
     border-style: dashed;
     text-shadow: none;
 }
@@ -410,7 +428,7 @@ kbd {
     border: 2px solid var(--tinta);
 }
 .cuenta {
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     background: rgba(28, 23, 21, 0.1);
     padding: 3px 5px 2px;
     margin-left: 6px;
@@ -420,7 +438,7 @@ kbd {
     height: 30px;
     display: inline-grid;
     place-items: center;
-    background: var(--naranja);
+    background: var(--acento);
     color: #fff;
     border: 2px solid var(--crema);
     font: 700 12px/1 var(--titulo);
@@ -500,7 +518,7 @@ kbd {
     border-color: #000;
 }
 .flecha {
-    font-size: 10px;
+    font-size: 12px;
     opacity: 0.7;
 }
 
@@ -574,7 +592,7 @@ kbd {
     background: transparent;
     border: 0;
     padding: 5px 9px 4px;
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
@@ -604,7 +622,9 @@ kbd {
     align-items: stretch;
 }
 .columna {
-    flex: 0 0 300px;
+    /* 300 px, y se encoge hasta 215 px para que las cuatro quepan en el panel de la oficina (944 px en un portátil de 1366) */
+    flex: 0 1 300px;
+    min-width: 215px;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -641,7 +661,7 @@ kbd {
 }
 .columna-vacia {
     border: 2px dashed var(--crema-mas);
-    color: var(--tenue);
+    color: var(--tinta-suave);
     padding: 14px;
     text-align: center;
     font-size: 13px;
@@ -651,7 +671,7 @@ kbd {
     text-align: left;
     background: transparent;
     border: 0;
-    border-top: 2px dashed var(--crema-mas);
+    border-top: 1px dashed var(--tinta-suave);
     padding: 9px 12px;
     color: var(--tinta-suave);
 }
@@ -712,7 +732,7 @@ kbd {
 }
 .tarjeta.hecha .tarjeta-titulo {
     text-decoration: line-through;
-    color: var(--tenue);
+    color: var(--tinta-suave);
 }
 .tarjeta.hecha {
     background: #f6f0e8;
@@ -765,7 +785,7 @@ table.lista {
     background: var(--tinta);
     color: var(--crema);
     text-align: left;
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     padding: 0;
@@ -848,7 +868,7 @@ table.lista {
     color: var(--tinta-suave);
 }
 .celda-nueva::placeholder {
-    color: var(--tenue);
+    color: var(--tinta-suave);
 }
 .fila .abrir {
     visibility: hidden;
@@ -881,7 +901,7 @@ table.lista {
 }
 .fila.hecha .celda-titulo {
     text-decoration: line-through;
-    color: var(--tenue);
+    color: var(--tinta-suave);
 }
 .fila-grupo td {
     background: var(--crema-osc);
@@ -934,7 +954,7 @@ table.lista {
     grid-template-columns: repeat(7, 1fr);
     background: var(--tinta);
     color: var(--crema);
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     text-transform: uppercase;
     position: sticky;
     top: 0;
@@ -968,7 +988,7 @@ table.lista {
     background: repeating-linear-gradient(45deg, #f4ebdf 0 6px, #efe4d6 6px 12px);
 }
 .cal-dia.fuera .cal-numero {
-    color: var(--tenue);
+    color: var(--tinta-suave);
 }
 .cal-dia.destino {
     background: rgba(255, 216, 74, 0.5);
@@ -978,7 +998,7 @@ table.lista {
     font: 400 12px/1 var(--titulo);
 }
 .cal-dia.hoy .cal-numero {
-    background: var(--naranja);
+    background: var(--acento);
     color: #fff;
     padding: 3px 5px 2px;
     box-shadow: 1px 1px 0 var(--tinta);
@@ -1020,7 +1040,7 @@ table.lista {
 }
 .cal-barra.hecha,
 .crono-barra.hecha {
-    opacity: 0.55;
+    filter: saturate(0.4);
 }
 .cal-barra.hecha .texto,
 .crono-barra.hecha .texto,
@@ -1113,7 +1133,7 @@ table.lista {
     background: var(--tinta);
     color: var(--crema);
     font-family: var(--titulo);
-    font-size: 11px;
+    font-size: 12px;
 }
 
 /* ---------- cronograma ---------- */
@@ -1147,7 +1167,7 @@ table.lista {
     width: var(--ancho-nombre);
     background: var(--tinta);
     border-right: 2px solid #000;
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     text-transform: uppercase;
     display: flex;
     align-items: flex-end;
@@ -1166,7 +1186,7 @@ table.lista {
     top: 0;
     bottom: 0;
     border-left: 1px solid rgba(243, 230, 216, 0.18);
-    font-size: 11px;
+    font-size: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1175,7 +1195,7 @@ table.lista {
 }
 .crono-tramo.mayor {
     justify-content: flex-start;
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     text-transform: uppercase;
     border-left-color: rgba(243, 230, 216, 0.45);
 }
@@ -1188,7 +1208,7 @@ table.lista {
     color: rgba(243, 230, 216, 0.55);
 }
 .crono-tramo.hoy {
-    background: var(--naranja);
+    background: var(--acento);
     color: #fff;
 }
 .crono-cuerpo {
@@ -1301,7 +1321,7 @@ table.lista {
 }
 .crono-fuera.hecha {
     text-decoration: line-through;
-    color: var(--tenue);
+    color: var(--tinta-suave);
 }
 .asa {
     position: absolute;
@@ -1444,7 +1464,7 @@ table.lista {
     display: contents;
 }
 .propiedad-nombre {
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--tinta-suave);
@@ -1459,7 +1479,7 @@ table.lista {
     min-height: 38px;
     background: transparent;
     border: 0;
-    border-bottom: 1px solid var(--crema-osc);
+    border-bottom: 1px solid var(--tenue);
     padding: 6px 8px;
     text-align: left;
     font-size: 15px;
@@ -1516,13 +1536,13 @@ table.lista {
 }
 .subtarea.hecha .subtarea-texto {
     text-decoration: line-through;
-    color: var(--tenue);
+    color: var(--tinta-suave);
 }
 .subtarea .quitar {
     background: none;
     border: 0;
     font-size: 18px;
-    color: var(--tenue);
+    color: var(--tinta-suave);
     visibility: hidden;
 }
 .subtarea:hover .quitar,
@@ -1532,7 +1552,7 @@ table.lista {
 .subtarea-nueva {
     box-shadow: none;
     border-style: dashed;
-    border-color: var(--crema-mas);
+    border-color: var(--tenue);
     background: transparent;
 }
 .ficha-notas {
@@ -1563,7 +1583,7 @@ table.lista {
 }
 .ficha-pie {
     font-size: 13px;
-    color: var(--tenue);
+    color: var(--tinta-suave);
     border-top: 2px dashed var(--crema-osc);
     padding-top: 10px;
 }
@@ -1582,7 +1602,7 @@ table.lista {
     padding: 4px;
 }
 .menu-titulo {
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--tinta-suave);
@@ -1806,13 +1826,15 @@ table.lista {
     margin: -22px -22px 4px;
     padding: 12px 16px;
 }
-.acceso-marca strong {
+.acceso-marca strong,
+.acceso .acceso-marca h1 {
     display: block;
+    margin: 0;
     font: 700 18px/1 var(--titulo);
     letter-spacing: 0.06em;
 }
 .acceso-marca small {
-    font: 400 11px/1.6 var(--titulo);
+    font: 400 12px/1.6 var(--titulo);
     letter-spacing: 0.06em;
     opacity: 0.75;
 }
@@ -1862,7 +1884,8 @@ table.lista {
         margin-left: 0;
     }
     .columna {
-        flex-basis: min(290px, 85vw);
+        flex: 0 0 min(290px, 85vw);
+        min-width: 0;
     }
     .cal-cuerpo {
         flex-direction: column;
@@ -1908,7 +1931,7 @@ table.lista {
 }
 .crew-fila.baja .crew-datos strong {
     text-decoration: line-through;
-    color: var(--tenue);
+    color: var(--tinta-suave);
 }
 .crew-fila .avatar {
     width: 30px;
@@ -1933,7 +1956,7 @@ table.lista {
     overflow-wrap: anywhere;
 }
 .chip.crew-admin {
-    font: 400 9px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     background: var(--tinta);
     color: var(--crema);
     padding: 3px 4px 2px;
@@ -1949,7 +1972,7 @@ table.lista {
 }
 .crew-estado.fuera,
 .crew-estado.sin {
-    color: var(--tenue);
+    color: var(--tinta-suave);
 }
 .crew-botones {
     display: flex;
@@ -1972,5 +1995,383 @@ table.lista {
     .crew-botones {
         width: 100%;
         justify-content: flex-start;
+    }
+}
+
+/* ---------- aviso de choque de notas (en la ficha) ---------- */
+.zona-toque {
+    display: contents; /* en pantallas anchas la casilla se queda como está; en el móvil es una zona de toque */
+}
+.ficha-conflicto {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    background: var(--amarillo);
+    border: 2px solid var(--tinta);
+    font-size: 14px;
+}
+.ficha-conflicto[hidden] {
+    display: none;
+}
+.ficha-conflicto-texto {
+    flex: 1 1 100%;
+}
+.ficha-conflicto.llama {
+    animation: llama-conflicto 0.5s steps(1, end) 2;
+}
+@keyframes llama-conflicto {
+    50% {
+        background: var(--acento);
+        color: #fff;
+    }
+}
+
+/* ---------- móvil: lo que se toca mide 44 px de alto como mínimo ---------- */
+@media (max-width: 600px) {
+    .pestana,
+    .btn,
+    .btn.pequeno,
+    .filtro,
+    .boton-yo,
+    .boton-icono,
+    .cerrar,
+    .anadir,
+    .segmento,
+    .ordenar,
+    .grupo,
+    .celda,
+    .propiedad-valor,
+    .subtarea .quitar,
+    .opcion,
+    .resumen-boton,
+    .cal-suelta,
+    .interruptor,
+    .aviso button,
+    .campo,
+    .buscar,
+    .celda-titulo,
+    .celda-nueva,
+    .subtarea-texto {
+        min-height: 44px;
+    }
+    .boton-icono,
+    .cerrar,
+    .subtarea .quitar {
+        min-width: 44px;
+    }
+    .zona-toque {
+        display: grid;
+        place-items: center;
+        min-width: 44px;
+        min-height: 44px;
+        cursor: pointer;
+    }
+}
+
+/* ---------- cumpleaños: aviso del día, confeti, «Mi cuenta», calendario y crew ---------- */
+.cumple-zona {
+    flex: none;
+}
+.cumple-aviso {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 8px 6px 12px;
+    color: var(--tinta);
+    border-bottom: 3px solid var(--tinta);
+    /* una tira de papelitos de colores por arriba */
+    background:
+        repeating-linear-gradient(90deg, var(--naranja) 0 9px, transparent 9px 18px, #c4461f 18px 27px, transparent 27px 36px, var(--crema) 36px 45px, transparent 45px 54px) top / 100% 3px no-repeat,
+        var(--amarillo);
+}
+.cumple-texto {
+    flex: 1;
+    min-width: 0;
+    font: 700 16px/1.25 var(--texto);
+    overflow-wrap: anywhere;
+}
+.cumple-tarta {
+    flex: none;
+    width: 36px;
+    height: 33px;
+    padding: 0;
+    border: 0;
+    background: url("tarta.svg") center / 36px 33px no-repeat;
+    image-rendering: pixelated;
+}
+.cumple-tarta:hover {
+    transform: translateY(-3px);
+}
+.cumple-cerrar {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    background: transparent;
+    border: 2px solid transparent;
+    color: var(--tinta);
+    font: 400 22px/1 var(--texto);
+}
+.cumple-cerrar:hover {
+    border-color: var(--tinta);
+    background: var(--papel);
+}
+.confeti {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 400;
+    pointer-events: none;
+    image-rendering: pixelated;
+}
+.fila-cumple {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.campo.selector-cumple {
+    width: auto;
+    padding: 6px 8px;
+}
+.selector-cumple.dia {
+    flex: 0 0 86px;
+}
+.selector-cumple.mes {
+    flex: 1 1 140px;
+    max-width: 190px;
+}
+.estado-cumple:empty {
+    display: none;
+}
+.cal-cabeza {
+    /* el número y los cumpleaños en la misma línea; si no caben, se cortan con «…» */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.cal-cumple {
+    margin-left: 5px;
+    font-size: 12px;
+    color: var(--naranja-osc);
+}
+.cal-cumple .tarta,
+.crew-cumple::before {
+    content: "";
+    flex: none;
+    display: inline-block;
+    width: 12px;
+    height: 11px;
+    background: url("tarta.svg") center / 12px 11px no-repeat;
+}
+.cal-cumple .tarta {
+    margin-right: 4px;
+    vertical-align: -1px;
+}
+.crew-cumple {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--tinta-suave);
+}
+@media (max-width: 720px) {
+    .cumple-aviso {
+        gap: 8px;
+        padding-left: 8px;
+    }
+    .cumple-texto {
+        font-size: 15px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .confeti {
+        display: none;
+    }
+    .cumple-tarta:hover {
+        transform: none;
+    }
+}
+
+/* ---------- tablero: «Hecho» se pliega en una etiqueta con su número cuando las cuatro columnas no caben ---------- */
+.plegar-hecho {
+    display: none;
+}
+@media (max-width: 1270px) {
+    /* con las columnas encogidas, ninguna letra del tablero baja de 12 px (en una ventana ancha todo se queda como siempre) */
+    .tablero .chip.prioridad,
+    .tablero .cuenta,
+    .tablero .avatar {
+        font-size: 12px;
+    }
+}
+@media (min-width: 721px) and (max-width: 929px) {
+    .tablero.hecho-abierto .columna {
+        min-width: 190px;
+    }
+    .plegar-hecho {
+        display: inline-grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        color: var(--tinta);
+        background: transparent;
+        border: 2px solid transparent;
+        font: 400 12px/1 var(--titulo);
+    }
+    .plegar-hecho:hover {
+        border-color: var(--tinta);
+        background: var(--papel);
+    }
+    .columna.plegable:not(.abierta) {
+        flex: 0 0 52px;
+        min-width: 0;
+    }
+    .columna.plegable:not(.abierta) > :not(.columna-cabecera) {
+        display: none;
+    }
+    .columna.plegable:not(.abierta) .columna-cabecera {
+        position: relative;
+        flex: 1;
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: 10px;
+        padding: 40px 0 12px;
+        border-bottom: 0;
+        box-shadow: inset 4px 0 0 var(--color-estado);
+    }
+    .columna.plegable:not(.abierta) .columna-cabecera .crece {
+        display: none;
+    }
+    .columna.plegable:not(.abierta) .columna-cabecera h2 {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+    }
+    /* toda la etiqueta es el botón de desplegar */
+    .columna.plegable:not(.abierta) .plegar-hecho {
+        position: absolute;
+        inset: 0;
+        width: auto;
+        height: auto;
+        place-items: start center;
+        padding-top: 8px;
+    }
+}
+
+/* ---------- móvil (≤ 600 px): la cabecera cabe en una línea y los filtros se despliegan con un botón ---------- */
+.boton-vista,
+.boton-filtros {
+    display: none;
+}
+@media (max-width: 600px) {
+    .barra {
+        flex-wrap: nowrap;
+        gap: 6px;
+        padding: 8px;
+    }
+    .marca,
+    .pestanas {
+        display: none;
+    }
+    .boton-vista {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 10px;
+        color: var(--tinta);
+        background: var(--crema);
+        border: 2px solid var(--crema);
+        box-shadow: 2px 2px 0 var(--naranja);
+        font: 400 12px/1 var(--titulo);
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+    .boton-filtros {
+        display: inline-flex;
+        /* está en la barra oscura: sin esto heredaba la letra crema y no se leía sobre el fondo claro del botón */
+        color: var(--tinta);
+        border-color: var(--crema);
+    }
+    .barra-derecha {
+        gap: 6px;
+    }
+    .filtros {
+        display: none;
+    }
+    .filtros.abiertos {
+        display: flex;
+    }
+    .filtros .buscar {
+        flex: 1 1 100%;
+    }
+}
+
+/* ---------- franja «Sin conexión…» (app/conexion.js): fija abajo, sin tapar clics ni mover nada ---------- */
+.aviso-conexion {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    padding: 4px 10px;
+    background: #7a1016;
+    color: #fff;
+    border-top: 2px solid #000;
+    font-size: 13px;
+    line-height: 18px;
+    text-align: center;
+    pointer-events: none;
+}
+
+/* ---------- móvil (≤ 600 px): lo que se toca llega a 44 px de alto y de ancho ----------
+   Lo que ya los tenía está en los bloques de arriba; aquí va lo que faltaba. */
+@media (max-width: 600px) {
+    .barra-vista .btn.pequeno {
+        min-width: 44px;
+    }
+    .enlace:not([hidden]) {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 8px;
+    }
+    .ficha-titulo {
+        min-height: 44px;
+    }
+    /* calendario: carriles de 44 px (la fila de «+N más» solo ocupa lo que lleva) */
+    .cal-rejilla {
+        --cal-carril: 44px;
+        --cal-mas: auto;
+    }
+    .cal-barra {
+        height: 44px;
+    }
+    .cal-mas {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    /* cronograma: filas y barras de 44 px (la barra de un solo día, también de ancho) */
+    .crono-fila {
+        height: 45px;
+    }
+    .crono-nombre {
+        min-height: 44px;
+    }
+    .crono-barra {
+        top: 0;
+        height: 44px;
+        min-width: 44px;
+    }
+    .crono-fuera {
+        top: 14px;
+        margin-left: 12px; /* la barra de un día ya no mide 32 px sino 44: el título de al lado no se queda debajo */
     }
 }

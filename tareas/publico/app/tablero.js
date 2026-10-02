@@ -51,7 +51,8 @@ function ordenColumna(estado) {
 export function pintarTablero(cont, ctx, estadoVista) {
     const tareas = ctx.visibles({ incluirHechas: true });
     const ocultarHechas = ctx.E.filtros.ocultarHechas;
-    const tablero = h("div", { class: "tablero", "data-desplazar": "tablero" });
+    // «Hecho» se pliega (solo con el CSS de los paneles de 721 a 929 px, donde las cuatro columnas no caben) en una etiqueta con su número.
+    const tablero = h("div", { class: ["tablero", estadoVista.hechoAbierto && "hecho-abierto"], "data-desplazar": "tablero" });
 
     for (const est of ESTADOS) {
         let enColumna = tareas.filter((t) => t.estado === est.id).sort(ordenColumna(est.id));
@@ -87,7 +88,7 @@ export function pintarTablero(cont, ctx, estadoVista) {
 
         const columna = h(
             "section",
-            { class: "columna", dataset: { estado: est.id }, style: { "--color-estado": est.color } },
+            { class: ["columna", est.id === "hecho" && "plegable", est.id === "hecho" && estadoVista.hechoAbierto && "abierta"], dataset: { estado: est.id }, style: { "--color-estado": est.color } },
             h(
                 "header",
                 { class: "columna-cabecera" },
@@ -95,6 +96,23 @@ export function pintarTablero(cont, ctx, estadoVista) {
                 h("h2", null, est.nombre),
                 h("span", { class: "cuenta" }, total),
                 h("span", { class: "crece" }),
+                est.id === "hecho"
+                    ? h(
+                          "button",
+                          {
+                              type: "button",
+                              class: "plegar-hecho",
+                              title: est.nombre,
+                              "aria-label": est.nombre,
+                              "aria-expanded": String(Boolean(estadoVista.hechoAbierto)),
+                              onclick: () => {
+                                  estadoVista.hechoAbierto = !estadoVista.hechoAbierto;
+                                  ctx.pintar();
+                              },
+                          },
+                          estadoVista.hechoAbierto ? "▾" : "▸",
+                      )
+                    : null,
                 est.id !== "hecho"
                     ? h(
                           "button",

@@ -43,6 +43,14 @@ export function vaciar(el) {
     return el;
 }
 
+// Como «el.replaceChildren(...hijos)», pero sin pintar «null», «undefined» ni «false» (y aplanando listas):
+// así se puede poner «condición ? h(…) : null» sin que salga la palabra «null» en pantalla.
+export function rellenar(el, ...hijos) {
+    vaciar(el);
+    poner(el, hijos);
+    return el;
+}
+
 export const normalizar = (s) =>
     String(s || "")
         .normalize("NFD")

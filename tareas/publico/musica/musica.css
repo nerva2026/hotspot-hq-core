@@ -1,0 +1,541 @@
+/* La cabina de música de HOT SPOT S.L. · encima de estilo.css (mismas letras, colores y piezas que el tablón). */
+
+:root {
+    --spotify: #1ed760;
+    --tenue-oscuro: #b9a999;
+    --fondo-escenario: #2a2320;
+}
+
+a.pestana {
+    text-decoration: none;
+}
+
+.musica {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background:
+        repeating-linear-gradient(0deg, transparent 0 31px, rgba(28, 23, 21, 0.04) 31px 32px),
+        repeating-linear-gradient(90deg, transparent 0 31px, rgba(28, 23, 21, 0.04) 31px 32px),
+        var(--crema);
+}
+.musica-contenido {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 16px 14px 40px;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    grid-template-areas:
+        "ahora cabina"
+        "ahora cuenta"
+        "historial historial";
+    /* El sobrante de la tarjeta grande va a la fila de «Tu Spotify»: la cabina y tu cuenta quedan juntas, arriba. */
+    grid-template-rows: auto 1fr auto;
+    align-items: start;
+}
+.ahora {
+    grid-area: ahora;
+}
+.cabina {
+    grid-area: cabina;
+}
+.tu-spotify {
+    grid-area: cuenta;
+}
+.historial {
+    grid-area: historial;
+}
+.tarjeta-musica.sin-configurar {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: 720px;
+    justify-self: center;
+}
+
+.tarjeta-musica {
+    min-width: 0;
+    background: var(--papel);
+    border: 3px solid var(--tinta);
+    box-shadow: var(--sombra);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.tarjeta-musica h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+}
+.tarjeta-musica h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+}
+.tarjeta-musica p {
+    margin: 0;
+}
+
+/* ---------- ahora suena: el escenario ---------- */
+.ahora {
+    background: var(--tinta);
+    color: var(--crema);
+    border-color: #000;
+    box-shadow: 4px 4px 0 var(--naranja);
+    gap: 14px;
+}
+.cabecera-ahora {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.ahora h2 {
+    color: var(--amarillo);
+}
+.chip-directo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: 400 12px/1 var(--titulo);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 5px 7px 4px;
+    border: 2px solid currentColor;
+    color: var(--tenue-oscuro);
+    white-space: nowrap;
+}
+.chip-directo.en-directo {
+    color: var(--tinta);
+    background: var(--amarillo);
+    border-color: #000;
+    box-shadow: 2px 2px 0 #000;
+}
+.ecualizador {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 10px;
+}
+.ecualizador i {
+    width: 3px;
+    height: 4px;
+    background: currentColor;
+    animation: ecualizador 0.9s steps(4) infinite;
+}
+.ecualizador i:nth-child(2) {
+    animation-delay: -0.3s;
+}
+.ecualizador i:nth-child(3) {
+    animation-delay: -0.6s;
+}
+.ecualizador i:nth-child(4) {
+    animation-delay: -0.45s;
+}
+@keyframes ecualizador {
+    0% {
+        height: 3px;
+    }
+    25% {
+        height: 10px;
+    }
+    50% {
+        height: 6px;
+    }
+    75% {
+        height: 8px;
+    }
+    100% {
+        height: 3px;
+    }
+}
+
+.ahora-cuerpo {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+}
+.ahora-cuerpo > a {
+    flex: none;
+    display: block;
+}
+.portada {
+    flex: none;
+    display: grid;
+    place-items: center;
+    background: var(--fondo-escenario);
+    border: 3px solid #000;
+    overflow: hidden;
+}
+.portada img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+.portada.sin-imagen svg,
+.portada > svg {
+    width: 72%;
+    height: 72%;
+    display: block;
+}
+.portada-grande {
+    width: 200px;
+    height: 200px;
+    box-shadow: 4px 4px 0 #000;
+}
+.portada-grande.apagada {
+    opacity: 0.55;
+}
+.ahora-datos {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ahora-titulo {
+    font-size: 24px;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+.ahora-datos.vacio .ahora-titulo {
+    font: 400 18px/1.2 var(--titulo);
+    color: var(--amarillo);
+}
+.ahora-datos.vacio .nota {
+    color: var(--tenue-oscuro);
+    font-size: 15px;
+}
+.ahora-titulo a,
+.ahora-artistas a,
+.ahora-album a {
+    color: inherit;
+    text-decoration: none;
+}
+.ahora-titulo a:hover,
+.ahora-artistas a:hover,
+.ahora-album a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.ahora-artistas {
+    font-size: 16px;
+    color: var(--crema-osc);
+}
+.ahora-album {
+    font-size: 13px;
+    color: var(--tenue-oscuro);
+}
+.progreso-musica {
+    height: 12px;
+    margin-top: 8px;
+    border: 2px solid #000;
+    background: #3a302c;
+    box-shadow: 2px 2px 0 #000;
+}
+.progreso-relleno {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: repeating-linear-gradient(90deg, var(--naranja) 0 6px, #f06a3c 6px 8px);
+    transition: width 0.5s linear;
+}
+.tiempos {
+    display: flex;
+    justify-content: space-between;
+    font: 400 12px/1 var(--titulo);
+    color: var(--tenue-oscuro);
+}
+.ahora-dj {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    margin-top: 2px;
+}
+.ahora-dj .avatar {
+    border-color: #000;
+}
+.atribucion {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--tenue-oscuro);
+}
+.atribucion strong {
+    color: var(--crema);
+    font-weight: 400;
+}
+.icono-spotify {
+    width: 16px;
+    height: 16px;
+    flex: none;
+}
+.icono-pixel {
+    width: 12px;
+    height: 12px;
+    flex: none;
+}
+.ahora-controles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+.ahora .btn {
+    border-color: #000;
+    box-shadow: 2px 2px 0 #000;
+}
+.boton-escuchar {
+    min-width: 132px;
+}
+.boton-spotify {
+    background: var(--tinta);
+    color: var(--crema);
+    border-color: var(--crema-osc) !important;
+}
+.boton-spotify:hover {
+    background: #000;
+}
+.reproductor {
+    min-height: 0;
+}
+.reproductor iframe {
+    display: block;
+    width: 100%;
+    border: 0;
+    /* Las esquinas del reproductor de Spotify son redondas: sin esto, en algunos navegadores sale un fondo blanco. */
+    border-radius: 12px;
+}
+.nota-reproductor {
+    color: var(--tenue-oscuro);
+    font-size: 13px;
+}
+.nota-reproductor[data-estado="bloqueado"],
+.nota-reproductor[data-estado="fallo"],
+.nota-reproductor[data-estado="a-mano"] {
+    color: var(--amarillo);
+}
+.aviso-musica {
+    background: var(--amarillo);
+    color: var(--tinta);
+    border: 2px solid #000;
+    padding: 7px 10px;
+    font-size: 14px;
+}
+/* (la franja «Sin conexión…» es la de todas las pantallas: .aviso-conexion en estilo.css) */
+
+/* ---------- la cabina y tu Spotify ---------- */
+.cabina-estado {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.cabina-estado > span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.cabina-estado small {
+    color: var(--tinta-suave);
+    font-size: 12px;
+}
+.cabina-estado .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+}
+.cabina-estado.libre strong {
+    font: 400 14px/1 var(--titulo);
+    color: var(--verde);
+    text-transform: uppercase;
+}
+.cabina .btn,
+.tu-spotify .btn {
+    align-self: flex-start;
+}
+.escuchan {
+    border-top: 2px dashed var(--crema-osc);
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.etiqueta-pequena {
+    font: 400 12px/1 var(--titulo);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--tinta-suave);
+}
+.personas-escuchan {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 4px;
+    font-size: 14px;
+}
+.cuenta-conectada {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.nota.esperando {
+    color: var(--naranja-osc);
+}
+
+/* ---------- ha sonado ---------- */
+.lista-sonado {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+}
+.lista-sonado li {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto 18px;
+    gap: 10px;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 2px dashed var(--crema-osc);
+    min-width: 0;
+}
+.portada-mini {
+    width: 40px;
+    height: 40px;
+    border-width: 2px;
+}
+.sonado-datos {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.sonado-titulo,
+.sonado-artistas {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sonado-titulo a {
+    color: inherit;
+    text-decoration: none;
+}
+.sonado-titulo a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.sonado-artistas {
+    font-size: 13px;
+    color: var(--tinta-suave);
+}
+.sonado-quien {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--tinta-suave);
+    white-space: nowrap;
+}
+.sonado-spotify {
+    display: grid;
+    place-items: center;
+    width: 18px;
+}
+
+/* ---------- sin configurar ---------- */
+.pasos {
+    margin: 0;
+    padding-left: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.pasos li::marker {
+    font-family: var(--titulo);
+}
+.pasos .copiable {
+    margin-top: 6px;
+}
+.pasos a {
+    color: var(--naranja-osc);
+}
+.codigo {
+    margin: 6px 0 0;
+    background: var(--tinta);
+    color: var(--crema);
+    padding: 8px 10px;
+    font: 13px/1.5 ui-monospace, "SFMono-Regular", Menlo, monospace;
+    overflow-x: auto;
+}
+.tarjeta-musica code {
+    font: 13px ui-monospace, "SFMono-Regular", Menlo, monospace;
+    background: rgba(28, 23, 21, 0.08);
+    padding: 1px 4px;
+    overflow-wrap: anywhere;
+}
+
+/* ---------- pantallas estrechas (panel de la oficina, móvil) ---------- */
+@media (max-width: 860px) {
+    .lista-sonado {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+@media (max-width: 760px) {
+    .musica-contenido {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "ahora"
+            "cabina"
+            "cuenta"
+            "historial";
+        grid-template-rows: none;
+        padding: 12px 10px 30px;
+        gap: 14px;
+    }
+    .ahora-cuerpo {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .ahora-cuerpo > a,
+    .ahora-cuerpo > .portada {
+        align-self: center;
+    }
+    .portada-grande {
+        width: min(240px, 70vw);
+        height: min(240px, 70vw);
+    }
+    .ahora-titulo {
+        font-size: 21px;
+    }
+    .boton-escuchar {
+        flex: 1;
+    }
+}
+@media (max-width: 420px) {
+    .sonado-cuando {
+        display: none;
+    }
+    .tarjeta-musica {
+        padding: 12px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .ecualizador i {
+        animation: none;
+        height: 8px;
+    }
+    .progreso-relleno {
+        transition: none;
+    }
+}
+
+/* ---------- móvil (≤ 600 px): el enlace de las instrucciones llega a 44 px sin cambiar la altura de la línea ---------- */
+@media (max-width: 600px) {
+    .musica li a {
+        display: inline-block;
+        padding: 14px 0;
+        margin: -14px 0;
+    }
+}

@@ -57,7 +57,8 @@ export function validarNombre(nombre, usuarios, excepto = null) {
     return { nombre: limpio };
 }
 
-export const usuarioPublico = (u) => ({ id: u.id, nombre: u.nombre, color: u.color, admin: Boolean(u.admin), baja: Boolean(u.baja) });
+// Lo que ve todo el crew de cada persona. El cumpleaños («MM-DD», sin año) no se enseña de quien ya no está.
+export const usuarioPublico = (u) => ({ id: u.id, nombre: u.nombre, color: u.color, admin: Boolean(u.admin), baja: Boolean(u.baja), cumple: (!u.baja && u.cumple) || null });
 
 export function crearSesion(datos, usuario) {
     const codigo = crypto.randomBytes(32).toString("base64url");

@@ -1,0 +1,375 @@
+/* El reproductor pequeño de la oficina (/tareas/musica/mini/) · 360 × 128 px, sin desplazamiento.
+   Va encima de estilo.css y musica.css (mismas letras, colores, portadas e iconos que la cabina). */
+
+html,
+body.pagina-mini {
+    background: var(--tinta);
+    overflow: hidden;
+}
+body.pagina-mini {
+    min-height: 128px;
+    font-size: 13px;
+    line-height: 1.25;
+}
+.pagina-mini #app {
+    min-height: 0;
+}
+
+/* ---------- el marco ---------- */
+.mini {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 5px 8px;
+    overflow: hidden;
+    color: var(--crema);
+    background: var(--tinta);
+    border: 3px solid #000;
+    box-shadow: inset 0 0 0 2px var(--naranja);
+}
+.mini .btn {
+    border-color: #000;
+    box-shadow: 2px 2px 0 #000;
+}
+.mini .btn:active {
+    box-shadow: none;
+}
+.mini a:not(.btn) {
+    color: inherit;
+}
+.mini p {
+    margin: 0;
+}
+
+/* ---------- la cabeza: quién pincha (solo al escuchar) y los botones ---------- */
+.mini-cabeza {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    height: 26px;
+}
+.mini[data-cabeza="no"] .mini-cabeza {
+    position: absolute;
+    top: 5px;
+    right: 6px;
+    height: auto;
+    z-index: 2;
+}
+.mini-rotulo {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+}
+.mini-botones {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+#zona-escuchar {
+    display: contents;
+}
+.mini-abrir {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    color: var(--crema);
+    background: transparent;
+    border: 2px solid var(--tenue);
+    text-decoration: none;
+}
+.mini-abrir:hover {
+    color: var(--tinta);
+    background: var(--amarillo);
+    border-color: var(--amarillo);
+}
+.mini-abrir .icono-pixel {
+    width: 12px;
+    height: 12px;
+}
+.mini a:focus-visible,
+.mini button:focus-visible {
+    outline: 2px solid var(--amarillo);
+    outline-offset: 1px;
+}
+
+.mini-dj {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    font: 400 12px/1.1 var(--titulo);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--amarillo);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mini-oyentes {
+    color: var(--crema-mas);
+}
+.mini-pausa {
+    color: var(--tenue-oscuro);
+}
+.mini-estado {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: 400 13px/1.1 var(--texto);
+    color: var(--amarillo);
+}
+.mini-chip {
+    flex: none;
+    font: 400 12px/1 var(--titulo);
+    color: var(--tinta);
+    background: var(--amarillo);
+    padding: 3px 5px 2px;
+    cursor: help;
+}
+.led {
+    flex: none;
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--tinta-suave);
+    border: 1px solid #000;
+}
+.led.encendido {
+    background: #4ade80;
+    box-shadow: 0 0 0 1px #14532d;
+}
+
+/* ---------- el cuerpo ---------- */
+.mini-cuerpo {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.mini[data-vista="escuchando"] .mini-cuerpo {
+    display: none;
+}
+.mini-textos {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+}
+
+/* Un aviso con su botón: cabina vacía, sin sesión, sin configurar, sin conexión. */
+.mini-mensaje {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 12px;
+}
+.mini-disco {
+    flex: none;
+    width: 52px;
+    height: 52px;
+    display: block;
+    padding: 4px;
+    background: var(--fondo-escenario);
+    border: 2px solid #000;
+    box-shadow: 2px 2px 0 #000;
+}
+.mini-titulo-mensaje {
+    font: 400 12px/1.2 var(--titulo);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--amarillo);
+}
+.mini-linea {
+    font-size: 14px;
+    line-height: 1.2;
+    color: var(--crema);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.mini-mensaje > .btn {
+    flex: none;
+}
+
+/* Se ve lo que suena pero no se escucha. */
+.mini-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 0;
+}
+.mini-info .mini-dj {
+    padding-right: 26px;
+}
+.mini-portada {
+    flex: none;
+    width: 70px;
+    height: 70px;
+    border-width: 3px;
+    box-shadow: 3px 3px 0 #000;
+}
+.mini-portada-enlace {
+    flex: none;
+    display: block;
+    line-height: 0;
+}
+.mini-titulo {
+    font: 700 16px/1.15 var(--texto);
+    color: var(--crema);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mini-titulo a {
+    text-decoration: none;
+}
+.mini-titulo a:hover {
+    color: var(--amarillo);
+    text-decoration: underline;
+}
+.mini-artistas {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    color: var(--tenue-oscuro);
+    font-size: 14px;
+    line-height: 1.15;
+}
+.mini-artistas span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mini-spotify {
+    flex: none;
+    display: block;
+    line-height: 0;
+}
+.mini .icono-spotify {
+    width: 14px;
+    height: 14px;
+}
+
+/* ---------- el pie: escuchar y por dónde va ---------- */
+.mini-pie {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 0;
+}
+.mini-pie:empty {
+    display: none;
+}
+.mini-pie .btn {
+    flex: none;
+}
+.mini-progreso {
+    flex: 1;
+    min-width: 0;
+    height: 10px;
+    display: block;
+    background: #000;
+    border: 2px solid var(--tinta-suave);
+}
+.mini-relleno {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--naranja);
+}
+.mini-tiempo {
+    flex: none;
+    min-width: 34px;
+    text-align: right;
+    font-size: 13px;
+    color: var(--crema-mas);
+}
+
+/* ---------- escuchando: el reproductor compacto de Spotify (80 px) ---------- */
+.mini-caja {
+    position: relative;
+    flex: none;
+    height: 80px;
+}
+.mini:not([data-vista="escuchando"]) .mini-caja {
+    display: none;
+}
+.mini-embed,
+.mini-embed > div {
+    height: 80px;
+}
+.mini-embed iframe {
+    display: block;
+    width: 100%;
+    height: 80px;
+    border: 0;
+    /* Las esquinas del reproductor de Spotify son redondas: sin esto, en algunos navegadores sale un fondo blanco. */
+    border-radius: 12px;
+}
+.mini-sin-embed {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 6px;
+    background: #2a2320;
+    border: 2px solid var(--tinta-suave);
+}
+.mini-sin-embed[hidden] {
+    display: none;
+}
+.mini-sin-embed .mini-portada {
+    width: 60px;
+    height: 60px;
+    border-width: 2px;
+    box-shadow: 2px 2px 0 #000;
+}
+.mini-sin-embed .mini-titulo {
+    font-size: 15px;
+}
+.mini-enlace {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+    font-size: 13px;
+    color: var(--amarillo);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mini * {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* ---------- barra pequeña (su marco mide 360 px, así que esto vale también en el escritorio de la oficina):
+   el botón de abrir la cabina llega a 44 px ---------- */
+@media (max-width: 600px) {
+    .mini-abrir {
+        width: 44px;
+        height: 44px;
+    }
+}
