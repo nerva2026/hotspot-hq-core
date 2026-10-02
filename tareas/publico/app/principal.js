@@ -241,11 +241,22 @@ function montar() {
     raiz.append(
         h(
             "header",
-            { class: "barra" },
+            { class: "barra barra-tablon" },
             h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app" }, "TAREAS")),
+            // Las pestañas a las otras pantallas, las mismas que en todas («otra-pantalla»: con ?solo=1 no salen, ver solo.js).
             h(
                 "nav",
-                { class: "pestanas", "aria-label": "Vistas" },
+                { class: "pestanas pantallas otra-pantalla", "aria-label": "Aplicaciones" },
+                h("span", { class: "pestana activa", "aria-current": "page" }, "Tareas"),
+                E.yo.libro ? h("a", { class: "pestana otra-pantalla", href: "libro/" }, "Cuentas") : null,
+                h("a", { class: "pestana otra-pantalla", href: "pizarra/" }, "Pizarra"),
+                h("a", { class: "pestana otra-pantalla", href: "archivo/" }, "Archivo"),
+                h("a", { class: "pestana otra-pantalla", href: "musica/" }, "Música"),
+            ),
+            // Las vistas del tablón: al lado del nombre en modo solo y en su propia línea cuando están las pestañas de arriba.
+            h(
+                "nav",
+                { class: "pestanas vistas", "aria-label": "Vistas" },
                 VISTAS.map((v) =>
                     h(
                         "button",
@@ -379,7 +390,7 @@ setInterval(() => {
 }, 10 * 60 * 1000);
 
 function pintarBarra() {
-    for (const b of document.querySelectorAll(".pestana")) {
+    for (const b of document.querySelectorAll(".vistas .pestana")) {
         b.classList.toggle("activa", b.dataset.vista === E.vista);
         b.setAttribute("aria-current", b.dataset.vista === E.vista ? "page" : "false");
     }
@@ -389,7 +400,8 @@ function pintarBarra() {
     const f = E.filtros;
     const vistaActual = VISTAS.find((v) => v.id === E.vista);
     const botonVista = $("#boton-vista");
-    if (botonVista) botonVista.replaceChildren(vistaActual.nombre, h("span", { class: "flecha" }, "▾"));
+    // En el móvil no cabe el nombre de la pantalla al lado: va en pequeño dentro del botón, encima de la vista.
+    if (botonVista) botonVista.replaceChildren(h("span", { class: "boton-vista-pantalla" }, "Tareas"), h("span", { class: "boton-vista-nombre" }, vistaActual.nombre, h("span", { class: "flecha" }, "▾")));
     const hayFiltros = Boolean(f.texto || f.persona !== "todos" || f.prioridades.length || f.etiqueta || f.ocultarHechas);
     $("#boton-filtros")?.classList.toggle("activo", hayFiltros);
     const persona = $("#filtro-persona");

@@ -772,10 +772,10 @@ function montar() {
         h(
             "header",
             { class: "barra" },
-            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("span", { class: "nombre-app" }, "ARCHIVO")),
+            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app" }, "ARCHIVO")),
             h(
                 "nav",
-                { class: "pestanas", "aria-label": "Aplicaciones" },
+                { class: "pestanas pantallas otra-pantalla", "aria-label": "Aplicaciones" },
                 h("a", { class: "pestana otra-pantalla", href: "../" }, "Tareas"),
                 E.yo.libro ? h("a", { class: "pestana otra-pantalla", href: "../libro/" }, "Cuentas") : null,
                 h("a", { class: "pestana otra-pantalla", href: "../pizarra/" }, "Pizarra"),

@@ -41,10 +41,21 @@ cualquier navegador.
 - **Vistas:** tablero por columnas (Por hacer, En marcha, Esperando, Hecho), lista tipo Notion,
   calendario y cronograma.
 - **Pantallas pequeñas:** con 600 px o menos la cabecera cabe en una línea (las vistas, en un solo botón con el nombre de
-  la de ahora; los filtros, con la búsqueda, plegados detrás de «Filtros») y, si no hay una vista guardada, se abre la
-  lista (por fecha) en vez del tablero. En el panel de la oficina, de 930 px o más caben las cuatro columnas (miden entre
-  215 y 300 px, sin tocar la letra); en uno de 721 a 929 px «Hecho» se pliega en una etiqueta con su número, que se
-  despliega al pulsarla. En un móvil la oficina abre el tablón casi a pantalla completa (`src/hq.js` del repositorio de mapas).
+  la de ahora y, encima y en pequeño, «Tareas»; los filtros, con la búsqueda, plegados detrás de «Filtros») y, si no hay
+  una vista guardada, se abre la lista (por fecha) en vez del tablero. En el panel de la oficina, de 930 px o más caben
+  las cuatro columnas (miden entre 215 y 300 px, sin tocar la letra); en uno de 721 a 929 px «Hecho» se pliega en una
+  etiqueta con su número, que se despliega al pulsarla. En un móvil la oficina abre el tablón casi a pantalla completa
+  (`src/hq.js` del repositorio de mapas).
+- **La lista con 720 px o menos:** no hay columnas que se salgan por la derecha. Cada fila enseña el título entero (hasta
+  tres líneas) y, debajo, estado, prioridad, para quién y fecha; «Abrir» está siempre a la vista y un toque en la fila
+  (fuera de la casilla) abre la tarea, que es donde se cambia lo demás. Más ancha es la tabla de siempre, que se edita
+  en el sitio; donde no hay ratón (`hover: none`) «Abrir» tampoco se esconde.
+- **Calendario y cronograma:** el calendario se abre desplazado hasta hoy (en un móvil solo caben tres o cuatro días) y
+  marca con una sombra el lado por el que sigue; en los dos, el título de una barra que empieza antes del borde visible
+  se corre hasta lo que se ve.
+- **Avisos y ventanas:** los avisos salen abajo, en el centro; con una ventana abierta (o la ficha de una tarea) van
+  dentro de ella, debajo de la ventana o al pie de la ficha, para no tapar el pie de un formulario
+  (`colocarAvisos()` en `publico/app/menus.js`). Una ventana nunca es más alta que la pantalla: se desplaza por dentro.
 - **Cada tarea tiene:** título, estado, prioridad (urgente, alta, media, baja; cada una con su color),
   para quién, pedido por, fecha de inicio y fecha límite, etiquetas, subtareas y notas.
 - **En directo:** lo que cambia uno lo ve el otro al momento (Server-Sent Events).
@@ -84,16 +95,22 @@ Las tareas borradas pasan 30 días en una papelera interna (el aviso «Deshacer�
 
 **Cómo se llega de una pantalla a otra:** el menú de la cuenta (arriba a la derecha) de cada pantalla y las pestañas
 de arriba llevan a las demás con los mismos nombres: «Tablón de tareas», «Libro de cuentas» (en las pestañas,
-«Cuentas»; solo a quien tiene parte en el reparto), «Pizarra», «Archivo» y «Música». Al añadir una pantalla nueva hay
-que añadirla en todas (en `principal.js`, `libro.js`, `pizarra.js`, `archivo.js` y `musica.js`, de `publico/app/`),
-y cada enlace a otra pantalla lleva la clase `otra-pantalla` (en los menús hechos con `opcionesMenu`, `otra: true`).
-El cartel de cumpleaños (`cumples/`) es la excepción: se abre desde el mapa, como el puente, y ni enlaza ni se enlaza.
+«Tareas» y «Cuentas»; esta, solo a quien tiene parte en el reparto), «Pizarra», «Archivo» y «Música». Las cinco
+pantallas llevan las mismas cinco pestañas, en ese orden y con la suya marcada; en el tablón, que además tiene sus
+vistas (Tablero, Lista, Calendario y Cronograma), las vistas bajan a una segunda línea de la cabecera. Al añadir una
+pantalla nueva hay que añadirla en todas (en `principal.js`, `libro.js`, `pizarra.js`, `archivo.js` y `musica.js`, de
+`publico/app/`), y cada enlace a otra pantalla lleva la clase `otra-pantalla` (en los menús hechos con `opcionesMenu`,
+`otra: true`), igual que la fila de pestañas entera. La cabecera dice siempre cómo se llama la pantalla (`.nombre-app`;
+en la pizarra, el nombre de esa pizarra): con 600 px o menos no hay pestañas (queda el menú de la cuenta) pero el
+nombre sigue ahí. El cartel de cumpleaños (`cumples/`) es la excepción: se abre desde el mapa, como el puente, y ni
+enlaza ni se enlaza.
 
 ### Solo lo suyo (`?solo=1`)
 
 Cada personaje u objeto de la oficina enseña solo su pantalla: el mapa la abre con `?solo=1` y esa pantalla esconde
-las pestañas que llevan a las demás y los enlaces a otras pantallas del menú de la cuenta (lo demás del menú se
-queda). Sin el parámetro todo sigue igual.
+la fila de pestañas entera (tampoco queda la suya: el nombre ya está en la cabecera) y los enlaces a otras pantallas
+del menú de la cuenta (lo demás del menú se queda). En el tablón, sin pestañas, las vistas se quedan en la primera
+línea, al lado del nombre. Sin el parámetro todo sigue igual.
 
 | Pantalla | Dirección para el mapa |
 | --- | --- |
@@ -135,7 +152,10 @@ misma sesión que el tablón.
 
 - **Herramientas:** lápiz (8 colores y 4 grosores; con Mayúsculas, línea recta), goma (borra trazos enteros),
   notas, fotos (elegir, pegar con Ctrl+V o arrastrar; JPG, PNG, WebP o GIF de hasta 10 MB), mover y cambiar
-  el tamaño, lupa, deshacer y rehacer, y descargar como imagen.
+  el tamaño, lupa, deshacer y rehacer, y descargar como imagen. La lupa dice el tamaño de verdad (a cuánto se ve la
+  pizarra respecto a sus 1920 × 1200: entera en un móvil es un 19 %, no un 100 %).
+- **En el móvil (menos de 600 px):** las herramientas ocupan dos filas. El color y el grosor están plegados detrás de un
+  botón que enseña los de ahora (se pliegan solos al empezar a pintar) y «¿Cómo funciona?» queda en el menú de la cuenta.
 - **En directo:** cada uno ve el lápiz de los demás y lo que pintan mientras lo pintan, y quién tiene la
   pizarra abierta.
 - **Vaciar:** quita todo para todos; se puede recuperar durante 30 días.
@@ -419,7 +439,7 @@ sus variables, están en el workflow.
 | Probar el archivo | `pruebas/archivo.mjs` | 3992 | Subir un documento de cada tipo, enlaces, papelera, búsqueda, lo que no debe entrar, Markdown y Word escapados y el límite total (`ARCHIVO_MAXIMO_MB=40`). |
 | Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify (y entrar en la cabina al conectar, libre u ocupada), lo que suena en directo, cómo le va a cada oyente, el aviso a la oficina y el puente con `hsMusica` (el módulo de verdad con una oficina de mentira); y la música «sin configurar». |
 | Probar el reproductor de la música | `pruebas/reproductor.mjs` | ninguno (sin servidor ni navegador) | Los estados del reproductor (`publico/app/musica-seguidor.js`) con un Embed y un reloj de mentira: suena entera, la muestra de 30 s y su final, no arranca solo, no carga, y el cambio de canción. |
-| Probar el modo solo | `pruebas/solo.mjs` | 3990 | `?solo=1` sin navegador: lo que sirve el servidor (las cinco pantallas, `app/solo.js`, la regla de `estilo.css`, la vuelta de entrar), la lógica del módulo y que las pantallas marcan sus enlaces a las demás y no pierden el modo al cambiar de dirección. |
+| Probar el modo solo | `pruebas/solo.mjs` | 3990 | `?solo=1` sin navegador: lo que sirve el servidor (las cinco pantallas, `app/solo.js`, la regla de `estilo.css`, la vuelta de entrar), la lógica del módulo y que las pantallas marcan sus enlaces a las demás y no pierden el modo al cambiar de dirección. También las pestañas: las mismas cinco en las cinco pantallas, la fila entera marcada y el nombre de la pantalla en la cabecera. |
 | Probar el acceso de la oficina | `pruebas/oficina-oidc.mjs` y `pruebas/google-falso.mjs` | 3998 y 8412 (el Google de mentira) | Entrar por `/cuentas` con `openid-client` 5 (la librería de WorkAdventure): PKCE, `userinfo` y revocar. Es el único paso que instala un paquete (`npm install`). |
 
 El paso «Comprobar el código» pasa antes `node --check` a todo el JavaScript (`servidor/`, `publico/app/`, `portada/`

@@ -33,9 +33,6 @@
     font-size: 14px;
     text-transform: uppercase;
 }
-a.pestana {
-    text-decoration: none;
-}
 /* Cifras con la letra de los títulos (Silkscreen): en Pixelify Sans el 5 parece una S y el € un 0. */
 .cifra-pixel,
 .mov-importe,

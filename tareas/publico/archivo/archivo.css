@@ -1,8 +1,5 @@
 /* Archivo de documentos de HOT SPOT S.L. · encima de estilo.css (mismas letras, colores y piezas que el tablón, el libro y la pizarra). */
 
-a.pestana {
-    text-decoration: none;
-}
 mark {
     background: var(--amarillo);
     color: inherit;

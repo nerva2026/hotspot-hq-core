@@ -176,7 +176,7 @@ function montar() {
             "header",
             { class: "barra" },
             h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app" }, "CUENTAS")),
-            h("nav", { class: "pestanas", "aria-label": "Aplicaciones" }, h("a", { class: "pestana otra-pantalla", href: "../" }, "Tareas"), h("span", { class: "pestana activa", "aria-current": "page" }, "Cuentas"), h("a", { class: "pestana otra-pantalla", href: "../pizarra/" }, "Pizarra"), h("a", { class: "pestana otra-pantalla", href: "../archivo/" }, "Archivo"), h("a", { class: "pestana otra-pantalla", href: "../musica/" }, "Música")),
+            h("nav", { class: "pestanas pantallas otra-pantalla", "aria-label": "Aplicaciones" }, h("a", { class: "pestana otra-pantalla", href: "../" }, "Tareas"), h("span", { class: "pestana activa", "aria-current": "page" }, "Cuentas"), h("a", { class: "pestana otra-pantalla", href: "../pizarra/" }, "Pizarra"), h("a", { class: "pestana otra-pantalla", href: "../archivo/" }, "Archivo"), h("a", { class: "pestana otra-pantalla", href: "../musica/" }, "Música")),
             h(
                 "div",
                 { class: "barra-derecha" },

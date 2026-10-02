@@ -1,9 +1,5 @@
 /* Pizarra de HOT SPOT S.L. · encima de estilo.css (mismas letras, colores y piezas que el tablón y el libro). */
 
-a.pestana {
-    text-decoration: none;
-}
-
 /* ---------- herramientas ---------- */
 .herramientas-pizarra {
     flex: none;
@@ -127,6 +123,14 @@ a.pestana {
 }
 .grosor.activo {
     background: var(--amarillo);
+}
+/* El color y el grosor van juntos: en pantallas anchas, en la barra como siempre; en el móvil, plegados detrás de un
+   botón que enseña los de ahora (más abajo). */
+.trazo-pizarra {
+    display: contents;
+}
+.boton-trazo {
+    display: none;
 }
 
 /* ---------- la pizarra ---------- */
@@ -484,8 +488,67 @@ body[data-herramienta="mover"] .elegida .redimensionar {
 /* Por debajo de 600 px (móvil) todos los controles de la barra miden 44 px o más. Las muestras de color siguen
    pintándose de 24 px: el botón mide 44 px y el cuadrito (con su borde y su sombra) va en ::before. */
 @media (max-width: 599.98px) {
+    /* Dos filas y nada más: arriba las herramientas y el botón del color y el grosor; abajo el tamaño, deshacer,
+       rehacer, descargar y vaciar («¿Cómo funciona?» sigue en el menú de la cuenta). */
     .herramientas-pizarra {
+        position: relative;
         gap: 4px 8px;
+    }
+    .grupo-herramientas {
+        flex: 1 1 100%;
+    }
+    .grupo-herramientas.derecha .zoom {
+        margin-right: auto;
+    }
+    .boton-ayuda {
+        display: none;
+    }
+    .boton-trazo {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        width: auto;
+        margin-left: auto;
+        padding: 0 7px;
+    }
+    .boton-trazo[aria-expanded="true"] {
+        background: var(--amarillo);
+    }
+    .muestra-color {
+        flex: none;
+        width: 22px;
+        height: 22px;
+        background: var(--color-lapiz, var(--tinta));
+        border: 2px solid var(--tinta);
+    }
+    .caja-grosor {
+        flex: none;
+        width: 20px;
+        height: 22px;
+        display: grid;
+        place-items: center;
+    }
+    .muestra-grosor {
+        display: block;
+        background: var(--tinta);
+    }
+    .trazo-pizarra {
+        display: none;
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 100%;
+        z-index: 20;
+        flex-wrap: wrap;
+        gap: 4px 8px;
+        padding: 6px 8px;
+        background: var(--crema-osc);
+        border-top: 2px dashed var(--crema-mas);
+        border-bottom: 2px solid var(--tinta);
+        box-shadow: 0 4px 0 rgba(28, 23, 21, 0.25);
+    }
+    .trazo-pizarra.abierto {
+        display: flex;
     }
     .herramienta {
         min-width: 44px;
@@ -502,9 +565,6 @@ body[data-herramienta="mover"] .elegida .redimensionar {
         padding: 0 2px;
         white-space: nowrap;
         letter-spacing: 0;
-    }
-    .grupo-herramientas.derecha {
-        display: contents;
     }
     .grosor {
         width: 44px;

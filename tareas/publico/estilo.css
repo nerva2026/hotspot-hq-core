@@ -503,10 +503,18 @@ kbd {
     display: flex;
     align-items: center;
     gap: 10px;
+    /* si no cabe todo, lo primero que se encoge es el nombre (acaba en «…»), no las pestañas */
+    flex: 0 100 auto;
+    min-width: 0;
 }
 .nombre-app {
     font: 700 16px/1 var(--titulo);
     letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 2px 0; /* la tilde de una mayúscula («MÚSICA») no se corta */
 }
 .pestanas {
     display: flex;
@@ -524,6 +532,10 @@ kbd {
     border: 2px solid transparent;
     padding: 8px 10px 7px;
     white-space: nowrap;
+    text-align: center;
+}
+a.pestana {
+    text-decoration: none;
 }
 .pestana:hover {
     border-color: var(--tinta-suave);
@@ -536,9 +548,25 @@ kbd {
 }
 .barra-derecha {
     margin-left: auto;
+    flex: none;
     display: flex;
     align-items: center;
     gap: 10px;
+}
+/* El tablón entero (sin ?solo=1) lleva arriba las pestañas a las otras pantallas, como las demás, y sus vistas pasan a
+   una línea propia de la cabecera. En modo solo no hay pestañas y las vistas siguen al lado del nombre. */
+html:not(.solo) .barra-tablon {
+    flex-wrap: wrap;
+    row-gap: 8px;
+    padding-bottom: 0;
+}
+html:not(.solo) .barra-tablon .vistas {
+    order: 5;
+    flex: 1 1 100%;
+    margin: 0 -12px;
+    padding: 6px 12px 7px;
+    background: #2e2622;
+    border-top: 2px solid #000;
 }
 .barra .btn.primario {
     border-color: #000;
@@ -2026,17 +2054,11 @@ table.lista {
         flex: 1;
         padding: 8px 4px 7px;
     }
-    /* Con ?solo=1 solo queda la pestaña de esta pantalla: que no se estire a todo el ancho. */
-    .solo span.pestana {
-        flex: none;
-        padding: 8px 10px 7px;
-    }
     .buscar {
         flex: 1 1 140px;
     }
     .resumen {
-        width: 100%;
-        margin-left: 0;
+        margin-left: auto; /* comparte línea con «Ocultar hechas» si cabe */
     }
     .columna {
         flex: 0 0 min(290px, 85vw);
@@ -2535,14 +2557,23 @@ table.lista {
         gap: 6px;
         padding: 8px;
     }
-    .marca,
-    .pestanas {
+    /* Sin pestañas (las otras pantallas están en el menú de la cuenta), pero con el nombre de la pantalla siempre a la
+       vista. En el tablón no cabe al lado de sus botones: va en pequeño dentro del botón de las vistas. */
+    .pestanas,
+    .marca .logo,
+    .barra-tablon .marca {
         display: none;
+    }
+    html:not(.solo) .barra-tablon {
+        flex-wrap: nowrap;
+        padding-bottom: 8px;
     }
     .boton-vista {
         display: inline-flex;
-        align-items: center;
-        gap: 6px;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 4px;
         min-height: 44px;
         padding: 0 10px;
         color: var(--tinta);
@@ -2553,6 +2584,16 @@ table.lista {
         letter-spacing: 0.03em;
         text-transform: uppercase;
         white-space: nowrap;
+    }
+    .boton-vista-pantalla {
+        font-size: 8px; /* el tamaño para el que se dibujó Silkscreen */
+        letter-spacing: 0.1em;
+        color: var(--tinta-suave);
+    }
+    .boton-vista-nombre {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
     .boton-filtros {
         display: inline-flex;
