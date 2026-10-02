@@ -263,7 +263,7 @@ test("8 · las letras de la casa", async ({ browser }) => {
 
                 // Una muestra para mirarla: cada letra con sus cifras y las letras retocadas, a 4 veces su tamaño
                 const muestra = document.createElement("canvas");
-                muestra.width = 1180;
+                muestra.width = 1400;
                 muestra.height = 420;
                 const pincel = muestra.getContext("2d");
                 if (!pincel) throw new Error("sin lienzo");
