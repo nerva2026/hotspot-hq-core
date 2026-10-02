@@ -469,7 +469,7 @@ assert.doesNotMatch(cssCartel, /font-size:\s*(\d|1[01])px/, "ninguna letra de me
 const codigoCartel = await servido("app/cumples.js", /^text\/javascript/);
 for (const dependencia of ["util.js", "api.js", "conexion.js", "acceso.js", "solo.js", "cumple.js", "confeti.js"]) await servido(`app/${dependencia}`, /^text\/javascript/);
 for (const m of codigoCartel.matchAll(/from "\.\/([\w-]+\.js)"/g)) await servido(`app/${m[1]}`, /^text\/javascript/);
-for (const letra of ["pixelify-sans.woff", "silkscreen-regular.woff", "silkscreen-bold.woff"]) await servido(`fuentes/${letra}`, /^font\/woff/);
+for (const letra of ["pixelify-sans.woff", "silkscreen-regular.woff", "silkscreen-bold.woff", "hs-retoques-texto.woff", "hs-retoques-texto-negra.woff", "hs-retoques-titulo.woff", "hs-retoques-titulo-negra.woff"]) await servido(`fuentes/${letra}`, /^font\/woff/);
 await servido("tarta.svg", /^image\/svg/);
 // Reutiliza lo que ya había: la entrada de siempre, los textos y cuentas de los cumpleaños y el confeti
 assert.match(codigoCartel, /import \{[^}]*pantallaEntrar[^}]*\} from "\.\/acceso\.js"/);

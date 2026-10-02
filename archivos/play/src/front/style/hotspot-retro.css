@@ -23,12 +23,62 @@
     font-style: normal;
     font-display: swap;
 }
+/* Pixelify Sans es una sola letra variable (400-700). Se declara partida en dos tramos de peso para poder cambiarle
+   algunos caracteres en cada tramo (ver «los retoques de las letras», justo debajo). */
 @font-face {
     font-family: "Pixelify Sans";
     src: url("/static/fonts/hotspot/pixelify-sans.woff") format("woff");
-    font-weight: 400 700;
+    font-weight: 400 549;
     font-style: normal;
     font-display: swap;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("/static/fonts/hotspot/pixelify-sans.woff") format("woff");
+    font-weight: 550 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ---------- los retoques de las letras ---------- */
+/* Los números de Pixelify Sans cuestan de leer (el 5 es igual que la S; el 2, el 3 y el 4 se confunden), su B, su C y
+   su G son casi el mismo dibujo y su «a» parece una «o». El 4 de Silkscreen parece otra letra. Estas fuentes solo
+   traen esos caracteres, dibujados con las mismas medidas que cada letra (herramientas/retoques.py). Van con el MISMO
+   nombre de familia y el MISMO peso que la letra a la que acompañan, declaradas después y con `unicode-range`: el
+   navegador saca de aquí esos caracteres y lo demás de la letra de siempre. (Chrome y Safari solo juntan las
+   declaraciones que tienen exactamente el mismo peso: por eso van calcadas.) Para volver a lo de antes basta quitar
+   estas cuatro declaraciones. */
+@font-face {
+    font-family: "Silkscreen";
+    src: url("/static/fonts/hotspot/hs-retoques-titulo.woff") format("woff");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+30-39;
+}
+@font-face {
+    font-family: "Silkscreen";
+    src: url("/static/fonts/hotspot/hs-retoques-titulo-negra.woff") format("woff");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+30-39;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("/static/fonts/hotspot/hs-retoques-texto.woff") format("woff");
+    font-weight: 400 549;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+30-39, U+42-43, U+47, U+61, U+E0-E1, U+20AC;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("/static/fonts/hotspot/hs-retoques-texto-negra.woff") format("woff");
+    font-weight: 550 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+30-39, U+42-43, U+47, U+61, U+E0-E1, U+20AC;
 }
 
 /* ---------- colores ---------- */
@@ -179,5 +229,153 @@ textarea {
     letter-spacing: 0.04em;
 }
 
+/* ---------- decir y pensar: las burbujas sobre la cabeza ---------- */
+/* WorkAdventure las escribe con una letra de cómic (Comic Jens) sobre una pastilla blanca medio transparente: ni se leía
+   bien ni era de la casa. Ahora van con Pixelify Sans a 11 px (su tamaño exacto: un píxel de la letra es un píxel de
+   pantalla, y con el zoom del juego crece limpio), en tinta sobre crema y con borde, como los carteles del mapa.
+   Las dos burbujas viven dentro del juego (un elemento DOM de Phaser que se amplía con la cámara): los tamaños de aquí
+   son «de mapa», no de pantalla. */
+.say-bubble,
+.thinking-cloud .thinking-text {
+    font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    line-height: 13px !important;
+    letter-spacing: 0.02em;
+    color: var(--hs-tinta) !important;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+/* Decir: caja recta con borde de tinta y un pico hacia quien habla. */
+.say-bubble {
+    background: var(--hs-crema) !important;
+    border: 1px solid var(--hs-tinta);
+    border-radius: 0 !important;
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
+    padding: 3px 7px 4px !important;
+    min-width: 24px;
+    max-width: 176px !important;
+    width: max-content;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+.say-bubble::before,
+.say-bubble::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    width: 0;
+    height: 0;
+    transform: translateX(-50%);
+    border-style: solid;
+    border-color: transparent;
+}
+.say-bubble::before {
+    bottom: -5px;
+    border-width: 5px 5px 0 5px;
+    border-top-color: var(--hs-tinta);
+}
+.say-bubble::after {
+    bottom: -3px;
+    border-width: 4px 4px 0 4px;
+    border-top-color: var(--hs-crema);
+}
+/* Pensar: caja de papel con las esquinas comidas (el borde se hace con sombras, así faltan los cuatro píxeles de las
+   esquinas) y tres cuadraditos que bajan hacia la cabeza. Sin el filtro de nube ni la transparencia, que emborronaban. */
+.thinking-cloud {
+    opacity: 1 !important;
+    background: #fffaf3 !important;
+    border-radius: 0 !important;
+    padding: 4px 8px 5px !important;
+    min-width: 24px;
+    max-width: 176px !important;
+    box-shadow:
+        0 -1px 0 0 var(--hs-tinta),
+        0 1px 0 0 var(--hs-tinta),
+        -1px 0 0 0 var(--hs-tinta),
+        1px 0 0 0 var(--hs-tinta),
+        2px 2px 0 0 rgba(0, 0, 0, 0.3);
+}
+.thinking-cloud::before {
+    display: none !important;
+}
+.thinking-cloud .thinking-tail {
+    bottom: -17px;
+    left: 50%;
+    gap: 2px;
+}
+.thinking-cloud .circle {
+    border-radius: 0 !important;
+    filter: none !important;
+    background: #fffaf3 !important;
+    box-shadow: 0 0 0 1px var(--hs-tinta);
+    transform: none !important;
+}
+.thinking-cloud .circle1 {
+    width: 5px;
+    height: 5px;
+    margin-left: 6px;
+}
+.thinking-cloud .circle2 {
+    width: 3px;
+    height: 3px;
+    margin-left: 2px;
+}
+.thinking-cloud .circle3 {
+    width: 2px;
+    height: 2px;
+    margin-left: -2px;
+}
+
+/* ---------- avisos junto al muñeco («Pulse ESPACIO…», mensajes de los scripts) ---------- */
+/* Llevan sus estilos escritos en línea (letra del sistema a 10 px, esquinas redondas, fondo azulado con desenfoque):
+   hace falta !important para ponerlos de la casa. */
+.characterTriggerAction {
+    font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    line-height: 14px !important;
+    letter-spacing: 0.02em !important;
+    color: var(--hs-crema) !important;
+    background: rgba(28, 23, 21, 0.94) !important;
+    border: 1px solid var(--hs-borde) !important;
+    border-radius: 0 !important;
+    box-shadow:
+        inset 1px 1px 0 hsl(var(--contrast-500)),
+        1px 1px 0 rgba(0, 0, 0, 0.35);
+    padding: 4px 8px 5px !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+.characterTriggerAction.speech-dom-inner--warning {
+    border-color: var(--hs-amarillo) !important;
+}
+.characterTriggerAction strong {
+    color: var(--hs-amarillo) !important;
+    font-weight: 700 !important;
+}
+
+/* ---------- el mensaje: chat, avisos y el campo de escribir ---------- */
+/* El texto que se lee de corrido va un punto más grande y con más aire entre líneas; la hora del chat usaba otra
+   letra (Roboto Condensed) y ahora va con la de la casa. */
+.message-bubble {
+    font-size: 15px;
+    line-height: 1.4;
+    letter-spacing: 0.01em;
+}
+.message-bubble.text-xs {
+    font-size: 13px;
+    line-height: 1.35;
+}
+.message-input,
+.message-input::placeholder {
+    font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    font-size: 15px;
+    letter-spacing: 0.01em;
+}
+.font-condensed {
+    font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+    letter-spacing: 0.02em;
+}
 /* El número de versión (abajo a la izquierda, pulsable) y el aviso de novedades llevan su propio estilo
    en Components/Hotspot/Novedades.svelte; qué versión es y qué novedades salen, en novedades.ts. */

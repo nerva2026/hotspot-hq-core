@@ -34,8 +34,14 @@ El servidor usa esa imagen en lugar de la oficial para el servicio `play`. El re
 
 ## Archivos propios (`archivos/`)
 
-- `play/src/front/style/hotspot-retro.css`: el estilo retro de la interfaz.
+- `play/src/front/style/hotspot-retro.css`: el estilo retro de la interfaz, con las burbujas de «decir» y «pensar», los
+  avisos junto al muñeco y el texto del chat en las letras de la casa.
 - `play/public/static/fonts/hotspot/`: letras Silkscreen y Pixelify Sans (licencia OFL, incluida).
+  Los archivos `hs-retoques-*.woff` son **los retoques de las letras**: unas cifras claras para las dos letras (el 5 de
+  Pixelify Sans era igual que la S y el 4 de Silkscreen parecía otra letra) y, en Pixelify Sans, la B, la C, la G, la
+  «a» y el €, que se confundían. Los dibuja `herramientas/retoques.py` (Python 3 con fontTools) y los deja aquí y en
+  `tareas/publico/fuentes/`; el CSS los declara con el mismo nombre de familia que la letra a la que acompañan y
+  `unicode-range` (ver el principio de `hotspot-retro.css`).
 - `play/public/static/images/hotspot/`: marca provisional (mientras llega el logo) y fachada de la calle.
 - `play/public/resources/characters/hotspot/` y `play/src/pusher/data/woka.json`: los muñecos de HOT SPOT (24 ya hechos y piezas para personalizar: piel, pelo, ropa, cabeza y complementos). Se generan con `herramientas/wokas_hs.py` del repositorio del mapa.
 

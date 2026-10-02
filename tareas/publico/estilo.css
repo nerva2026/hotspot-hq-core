@@ -12,11 +12,49 @@
     font-weight: 700;
     font-display: swap;
 }
+/* Pixelify Sans (una sola letra variable) va partida en dos tramos de peso para poder retocarla en cada uno. */
 @font-face {
     font-family: "Pixelify Sans";
     src: url("fuentes/pixelify-sans.woff") format("woff");
-    font-weight: 400 700;
+    font-weight: 400 549;
     font-display: swap;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("fuentes/pixelify-sans.woff") format("woff");
+    font-weight: 550 700;
+    font-display: swap;
+}
+/* Los retoques de las letras (herramientas/retoques.py): cifras claras para las dos letras y, en Pixelify Sans, la B,
+   la C, la G, la «a» y el €, que se confundían. Mismo nombre y mismo peso que la letra a la que acompañan, declarados
+   después y con `unicode-range`: el navegador saca de aquí esos caracteres y lo demás de la letra de siempre. */
+@font-face {
+    font-family: "Silkscreen";
+    src: url("fuentes/hs-retoques-titulo.woff") format("woff");
+    font-weight: 400;
+    font-display: swap;
+    unicode-range: U+30-39;
+}
+@font-face {
+    font-family: "Silkscreen";
+    src: url("fuentes/hs-retoques-titulo-negra.woff") format("woff");
+    font-weight: 700;
+    font-display: swap;
+    unicode-range: U+30-39;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("fuentes/hs-retoques-texto.woff") format("woff");
+    font-weight: 400 549;
+    font-display: swap;
+    unicode-range: U+30-39, U+42-43, U+47, U+61, U+E0-E1, U+20AC;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("fuentes/hs-retoques-texto-negra.woff") format("woff");
+    font-weight: 550 700;
+    font-display: swap;
+    unicode-range: U+30-39, U+42-43, U+47, U+61, U+E0-E1, U+20AC;
 }
 
 :root {
