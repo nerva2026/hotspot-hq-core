@@ -241,7 +241,7 @@
 .tiempos {
     display: flex;
     justify-content: space-between;
-    font: 400 12px/1 var(--titulo);
+    font: 400 16px/1 var(--titulo); /* «1:06»: cifras, en la rejilla de su letra (ver estilo.css) */
     color: var(--tenue-oscuro);
 }
 .ahora-dj {
@@ -368,14 +368,15 @@
     align-items: center;
     gap: 10px;
 }
-.cabina-estado > span {
+.cabina-estado > span:not(.avatar) {
+    /* el avatar no: su inicial se quedaba arriba en vez de en el centro */
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 .cabina-estado small {
     color: var(--tinta-suave);
-    font-size: 12px;
+    font-size: 11px;
 }
 .cabina-estado .avatar {
     width: 32px;
@@ -414,6 +415,7 @@
 .como-le-va {
     color: var(--tinta-suave);
     white-space: nowrap;
+    font-size: 11px; /* «solo 30 s» */
 }
 .persona[data-estado="suena"] .como-le-va {
     color: var(--verde);
@@ -482,7 +484,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--tinta-suave);
     white-space: nowrap;
 }

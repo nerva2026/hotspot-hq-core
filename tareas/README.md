@@ -93,6 +93,14 @@ Node 22 sin dependencias:
 
 Las tareas borradas pasan 30 días en una papelera interna (el aviso «Deshacer» las recupera).
 
+**Las cifras, en la rejilla de su letra.** Las dos letras son de píxeles y solo salen limpias, con la pantalla a escala 1,
+a ciertos tamaños: Silkscreen (títulos) a 16 px (o 8, 24, 32…) y Pixelify Sans (texto) a 11 px, a 16 px y a 21–22 px. Por
+eso todo lo que es una cifra (importes, saldos, fechas, horas, contadores, porcentajes) va a uno de esos tamaños: las
+grandes del libro en Silkscreen a 16 o 24 px; los importes de las listas en Pixelify Sans a 16 px con peso 600; las
+fechas de las tareas a 16 px; y lo menudo («hace 3 min», «3,4 KB», la escala del cronograma) a 11 px. La regla está al
+principio de «piezas pequeñas» en `publico/estilo.css`; lo que escribe la gente (títulos, conceptos, notas) y las frases
+con un número dentro no cuentan. Al añadir una cifra nueva, ponerla a uno de esos tamaños.
+
 **Cómo se llega de una pantalla a otra:** el menú de la cuenta (arriba a la derecha) de cada pantalla y las pestañas
 de arriba llevan a las demás con los mismos nombres: «Tablón de tareas», «Libro de cuentas» (en las pestañas,
 «Tareas» y «Cuentas»; esta, solo a quien tiene parte en el reparto), «Pizarra», «Archivo» y «Música». Las cinco

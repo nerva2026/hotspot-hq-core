@@ -284,7 +284,7 @@ export function menuFecha(ancla, actual, alElegir, { titulo = "Para cuándo" } =
                 ),
             );
         },
-        { ancho: 240 },
+        { ancho: 290 },
     );
 }
 

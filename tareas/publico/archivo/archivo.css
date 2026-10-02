@@ -115,7 +115,7 @@ mark {
 }
 .carpetas .espacio {
     margin: 14px 4px 0;
-    font-size: 12px;
+    font-size: 11px; /* «Ocupa 3,7 KB de 1 GB»: una cifra, en rejilla (ver estilo.css) */
 }
 .lista-zona {
     flex: 1;
@@ -140,7 +140,8 @@ mark {
     min-width: 0;
 }
 .lista-cab h2 {
-    font-size: 15px;
+    font-size: 16px; /* «3 resultados para…» */
+    line-height: 1.2;
     text-transform: uppercase;
     overflow-wrap: anywhere;
 }
@@ -254,7 +255,7 @@ mark {
 }
 .tarjeta-meta {
     margin-top: 2px;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--tinta-suave);
 }
 .tarjeta-etiquetas {
@@ -303,7 +304,7 @@ mark {
 }
 .coincidencias {
     color: var(--tinta-suave);
-    font-size: 12px;
+    font-size: 11px;
 }
 .tarjeta-pie {
     margin-top: auto;
@@ -319,7 +320,7 @@ mark {
     align-items: center;
     gap: 6px;
     min-width: 0;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--tinta-suave);
 }
 .tarjeta-quien-texto {
@@ -480,7 +481,7 @@ mark {
 }
 .subida-estado {
     margin-top: 3px;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--tinta-suave);
     overflow-wrap: anywhere;
 }
@@ -557,7 +558,7 @@ mark {
     gap: 4px 8px;
 }
 .visor-meta {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--tinta-suave);
 }
 .visor-acciones {
@@ -594,7 +595,7 @@ mark {
 }
 .cuenta-hallazgos {
     min-width: 5em;
-    font-size: 13px;
+    font-size: 16px;
     color: var(--tinta-suave);
     white-space: nowrap;
 }
@@ -1038,7 +1039,7 @@ mark.hallazgo.actual {
         justify-content: space-between;
         width: 100%;
         padding: 10px 12px;
-        font: 400 12px/1 var(--titulo);
+        font: 400 16px/1 var(--titulo); /* «Contenido (3)» */
         letter-spacing: 0.04em;
         text-align: left;
         text-transform: uppercase;

@@ -23,7 +23,7 @@
 }
 .cartel-fecha {
     margin: 0 0 0 auto;
-    font: 400 12px/1.3 var(--titulo);
+    font: 400 16px/1.3 var(--titulo); /* «viernes 2 de octubre»: con cifras, en la rejilla de su letra (ver estilo.css) */
     letter-spacing: 0.04em;
     text-transform: uppercase;
     text-align: right;
@@ -204,7 +204,7 @@
     padding: 6px 8px 5px;
     background: var(--amarillo);
     border: 2px solid var(--tinta);
-    font: 400 12px/1 var(--titulo);
+    font: 400 16px/1 var(--titulo);
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }

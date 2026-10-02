@@ -717,7 +717,7 @@ function menuYo(ancla) {
                 "div",
                 { class: "opciones" },
                 dentroDeLaOficina() ? enlace("Abrir en pestaña nueva ↗", sinSolo(location.href.split("#")[0]), { target: "_blank", rel: "noopener", onclick: cerrarMenu }) : null,
-                opcion(`Papelera${E.papelera.length ? ` (${E.papelera.length})` : ""}`, () => elegirCarpeta("papelera")),
+                opcion(["Papelera", E.papelera.length ? h("span", { class: "cuenta" }, E.papelera.length) : null], () => elegirCarpeta("papelera")),
                 h("hr", { class: "otra-pantalla" }),
                 enlace("Tablón de tareas", "../", otra),
                 E.yo.libro ? enlace("Libro de cuentas", "../libro/", otra) : null,

@@ -272,6 +272,7 @@ h3 {
 }
 .campo {
     width: 100%;
+    font-size: 16px; /* las fechas y las cifras que se escriben, en rejilla (y en el iPhone, sin ampliar la página al tocar) */
     background: var(--papel);
     border: 2px solid var(--tinta);
     padding: 7px 9px;
@@ -361,7 +362,7 @@ textarea.campo {
     background: #fff;
 }
 kbd {
-    font: 400 12px/1 var(--titulo);
+    font: 400 16px/1 var(--titulo);
     background: var(--papel);
     border: 2px solid var(--tinta);
     box-shadow: 1px 1px 0 var(--tinta);
@@ -369,16 +370,27 @@ kbd {
     white-space: nowrap;
 }
 
-/* ---------- piezas pequeñas ---------- */
+/* ---------- piezas pequeñas ----------
+   LAS CIFRAS (importes, saldos, fechas, horas, contadores, porcentajes) van siempre a un tamaño que cae en la rejilla
+   de su letra; a otros tamaños salen finas y emborronadas con la pantalla a escala 1:
+     · Silkscreen (--titulo), de rejilla de 8 px: 16 px (o 8, 24, 32…).
+     · Pixelify Sans (--texto), cuyo punto mide 1 px a 10,75 px: 11 px para lo menudo y 16 px (con peso 600 si es un
+       importe) para lo que se mira; 21–22 px para lo grande.
+   Lo que es texto de la gente (títulos, conceptos, notas) no cuenta. */
 .chip {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1;
     padding: 3px 6px;
     background: rgba(28, 23, 21, 0.07);
     white-space: nowrap;
+}
+/* las fechas («Hace 2 días», «9 oct», «Hoy») son lo que más se mira de una tarea */
+.chip.plazo {
+    font-size: 16px;
+    padding: 2px 6px;
 }
 .chip.prioridad {
     font: 400 12px/1 var(--titulo);
@@ -470,9 +482,9 @@ kbd {
     border: 2px solid var(--tinta);
 }
 .cuenta {
-    font: 400 12px/1 var(--titulo);
+    font: 400 16px/1 var(--titulo);
     background: rgba(28, 23, 21, 0.1);
-    padding: 3px 5px 2px;
+    padding: 2px 5px 1px;
     margin-left: 6px;
 }
 .logo {
@@ -651,6 +663,7 @@ html:not(.solo) .barra-tablon .vistas {
     flex-wrap: wrap;
     gap: 8px;
     padding: 8px 12px;
+    font-size: 16px; /* «14 tareas» */
 }
 .segmentos {
     display: inline-flex;
@@ -907,9 +920,14 @@ table.lista {
 .lista .col-pedidoPor {
     width: 130px;
 }
-.lista .col-fin,
+.lista .col-fin {
+    width: 128px;
+}
 .lista .col-inicio {
     width: 110px;
+}
+.col-inicio .celda {
+    font-size: 16px;
 }
 .lista .col-etiquetas {
     width: 170px;
@@ -1126,12 +1144,12 @@ table.lista {
     box-shadow: inset 0 0 0 2px var(--tinta);
 }
 .cal-numero {
-    font: 400 12px/1 var(--titulo);
+    font: 400 16px/1 var(--titulo);
 }
 .cal-dia.hoy .cal-numero {
     background: var(--acento);
     color: #fff;
-    padding: 3px 5px 2px;
+    padding: 1px 5px 0;
     box-shadow: 1px 1px 0 var(--tinta);
 }
 .cal-barra {
@@ -1211,7 +1229,7 @@ table.lista {
     background: none;
     border: 0;
     padding: 0 2px;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--naranja-osc);
     text-decoration: underline;
 }
@@ -1275,7 +1293,8 @@ table.lista {
     background: var(--tinta);
     color: var(--crema);
     font-family: var(--titulo);
-    font-size: 12px;
+    font-size: 16px;
+    max-width: 340px;
 }
 
 /* ---------- cronograma ---------- */
@@ -1309,11 +1328,13 @@ table.lista {
     width: var(--ancho-nombre);
     background: var(--tinta);
     border-right: 2px solid #000;
-    font: 400 12px/1 var(--titulo);
+    font: 400 16px/1 var(--titulo);
     text-transform: uppercase;
     display: flex;
     align-items: flex-end;
     padding: 8px;
+    white-space: nowrap;
+    overflow: hidden;
 }
 .crono-escala {
     position: relative;
@@ -1328,7 +1349,7 @@ table.lista {
     top: 0;
     bottom: 0;
     border-left: 1px solid rgba(243, 230, 216, 0.18);
-    font-size: 12px;
+    font-size: 11px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1337,7 +1358,7 @@ table.lista {
 }
 .crono-tramo.mayor {
     justify-content: flex-start;
-    font: 400 12px/1 var(--titulo);
+    font: 400 16px/1 var(--titulo);
     text-transform: uppercase;
     border-left-color: rgba(243, 230, 216, 0.45);
 }
@@ -1627,7 +1648,7 @@ table.lista {
     border-bottom: 1px solid var(--tenue);
     padding: 6px 8px;
     text-align: left;
-    font-size: 15px;
+    font-size: 16px;
 }
 .propiedad-valor:hover {
     background: var(--crema);
@@ -1643,6 +1664,9 @@ table.lista {
 .ficha-seccion h3 {
     font-size: 12px;
     text-transform: uppercase;
+}
+.ficha-seccion h3 .tenue {
+    font-size: 16px; /* «1/3» */
 }
 .progreso {
     height: 10px;
@@ -1727,7 +1751,8 @@ table.lista {
     overflow-wrap: anywhere;
 }
 .ficha-pie {
-    font-size: 13px;
+    font-size: 11px;
+    line-height: 1.5;
     color: var(--tinta-suave);
     border-top: 2px dashed var(--crema-osc);
     padding-top: 10px;
@@ -1802,6 +1827,9 @@ table.lista {
     gap: 6px;
     padding: 4px;
 }
+.menu-fecha .opcion {
+    font-size: 16px; /* «vie 9 oct», «En 2 semanas» */
+}
 .etiquetas-puestas {
     display: flex;
     flex-wrap: wrap;
@@ -1844,7 +1872,8 @@ table.lista {
     color: var(--crema);
 }
 .ventana h2 {
-    font-size: 13px;
+    font-size: 16px; /* «Gasto del 2 de octubre de 2026» */
+    line-height: 1.2;
     text-transform: uppercase;
 }
 .cuerpo-ventana {
@@ -2444,7 +2473,7 @@ table.lista {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--tinta-suave);
 }
 @media (max-width: 720px) {
@@ -2453,7 +2482,7 @@ table.lista {
         padding-left: 8px;
     }
     .cumple-texto {
-        font-size: 15px;
+        font-size: 16px;
     }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2472,7 +2501,6 @@ table.lista {
 @media (max-width: 1270px) {
     /* con las columnas encogidas, ninguna letra del tablero baja de 12 px (en una ventana ancha todo se queda como siempre) */
     .tablero .chip.prioridad,
-    .tablero .cuenta,
     .tablero .avatar {
         font-size: 12px;
     }

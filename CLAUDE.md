@@ -11,7 +11,8 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
 - Los textos visibles se deciden con el equipo: no inventar cifras, nombres ni contenido.
 - Estilo: pixel art retro (tipo Habbo). Paleta: tinta `#1c1715`, crema `#f3e6d8`, naranja `#e0562a`,
   acento `#c4461f`, amarillo `#ffd84a`. Letras Silkscreen (títulos) y Pixelify Sans (texto), sin ligaduras
-  (Pixelify dibuja «fi» como una A).
+  (Pixelify dibuja «fi» como una A). Las cifras (importes, fechas, horas, contadores), siempre a un tamaño de la
+  rejilla de su letra: Silkscreen a 16 px (8, 24…); Pixelify Sans a 11, 16 o 21–22 px (ver `tareas/README.md`).
 - **El servidor no es accesible desde Claude.** Lo que haya que hacer allí se prepara como un bloque para
   pegar en la consola (escrito a un archivo y ejecutado con `bash`, con copias `*.antes-…` de lo que toca),
   se prueba antes en seco con un `docker` falso y lo ejecuta una persona del equipo.
