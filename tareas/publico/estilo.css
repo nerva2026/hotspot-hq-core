@@ -362,7 +362,7 @@ textarea.campo {
     background: #fff;
 }
 kbd {
-    font: 400 16px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     background: var(--papel);
     border: 2px solid var(--tinta);
     box-shadow: 1px 1px 0 var(--tinta);
@@ -1718,6 +1718,12 @@ table.lista {
 .subtarea:focus-within .quitar {
     visibility: visible;
 }
+/* Donde no hay ratón, quitar una subtarea está siempre a la vista (como «Abrir» en la lista). */
+@media (hover: none) {
+    .subtarea .quitar {
+        visibility: visible;
+    }
+}
 .subtarea-nueva {
     box-shadow: none;
     border-style: dashed;
@@ -1924,6 +1930,25 @@ table.lista {
 }
 .tabla-atajos td:first-child {
     width: 45%;
+}
+/* En el móvil, cada atajo encima de lo que hace: una tecla larga («!urgente !alta !media !baja») no cabía al lado. */
+@media (max-width: 600px) {
+    .tabla-atajos,
+    .tabla-atajos tbody,
+    .tabla-atajos tr,
+    .tabla-atajos td {
+        display: block;
+    }
+    .tabla-atajos td:first-child {
+        width: auto;
+        border-bottom: 0;
+        padding-bottom: 0;
+    }
+    .tabla-atajos kbd {
+        display: inline-block;
+        white-space: normal;
+        line-height: 1.5;
+    }
 }
 .muestras {
     display: flex;
@@ -2595,6 +2620,16 @@ table.lista {
     html:not(.solo) .barra-tablon {
         flex-wrap: nowrap;
         padding-bottom: 8px;
+    }
+    /* un nombre largo («Pizarra ideas-para-la-fiesta») ocupa dos líneas antes que cortarse */
+    .nombre-app {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.15;
     }
     .boton-vista {
         display: inline-flex;
