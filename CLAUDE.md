@@ -21,10 +21,11 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
 
 | Ruta | Qué es |
 | --- | --- |
-| `parches/01…10-*.patch` | Cambios sobre WorkAdventure, en orden (tabla en `README.md`). |
+| `parches/01…12-*.patch` | Cambios sobre WorkAdventure, en orden (tabla en `README.md`). |
 | `archivos/` | Archivos propios que se copian encima (estilo retro, letras, marca, muñecos `hs-…`). |
 | `herramientas/retoques.py` | Dibuja los retoques de las letras (`hs-retoques-*.woff`: cifras claras y unas pocas letras de Pixelify Sans que se confundían) y los deja en `archivos/…/fonts/hotspot/` y en `tareas/publico/fuentes/`. |
 | `.github/workflows/hotspot-imagen.yml` | Construye la imagen `ghcr.io/nerva2026/hotspot-hq-play` (~7 min). |
+| `.github/workflows/hotspot-comprobar.yml` | En las ramas `oficina-v*` y en las PR hacia `hotspot`: parches, tipos (`tsc` y `svelte-check`) e imagen **sin publicar**. Es la forma de saber que una rama compila antes de fusionarla. |
 | `tareas/` | Servicio propio (Node sin dependencias): portada `/`, cuentas del crew `/cuentas`, tablón `/tareas` (con el cumpleaños y el personaje de cada uno: `/tareas/api/oficina`, `/tareas/api/yo/personaje`), libro de cuentas `/tareas/libro/`, pizarra `/tareas/pizarra/`, archivo de documentos `/tareas/archivo/`, música `/tareas/musica/` (cabina del DJ con Spotify, «escuchar a la vez» con el reproductor oficial; `musica/mini/` es la barra pequeña de 360×128 para la oficina; hace falta crear la aplicación de Spotify, ver «Música (Spotify)»), el puente invisible de la oficina `/tareas/oficina/` (la abre el mapa y deja las tareas y los cumpleaños de quien juega en las variables privadas `hsSesion`, `hsTareas`, `hsCumples` y `hsMusica`; esta última, `{ configurado, dj, suena }`, dice si Spotify está conectado, quién pincha y si suena, en directo: de `configurado` depende el botón «Música» y la línea de la música en las novedades) y el cartel de cumpleaños `/tareas/cumples/` (lo abre el mapa desde el calendario del hall, en un panel: todos los cumpleaños del crew y el propio). Detalles en `tareas/README.md`. |
 | `.github/workflows/hotspot-tareas.yml` | Prueba y construye `ghcr.io/nerva2026/hotspot-hq-tareas` (~1 min): una prueba por pantalla (cada paso con su servidor y su puerto, ver «Las pruebas de `tareas/`») e incluye una con `openid-client` 5 (la librería de WorkAdventure). |
 
@@ -34,7 +35,8 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
 2. Aplicar en orden los parches anteriores y hacer un commit temporal.
 3. Editar, y sacar el parche con `git diff` (o `git add -A && git diff --cached` si hay archivos nuevos).
 4. Comprobar que toda la cadena aplica sobre una copia limpia (`git apply` de 01 a N).
-5. La comprobación de tipos de verdad la hace la construcción en GitHub.
+5. La comprobación de tipos de verdad la hace `hotspot-comprobar.yml` en GitHub al subir una rama `oficina-v*` (la
+   construcción de la imagen no comprueba tipos).
 
 ### Probar `tareas/` en local
 
