@@ -470,7 +470,8 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
         if (estados.size > 500) estados.delete(estados.keys().next().value);
         const estado = crypto.randomBytes(24).toString("base64url");
         // El «state» va atado a esta sesión (y a una cookie de este navegador): nadie puede colarte su cuenta.
-        estados.set(estado, { usuario: sesion.usuario.id, sesion: sesion.sesion.id, volver: url.searchParams.get("volver") === "1", creado: ahora });
+        // «solo»: la cabina estaba en modo solo (?solo=1, publico/app/solo.js) y, si se vuelve a ella, tiene que seguir así.
+        estados.set(estado, { usuario: sesion.usuario.id, sesion: sesion.sesion.id, volver: url.searchParams.get("volver") === "1", solo: url.searchParams.get("solo") === "1", creado: ahora });
         const destino = new URL(cfg.autorizar);
         destino.searchParams.set("client_id", cfg.id);
         destino.searchParams.set("response_type", "code");
@@ -551,7 +552,7 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
             despertar();
         }
         if (guardado.volver) {
-            res.writeHead(302, { Location: `${base}/musica/?conectado=1`, "Cache-Control": "no-store" });
+            res.writeHead(302, { Location: `${base}/musica/?conectado=1${guardado.solo ? "&solo=1" : ""}`, "Cache-Control": "no-store" });
             return res.end();
         }
         return pagina(res, 200, "¡Listo!", [`Tu Spotify (${datos.cuentas[usuario.id].nombre}) ya está conectado.`, "Ya puedes cerrar esta pestaña: la cabina se ha actualizado sola."]);

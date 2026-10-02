@@ -63,11 +63,13 @@ datos y su puerto, ninguno repetido) y lo para al acabar; los comandos exactos e
 | Probar cumpleaños y personaje | `cumple.mjs` (con `TAREAS_HOY` fijo) | 3994 |
 | Probar la música | `musica.mjs` + `spotify-falso.mjs` | 3995 (3996 lo arranca la prueba) y 8614 |
 | Probar la pizarra | `pizarra.mjs` | 3997 |
+| Probar el modo solo | `solo.mjs` (`?solo=1`, sin navegador) | 3990 |
 | Probar el acceso de la oficina | `oficina-oidc.mjs` + `google-falso.mjs` (instala `openid-client`) | 3998 y 8412 |
 
 Una prueba nueva lleva su puerto, su carpeta de datos y su registro propios. Y una pantalla nueva se enlaza en las
 demás (pestañas de arriba y menú de la cuenta, con los nombres de siempre: «Tablón de tareas», «Libro de cuentas»,
-«Pizarra», «Archivo» y «Música»).
+«Pizarra», «Archivo» y «Música»), marcando cada enlace con la clase `otra-pantalla`: con `?solo=1` (como las abre el
+mapa desde un personaje o un objeto) esos enlaces no salen. Detalles en `tareas/README.md` («Solo lo suyo»).
 
 ## El servidor (VPS en Hostinger)
 

@@ -11,7 +11,8 @@
 // y a la cookie, vuelta, tokens guardados y nunca en la API); entrar y salir de la cabina; lo que suena en directo, el
 // cambio de canción, la pausa, los saltos, nada sonando (204), anuncios, pódcast y archivos locales; el refresco del
 // token con rotación; esperar si Spotify pide calma (429); quién escucha; que no se pregunta a Spotify si nadie
-// escucha; permiso retirado en Spotify; desconectar; salir del crew; lo que ha sonado y las páginas.
+// escucha; permiso retirado en Spotify; desconectar; la vuelta a la cabina fuera de la oficina (y en modo solo,
+// ?solo=1, si lo estaba); salir del crew; lo que ha sonado y las páginas.
 // Con TAREAS_DATOS mira también el archivo (musica.json, permisos 600). Con el último número arranca en ese puerto
 // otro servidor sin Spotify para ver la música «sin configurar».
 
@@ -133,9 +134,9 @@ const sonar = (cuenta, estado) => control("POST", `sonando?cuenta=${cuenta}`, es
 const pista = (id, extra = {}) => ({ id, nombre: `Canción ${id}`, artistas: ["Los de Prueba", "Invitada"], album: `Disco ${id}`, duracion: 200000, posicion: 30000, ...extra });
 
 // Conectar el Spotify de alguien de principio a fin: cabina → Spotify (falso) → vuelta.
-async function conectarSpotify(quien, cuenta) {
+async function conectarSpotify(quien, cuenta, extra = "") {
     await control("GET", `usar?cuenta=${cuenta}`);
-    const ida = await quien("GET", "musica/conectar", undefined, { crudo: true });
+    const ida = await quien("GET", `musica/conectar${extra}`, undefined, { crudo: true });
     assert.equal(ida.status, 302, "conectar lleva a Spotify");
     const aSpotify = await quien.ir(ida.headers.get("location"));
     assert.equal(aSpotify.status, 302, "Spotify (falso) vuelve al momento");
@@ -499,6 +500,26 @@ antes = (await control("GET", "estado")).llamadas.sonando.filter((l) => l.cuenta
 await esperar(800);
 despues = (await control("GET", "estado")).llamadas.sonando.filter((l) => l.cuenta === "victor").length;
 assert.equal(despues, antes, "ya no se pregunta por su Spotify");
+
+// ---------- conectar fuera de la oficina (?volver=1): se vuelve a la cabina, y en modo solo (?solo=1) si lo estaba ----------
+
+for (const [extra, destino] of [
+    ["?volver=1", "/musica/?conectado=1"],
+    ["?volver=1&solo=1", "/musica/?conectado=1&solo=1"],
+    ["?volver=1&solo=0", "/musica/?conectado=1"],
+]) {
+    flujo = await conectarSpotify(victor, "victor", extra);
+    vuelta = await flujo.abrirVuelta();
+    assert.equal(vuelta.status, 302, extra);
+    assert.equal(vuelta.headers.get("location"), `${new URL(base).pathname}${destino}`, extra);
+    assert.equal((await victor("POST", "musica/desconectar")).estado, 200);
+}
+// Sin «volver» (dentro de la oficina, en una pestaña aparte) la página de siempre, pida lo que pida
+flujo = await conectarSpotify(victor, "victor", "?solo=1");
+vuelta = await flujo.abrirVuelta();
+assert.equal(vuelta.status, 200);
+assert.match(await vuelta.text(), /¡Listo!/);
+assert.equal((await victor("POST", "musica/desconectar")).estado, 200);
 
 // ---------- quien sale del crew: se olvida su Spotify y deja la cabina ----------
 

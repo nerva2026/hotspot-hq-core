@@ -39,7 +39,7 @@ jobs:
       # Pruebas: cada paso arranca su propio servidor, con su carpeta de datos, su registro y su puerto (no se repite
       # ninguno), y lo para al acabar. Puertos: servidor 3999 · libro 3991 · pizarra 3997 · tablón 3993 ·
       # cumpleaños 3994 · archivo 3992 · música 3995 (la prueba arranca otro sin Spotify en el 3996 y usa el
-      # Spotify de mentira del 8614) · acceso de la oficina 3998 (con el Google de mentira del 8412).
+      # Spotify de mentira del 8614) · modo solo 3990 · acceso de la oficina 3998 (con el Google de mentira del 8412).
       - name: Probar el servidor
         working-directory: tareas
         run: |
@@ -155,6 +155,23 @@ jobs:
             exit 1
           fi
           cat /tmp/prueba-archivo.log
+
+      - name: Probar el modo solo
+        working-directory: tareas
+        run: |
+          trap 'kill $(jobs -p) 2>/dev/null || true' EXIT   # al acabar el paso (bien o mal) se para lo que haya arrancado
+          # Un servidor aparte (puerto 3990), con su propio enlace de alta. Sin navegador: lo que sirve el servidor con
+          # ?solo=1, la lógica de publico/app/solo.js y que las pantallas marcan sus enlaces a las demás.
+          mkdir -p /tmp/datos-solo
+          TAREAS_DATOS=/tmp/datos-solo TAREAS_PUERTO=3990 node servidor/principal.js > /tmp/tablon-solo.log 2>&1 &
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:3990/tareas/salud && break; sleep 0.5; done
+          CODIGO=$(grep -o '#alta=[A-Za-z0-9_-]*' /tmp/tablon-solo.log | head -1 | cut -d= -f2)
+          if ! node pruebas/solo.mjs http://127.0.0.1:3990/tareas "$CODIGO" > /tmp/prueba-solo.log 2>&1; then
+            cat /tmp/prueba-solo.log /tmp/tablon-solo.log
+            tail -n 15 /tmp/prueba-solo.log | sed 's/%/%25/g' | while IFS= read -r linea; do echo "::error::solo: $linea"; done
+            exit 1
+          fi
+          cat /tmp/prueba-solo.log
 
       - name: Probar el acceso de la oficina (openid-client, como WorkAdventure)
         working-directory: tareas

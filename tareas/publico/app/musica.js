@@ -8,6 +8,7 @@ import { h, $, vaciar, haceCuanto } from "./util.js";
 import { api, cuandoSePierdaLaSesion } from "./api.js";
 import { vigilante } from "./conexion.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
+import { conSolo } from "./solo.js";
 import { abrirMenu, cerrarMenu, aviso, ventana, avatar } from "./menus.js";
 import {
     apiMusica,
@@ -108,10 +109,10 @@ function montar() {
             h(
                 "nav",
                 { class: "pestanas", "aria-label": "Aplicaciones" },
-                h("a", { class: "pestana", href: "../" }, "Tareas"),
-                E.yo.libro ? h("a", { class: "pestana", href: "../libro/" }, "Cuentas") : null,
-                h("a", { class: "pestana", href: "../pizarra/" }, "Pizarra"),
-                h("a", { class: "pestana", href: "../archivo/" }, "Archivo"),
+                h("a", { class: "pestana otra-pantalla", href: "../" }, "Tareas"),
+                E.yo.libro ? h("a", { class: "pestana otra-pantalla", href: "../libro/" }, "Cuentas") : null,
+                h("a", { class: "pestana otra-pantalla", href: "../pizarra/" }, "Pizarra"),
+                h("a", { class: "pestana otra-pantalla", href: "../archivo/" }, "Archivo"),
                 h("span", { class: "pestana activa", "aria-current": "page" }, "Música"),
             ),
             h("div", { class: "barra-derecha" }, h("div", { class: "presentes", id: "oyentes" }), h("button", { type: "button", class: "boton-yo", id: "boton-yo", "aria-label": "Tu cuenta", onclick: (e) => menuYo(e.currentTarget) })),
@@ -319,7 +320,8 @@ function botonConectar(clase = "btn primario") {
         "a",
         {
             class: clase,
-            href: direccionConectar(!enOficina),
+            // Fuera de la oficina se va a Spotify y se vuelve en esta misma pestaña: que vuelva en el mismo modo (solo.js).
+            href: enOficina ? direccionConectar(false) : conSolo(direccionConectar(true)),
             target: enOficina ? "_blank" : null,
             rel: enOficina ? "noopener" : null,
             onclick: () => {
@@ -556,11 +558,12 @@ function menuYo(ancla) {
                 { class: "opciones" },
                 enOficina ? h("a", { class: "opcion", href: location.href.split("#")[0].split("?")[0], target: "_blank", rel: "noopener", onclick: cerrarMenu }, h("span", { class: "marca" }), "Abrir en pestaña nueva ↗") : null,
                 h("button", { type: "button", class: "opcion", onclick: () => (cerrarMenu(), ayuda()) }, h("span", { class: "marca" }), "¿Cómo funciona?"),
-                h("hr"),
-                h("a", { class: "opcion", href: "../" }, h("span", { class: "marca" }), "Tablón de tareas"),
-                E.yo.libro ? h("a", { class: "opcion", href: "../libro/" }, h("span", { class: "marca" }), "Libro de cuentas") : null,
-                h("a", { class: "opcion", href: "../pizarra/" }, h("span", { class: "marca" }), "Pizarra"),
-                h("a", { class: "opcion", href: "../archivo/" }, h("span", { class: "marca" }), "Archivo"),
+                // «otra-pantalla»: lo que lleva a otra pantalla, con su raya (con ?solo=1 no sale, ver solo.js)
+                h("hr", { class: "otra-pantalla" }),
+                h("a", { class: "opcion otra-pantalla", href: "../" }, h("span", { class: "marca" }), "Tablón de tareas"),
+                E.yo.libro ? h("a", { class: "opcion otra-pantalla", href: "../libro/" }, h("span", { class: "marca" }), "Libro de cuentas") : null,
+                h("a", { class: "opcion otra-pantalla", href: "../pizarra/" }, h("span", { class: "marca" }), "Pizarra"),
+                h("a", { class: "opcion otra-pantalla", href: "../archivo/" }, h("span", { class: "marca" }), "Archivo"),
                 h("hr"),
                 h("button", { type: "button", class: "opcion", onclick: () => (cerrarMenu(), salir()) }, h("span", { class: "marca" }), "Salir"),
             ),
@@ -690,7 +693,7 @@ function empezar(datos) {
     clearInterval(reloj);
     reloj = setInterval(pintarProgreso, 500);
     if (new URLSearchParams(location.search).has("conectado")) {
-        history.replaceState(null, "", location.pathname);
+        history.replaceState(null, "", conSolo(location.pathname));
         if (E.spotify.conectado) aviso(`Spotify conectado (${E.spotify.nombre}).`);
     }
     // Si la última vez estaba escuchando, sigue (si el navegador no deja empezar solo, se avisa).

@@ -3,6 +3,7 @@
 import { h, $, vaciar, normalizar, hoy, plazo, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, pesoPrioridad, guardarLocal, leerLocal, fechaMedia, retrasar, MESES } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion } from "./api.js";
 import { pantallaEntrar, pantallaAlta } from "./acceso.js";
+import { sinSolo } from "./solo.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar, chipEtiqueta } from "./menus.js";
 import { hayArrastre } from "./arrastre.js";
 import { interpretar } from "./rapida.js";
@@ -493,7 +494,7 @@ function opcionesMenu(opciones) {
             h(
                 o.href ? "a" : "button",
                 {
-                    class: ["opcion", o.marcado && "marcada"],
+                    class: ["opcion", o.marcado && "marcada", o.otra && "otra-pantalla"],
                     type: o.href ? null : "button",
                     href: o.href,
                     download: o.download,
@@ -577,14 +578,15 @@ function menuYo(ancla) {
             null,
             h("div", { class: "menu-titulo" }, `Hola, ${E.yo.nombre}`),
             opcionesMenu([
-                enOficina ? { contenido: "Abrir en pestaña nueva ↗", href: location.href.split("#")[0], target: "_blank" } : null,
+                enOficina ? { contenido: "Abrir en pestaña nueva ↗", href: sinSolo(location.href.split("#")[0]), target: "_blank" } : null,
                 { contenido: "Descargar en Excel", href: "api/excel", download: "" },
                 { contenido: "Importar desde Excel…", accion: importarExcel },
                 "-",
-                E.yo.libro ? { contenido: "Libro de cuentas", href: "libro/" } : null,
-                { contenido: "Pizarra", href: "pizarra/" },
-                { contenido: "Archivo", href: "archivo/" },
-                { contenido: "Música", href: "musica/" },
+                // «otra»: lleva a otra pantalla (con ?solo=1 no sale, ver solo.js)
+                E.yo.libro ? { contenido: "Libro de cuentas", href: "libro/", otra: true } : null,
+                { contenido: "Pizarra", href: "pizarra/", otra: true },
+                { contenido: "Archivo", href: "archivo/", otra: true },
+                { contenido: "Música", href: "musica/", otra: true },
                 E.yo.admin ? { contenido: "Crew: quién puede entrar…", accion: panelCrew } : null,
                 { contenido: "Mi cuenta…", accion: ajustesYo },
                 { contenido: "Atajos de teclado", accion: atajos },

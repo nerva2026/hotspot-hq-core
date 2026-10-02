@@ -75,6 +75,7 @@ Node 22 sin dependencias:
 | `publico/app/archivo*.js` | El archivo en pantalla: la lista (`archivo.js`), el visor con índice y buscador (`archivo-visor.js`) y piezas comunes (`archivo-comun.js`). |
 | `publico/app/musica*.js` | La música en pantalla: la cabina (`musica.js`), el reproductor pequeño (`musica-mini.js`) y piezas comunes (`musica-comun.js`). |
 | `publico/app/cumple.js`, `confeti.js`, `oficina.js` | Los cumpleaños (cuentas y textos), el confeti y el puente invisible de la oficina (`/tareas/oficina/`). |
+| `publico/app/solo.js` | El modo «solo lo suyo» (`?solo=1`): cuándo se pone y cómo se conserva en las direcciones (ver «Solo lo suyo»). |
 | `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar, una por pantalla y cada una con su servidor y su puerto (tabla en «Las pruebas»). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
 
@@ -83,7 +84,36 @@ Las tareas borradas pasan 30 días en una papelera interna (el aviso «Deshacer�
 **Cómo se llega de una pantalla a otra:** el menú de la cuenta (arriba a la derecha) de cada pantalla y las pestañas
 de arriba llevan a las demás con los mismos nombres: «Tablón de tareas», «Libro de cuentas» (en las pestañas,
 «Cuentas»; solo a quien tiene parte en el reparto), «Pizarra», «Archivo» y «Música». Al añadir una pantalla nueva hay
-que añadirla en todas (en `principal.js`, `libro.js`, `pizarra.js`, `archivo.js` y `musica.js`, de `publico/app/`).
+que añadirla en todas (en `principal.js`, `libro.js`, `pizarra.js`, `archivo.js` y `musica.js`, de `publico/app/`),
+y cada enlace a otra pantalla lleva la clase `otra-pantalla` (en los menús hechos con `opcionesMenu`, `otra: true`).
+
+### Solo lo suyo (`?solo=1`)
+
+Cada personaje u objeto de la oficina enseña solo su pantalla: el mapa la abre con `?solo=1` y esa pantalla esconde
+las pestañas que llevan a las demás y los enlaces a otras pantallas del menú de la cuenta (lo demás del menú se
+queda). Sin el parámetro todo sigue igual.
+
+| Pantalla | Dirección para el mapa |
+| --- | --- |
+| Tablón de tareas | `/tareas/?solo=1` |
+| Libro de cuentas | `/tareas/libro/?solo=1` |
+| Pizarra (la de reuniones; otra, con su `p`) | `/tareas/pizarra/?solo=1` · `/tareas/pizarra/?p=reuniones&solo=1` |
+| Archivo (y un documento directamente) | `/tareas/archivo/?solo=1` · `/tareas/archivo/?doc=<id>&solo=1` |
+| Música (la cabina) | `/tareas/musica/?solo=1` |
+
+- **Cómo está hecho:** `publico/app/solo.js` mira la dirección al cargar (solo vale `solo=1`) y pone la clase `solo`
+  en `<html>`; una regla de `estilo.css` (`.solo .otra-pantalla`) esconde lo marcado. El servidor sirve la misma
+  página; solo cuida de no perder el parámetro al redirigir a la carpeta (`/tareas/libro?solo=1` →
+  `/tareas/libro/?solo=1`) y al volver de Spotify (`api/musica/conectar?volver=1&solo=1`).
+- **El modo vive en la dirección**, no en el almacenamiento del navegador (lo compartirían todos los paneles de la
+  oficina). Las direcciones que una pantalla construye para sí misma pasan por `conSolo()`: abrir y cerrar un
+  documento del archivo, la vuelta de entrar (con Google, con contraseña o con un enlace de alta) y la vuelta de
+  conectar Spotify. Una dirección propia nueva tiene que hacer lo mismo (la prueba lo vigila).
+- **Lo que sale de la oficina va sin el modo:** «Abrir en pestaña nueva ↗» (`sinSolo()`), el enlace de una tarea para
+  compartir y la pestaña que se abre para entrar con Google desde un marco. Allí las pestañas y el menú son la única
+  manera de moverse.
+- En el libro, a quien no tiene parte («Solo para los socios») tampoco le sale el botón «Ir al tablón de tareas».
+- `musica/mini/` y `oficina/` no tienen pestañas ni menú: no usan el parámetro.
 
 ## Libro de cuentas
 
@@ -303,6 +333,7 @@ sus variables, están en el workflow.
 | Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje y puente `/tareas/oficina/`. |
 | Probar el archivo | `pruebas/archivo.mjs` | 3992 | Subir un documento de cada tipo, enlaces, papelera, búsqueda, lo que no debe entrar, Markdown y Word escapados y el límite total (`ARCHIVO_MAXIMO_MB=40`). |
 | Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify y lo que suena en directo; y la música «sin configurar». |
+| Probar el modo solo | `pruebas/solo.mjs` | 3990 | `?solo=1` sin navegador: lo que sirve el servidor (las cinco pantallas, `app/solo.js`, la regla de `estilo.css`, la vuelta de entrar), la lógica del módulo y que las pantallas marcan sus enlaces a las demás y no pierden el modo al cambiar de dirección. |
 | Probar el acceso de la oficina | `pruebas/oficina-oidc.mjs` y `pruebas/google-falso.mjs` | 3998 y 8412 (el Google de mentira) | Entrar por `/cuentas` con `openid-client` 5 (la librería de WorkAdventure): PKCE, `userinfo` y revocar. Es el único paso que instala un paquete (`npm install`). |
 
 El paso «Comprobar el código» pasa antes `node --check` a todo el JavaScript (`servidor/`, `publico/app/`, `portada/`

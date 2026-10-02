@@ -9,6 +9,7 @@
 import { h, $, vaciar, retrasar, hoy, textoSobre } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion, direccionApi } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
+import { sinSolo } from "./solo.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar } from "./menus.js";
 
 aplicacion("PIZARRA", "La pizarra es del crew de HOT SPOT S.L. Entra con tu cuenta de Google.");
@@ -1194,11 +1195,11 @@ function montar() {
             h(
                 "nav",
                 { class: "pestanas", "aria-label": "Aplicaciones" },
-                h("a", { class: "pestana", href: "../" }, "Tareas"),
-                E.yo.libro ? h("a", { class: "pestana", href: "../libro/" }, "Cuentas") : null,
+                h("a", { class: "pestana otra-pantalla", href: "../" }, "Tareas"),
+                E.yo.libro ? h("a", { class: "pestana otra-pantalla", href: "../libro/" }, "Cuentas") : null,
                 h("span", { class: "pestana activa", id: "titulo-pizarra", "aria-current": "page" }, E.pizarra.nombre),
-                h("a", { class: "pestana", href: "../archivo/" }, "Archivo"),
-                h("a", { class: "pestana", href: "../musica/" }, "Música"),
+                h("a", { class: "pestana otra-pantalla", href: "../archivo/" }, "Archivo"),
+                h("a", { class: "pestana otra-pantalla", href: "../musica/" }, "Música"),
             ),
             h("div", { class: "barra-derecha" }, h("div", { class: "presentes", id: "presentes" }), h("button", { type: "button", class: "boton-yo", id: "boton-yo", "aria-label": "Tu cuenta", onclick: (e) => menuYo(e.currentTarget) })),
         ),
@@ -1300,15 +1301,16 @@ function menuYo(ancla) {
             h(
                 "div",
                 { class: "opciones" },
-                dentroDeLaOficina() ? h("a", { class: "opcion", href: location.href.split("#")[0], target: "_blank", rel: "noopener", onclick: cerrarMenu }, h("span", { class: "marca" }), "Abrir en pestaña nueva ↗") : null,
+                dentroDeLaOficina() ? h("a", { class: "opcion", href: sinSolo(location.href.split("#")[0]), target: "_blank", rel: "noopener", onclick: cerrarMenu }, h("span", { class: "marca" }), "Abrir en pestaña nueva ↗") : null,
                 h("button", { type: "button", class: "opcion", onclick: () => (cerrarMenu(), descargar()) }, h("span", { class: "marca" }), "Descargar como imagen"),
                 E.puedeRecuperar ? h("button", { type: "button", class: "opcion", onclick: () => (cerrarMenu(), recuperar(true)) }, h("span", { class: "marca" }), "Recuperar lo vaciado") : null,
                 h("button", { type: "button", class: "opcion", onclick: () => (cerrarMenu(), ayuda()) }, h("span", { class: "marca" }), "¿Cómo funciona?"),
-                h("hr"),
-                h("a", { class: "opcion", href: "../" }, h("span", { class: "marca" }), "Tablón de tareas"),
-                E.yo.libro ? h("a", { class: "opcion", href: "../libro/" }, h("span", { class: "marca" }), "Libro de cuentas") : null,
-                h("a", { class: "opcion", href: "../archivo/" }, h("span", { class: "marca" }), "Archivo"),
-                h("a", { class: "opcion", href: "../musica/" }, h("span", { class: "marca" }), "Música"),
+                // «otra-pantalla»: lo que lleva a otra pantalla, con su raya (con ?solo=1 no sale, ver solo.js)
+                h("hr", { class: "otra-pantalla" }),
+                h("a", { class: "opcion otra-pantalla", href: "../" }, h("span", { class: "marca" }), "Tablón de tareas"),
+                E.yo.libro ? h("a", { class: "opcion otra-pantalla", href: "../libro/" }, h("span", { class: "marca" }), "Libro de cuentas") : null,
+                h("a", { class: "opcion otra-pantalla", href: "../archivo/" }, h("span", { class: "marca" }), "Archivo"),
+                h("a", { class: "opcion otra-pantalla", href: "../musica/" }, h("span", { class: "marca" }), "Música"),
                 h("hr"),
                 h("button", { type: "button", class: "opcion", onclick: () => (cerrarMenu(), salir()) }, h("span", { class: "marca" }), "Salir"),
             ),

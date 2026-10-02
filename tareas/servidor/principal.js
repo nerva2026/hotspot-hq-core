@@ -307,6 +307,15 @@ const ipDe = (req) => String(req.headers["x-forwarded-for"] || req.socket.remote
 
 // ---------- archivos de la aplicación ----------
 
+// La parte «?…» de lo pedido: al redirigir a la carpeta no se pierde (/tareas/libro?solo=1 → /tareas/libro/?solo=1).
+function busquedaDe(req) {
+    try {
+        return new URL(req.url, "http://x").search;
+    } catch {
+        return "";
+    }
+}
+
 function servirArchivo(req, res, ruta) {
     // Cada aplicación es una carpeta con su index.html: /tareas/ (el tablón), /tareas/libro/…
     const relativa = ruta.endsWith("/") ? `${ruta}index.html` : ruta;
@@ -319,7 +328,7 @@ function servirArchivo(req, res, ruta) {
         return fallo(res, 404, "No existe");
     }
     if (info.isDirectory() && fs.existsSync(path.join(archivo, "index.html"))) {
-        res.writeHead(301, { Location: `${BASE}${ruta}/` });
+        res.writeHead(301, { Location: `${BASE}${ruta}/${busquedaDe(req)}` });
         return res.end();
     }
     if (!info.isFile()) return fallo(res, 404, "No existe");
@@ -1288,7 +1297,7 @@ const servidor = http.createServer(async (req, res) => {
         return fallo(res, 400, "Dirección no válida");
     }
     if (ruta === BASE) {
-        res.writeHead(301, { Location: `${BASE}/` });
+        res.writeHead(301, { Location: `${BASE}/${busquedaDe(req)}` });
         return res.end();
     }
     try {

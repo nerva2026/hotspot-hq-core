@@ -6,6 +6,7 @@
 import { h, $, vaciar, retrasar, haceCuanto, guardarLocal, leerLocal, MESES_CORTOS } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion, subirDocumento } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
+import { conSolo, sinSolo } from "./solo.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar } from "./menus.js";
 import { tipoDe, tamano, insignia, terminosDe, resaltar } from "./archivo-comun.js";
 import { crearVisor, direccionArchivo, direccionAparte, direccionDescarga } from "./archivo-visor.js";
@@ -79,7 +80,7 @@ function aplicar(datos) {
     E.limites = { ...E.limites, ...datos.limites };
 }
 
-const enlaceDoc = (id) => `${location.pathname}?doc=${encodeURIComponent(id)}`;
+const enlaceDoc = (id) => conSolo(`${location.pathname}?doc=${encodeURIComponent(id)}`);
 
 // ---------- cambios sobre los documentos ----------
 
@@ -689,7 +690,7 @@ function cerrarDoc() {
         E.docId = null;
         history.back();
     } else {
-        history.replaceState(null, "", location.pathname);
+        history.replaceState(null, "", conSolo(location.pathname));
         mostrarLista();
     }
 }
@@ -706,6 +707,7 @@ window.addEventListener("popstate", () => {
 function menuYo(ancla) {
     const opcion = (texto, fn) => h("button", { type: "button", class: "opcion", onclick: () => (cerrarMenu(), fn()) }, h("span", { class: "marca" }), texto);
     const enlace = (texto, href, extra) => h("a", { class: "opcion", href, ...extra }, h("span", { class: "marca" }), texto);
+    const otra = { class: "opcion otra-pantalla" }; // lo que lleva a otra pantalla, con su raya (con ?solo=1 no sale, ver solo.js)
     abrirMenu(ancla, () =>
         h(
             "div",
@@ -714,13 +716,13 @@ function menuYo(ancla) {
             h(
                 "div",
                 { class: "opciones" },
-                dentroDeLaOficina() ? enlace("Abrir en pestaña nueva ↗", location.href.split("#")[0], { target: "_blank", rel: "noopener", onclick: cerrarMenu }) : null,
+                dentroDeLaOficina() ? enlace("Abrir en pestaña nueva ↗", sinSolo(location.href.split("#")[0]), { target: "_blank", rel: "noopener", onclick: cerrarMenu }) : null,
                 opcion(`Papelera${E.papelera.length ? ` (${E.papelera.length})` : ""}`, () => elegirCarpeta("papelera")),
-                h("hr"),
-                enlace("Tablón de tareas", "../"),
-                E.yo.libro ? enlace("Libro de cuentas", "../libro/") : null,
-                enlace("Pizarra", "../pizarra/"),
-                enlace("Música", "../musica/"),
+                h("hr", { class: "otra-pantalla" }),
+                enlace("Tablón de tareas", "../", otra),
+                E.yo.libro ? enlace("Libro de cuentas", "../libro/", otra) : null,
+                enlace("Pizarra", "../pizarra/", otra),
+                enlace("Música", "../musica/", otra),
                 h("hr"),
                 opcion("Salir", salir),
             ),
@@ -774,11 +776,11 @@ function montar() {
             h(
                 "nav",
                 { class: "pestanas", "aria-label": "Aplicaciones" },
-                h("a", { class: "pestana", href: "../" }, "Tareas"),
-                E.yo.libro ? h("a", { class: "pestana", href: "../libro/" }, "Cuentas") : null,
-                h("a", { class: "pestana", href: "../pizarra/" }, "Pizarra"),
+                h("a", { class: "pestana otra-pantalla", href: "../" }, "Tareas"),
+                E.yo.libro ? h("a", { class: "pestana otra-pantalla", href: "../libro/" }, "Cuentas") : null,
+                h("a", { class: "pestana otra-pantalla", href: "../pizarra/" }, "Pizarra"),
                 h("span", { class: "pestana activa", "aria-current": "page" }, "Archivo"),
-                h("a", { class: "pestana", href: "../musica/" }, "Música"),
+                h("a", { class: "pestana otra-pantalla", href: "../musica/" }, "Música"),
             ),
             h("div", { class: "barra-derecha" }, h("button", { type: "button", class: "boton-yo", id: "boton-yo", "aria-label": "Tu cuenta", onclick: (ev) => menuYo(ev.currentTarget) }, avatar(E.yo), h("span", { class: "nombre-yo" }, E.yo.nombre), h("span", { class: "flecha" }, "▾"))),
         ),

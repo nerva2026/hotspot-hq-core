@@ -6,6 +6,7 @@
 import { h, $, vaciar, normalizar, hoy, sumarDias, fechaCorta, fechaLarga, MESES, MESES_CORTOS, haceCuanto, retrasar } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion, direccionApi } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
+import { sinSolo } from "./solo.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar } from "./menus.js";
 
 aplicacion("CUENTAS", "El libro de cuentas es de los socios de HOT SPOT S.L. Entra con tu cuenta de Google.");
@@ -175,7 +176,7 @@ function montar() {
             "header",
             { class: "barra" },
             h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app" }, "CUENTAS")),
-            h("nav", { class: "pestanas", "aria-label": "Aplicaciones" }, h("a", { class: "pestana", href: "../" }, "Tareas"), h("span", { class: "pestana activa", "aria-current": "page" }, "Cuentas"), h("a", { class: "pestana", href: "../pizarra/" }, "Pizarra"), h("a", { class: "pestana", href: "../archivo/" }, "Archivo"), h("a", { class: "pestana", href: "../musica/" }, "Música")),
+            h("nav", { class: "pestanas", "aria-label": "Aplicaciones" }, h("a", { class: "pestana otra-pantalla", href: "../" }, "Tareas"), h("span", { class: "pestana activa", "aria-current": "page" }, "Cuentas"), h("a", { class: "pestana otra-pantalla", href: "../pizarra/" }, "Pizarra"), h("a", { class: "pestana otra-pantalla", href: "../archivo/" }, "Archivo"), h("a", { class: "pestana otra-pantalla", href: "../musica/" }, "Música")),
             h(
                 "div",
                 { class: "barra-derecha" },
@@ -1183,7 +1184,7 @@ function opcionesMenu(opciones) {
             h(
                 o.href ? "a" : "button",
                 {
-                    class: "opcion",
+                    class: ["opcion", o.otra && "otra-pantalla"],
                     type: o.href ? null : "button",
                     href: o.href,
                     download: o.download,
@@ -1209,17 +1210,18 @@ function menuYo(ancla) {
             null,
             h("div", { class: "menu-titulo" }, `Hola, ${E.yo.nombre}`),
             opcionesMenu([
-                dentroDeLaOficina() ? { contenido: "Abrir en pestaña nueva ↗", href: location.href.split("#")[0], target: "_blank" } : null,
+                dentroDeLaOficina() ? { contenido: "Abrir en pestaña nueva ↗", href: sinSolo(location.href.split("#")[0]), target: "_blank" } : null,
                 { contenido: "Descargar en Excel", href: direccionApi("libro/excel"), download: "" },
                 { contenido: "Descargar en CSV", href: direccionApi("libro/csv"), download: "" },
                 { contenido: "Importar desde Excel…", accion: importar },
                 "-",
                 E.yo.admin ? { contenido: "Reparto y categorías…", accion: ajustes } : null,
                 { contenido: "¿Cómo funciona?", accion: ayuda },
-                { contenido: "Tablón de tareas", href: "../" },
-                { contenido: "Pizarra", href: "../pizarra/" },
-                { contenido: "Archivo", href: "../archivo/" },
-                { contenido: "Música", href: "../musica/" },
+                // «otra»: lleva a otra pantalla (con ?solo=1 no sale, ver solo.js)
+                { contenido: "Tablón de tareas", href: "../", otra: true },
+                { contenido: "Pizarra", href: "../pizarra/", otra: true },
+                { contenido: "Archivo", href: "../archivo/", otra: true },
+                { contenido: "Música", href: "../musica/", otra: true },
                 "-",
                 { contenido: "Salir", accion: salir },
             ]),
@@ -1310,7 +1312,7 @@ function caja(...contenido) {
 function sinAcceso(mensaje) {
     dejarDeEscuchar?.();
     dejarDeEscuchar = null;
-    caja(h("h1", null, "Solo para los socios"), h("p", null, mensaje), h("a", { class: "btn primario ancho", href: "../" }, "Ir al tablón de tareas"));
+    caja(h("h1", null, "Solo para los socios"), h("p", null, mensaje), h("a", { class: "btn primario ancho otra-pantalla", href: "../" }, "Ir al tablón de tareas"));
 }
 
 function sinConexion(mensaje) {

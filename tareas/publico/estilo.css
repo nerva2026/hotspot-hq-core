@@ -77,6 +77,10 @@ button {
 [hidden] {
     display: none !important;
 }
+/* «Cada personaje enseña solo lo suyo» (?solo=1, app/solo.js): fuera lo que lleva a las otras pantallas. */
+.solo .otra-pantalla {
+    display: none !important;
+}
 .oculto {
     position: absolute !important;
     width: 1px;
@@ -1875,6 +1879,11 @@ table.lista {
     .pestana {
         flex: 1;
         padding: 8px 4px 7px;
+    }
+    /* Con ?solo=1 solo queda la pestaña de esta pantalla: que no se estire a todo el ancho. */
+    .solo span.pestana {
+        flex: none;
+        padding: 8px 10px 7px;
     }
     .buscar {
         flex: 1 1 140px;
