@@ -1,0 +1,66 @@
+name: Comprobar el tablón (sin publicar)
+
+# Pasa en una rama de trabajo las MISMAS pruebas que «Imagen del tablón de tareas» pasa en «hotspot» antes de publicar,
+# sin construir ni publicar nada (solo permiso de lectura). Así se sabe que `tareas/` funciona antes de fusionar la rama:
+# la prueba del acceso de la oficina, por ejemplo, necesita instalar `openid-client` y no se puede pasar en cualquier sitio.
+#
+# No copia las pruebas: lee los pasos «run» de `.github/workflows/hotspot-tareas.yml` y los ejecuta tal cual, en orden.
+# Los pasos que publican son acciones (`uses:`) o llevan expresiones de GitHub, y esos se saltan.
+
+on:
+  push:
+    branches: ["oficina-v*"]
+    paths:
+      - "tareas/**"
+      - ".github/workflows/hotspot-tareas.yml"
+      - ".github/workflows/hotspot-tareas-comprobar.yml"
+  pull_request:
+    branches: [hotspot]
+    paths:
+      - "tareas/**"
+      - ".github/workflows/hotspot-tareas.yml"
+      - ".github/workflows/hotspot-tareas-comprobar.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: comprobar-tareas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  probar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Las pruebas de la imagen del tablón, sin publicar
+        run: |
+          python3 - <<'FIN'
+          import subprocess, sys, yaml
+
+          flujo = yaml.safe_load(open(".github/workflows/hotspot-tareas.yml", encoding="utf-8"))
+          pasos = flujo["jobs"]["construir"]["steps"]
+          hechos = 0
+          for paso in pasos:
+              guion = paso.get("run")
+              if not guion or "${{" in guion:
+                  continue  # acciones (uses:) y pasos con expresiones de GitHub: son los de publicar
+              nombre = paso.get("name", "Comprobar el código")
+              print(f"::group::{nombre}", flush=True)
+              resultado = subprocess.run(["bash", "-e", "-c", guion], cwd=paso.get("working-directory", "."))
+              print("::endgroup::", flush=True)
+              if resultado.returncode != 0:
+                  print(f"::error::Ha fallado «{nombre}»", flush=True)
+                  sys.exit(1)
+              hechos += 1
+          if hechos < 10:
+              sys.exit(f"Solo se han encontrado {hechos} pasos de prueba en hotspot-tareas.yml: ¿ha cambiado el flujo?")
+          print(f"Pasos de prueba pasados: {hechos}")
+          FIN

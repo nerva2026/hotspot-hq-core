@@ -21,12 +21,12 @@ export const TITULO = "¡Bienvenido a la v0.3.1!";
 
 // Textos PROVISIONAL-v0.3.1: los repasa el equipo antes de publicar.
 export const NOVEDADES: Novedad[] = [
-    "Teclas nuevas: X para sentarte, B para bailar y H para saludar. También mientras hablas con alguien.",
+    "Teclas nuevas: X para sentarte, B para bailar, H para saludar y V para aplaudir. También mientras hablas con alguien.",
     "Los objetos hacen cosas: la nevera, la cafetera, el timbre, el espejo… y el baño.",
-    "Oficina reformada: mesa larga en reuniones, despacho grande, aseos pequeños y luz según la hora.",
+    "Oficina reformada: mesa larga en reuniones, despacho grande, aseos pequeños y luz que cambia con la hora.",
     "La calle y la terraza, terminadas. Ya te puedes sentar en ellas.",
     "Los cumpleaños, en el calendario del hall.",
-    { texto: "Música: suena sola al abrir «Música» y avisa cuando alguien se pone a pinchar.", requiere: "musica" },
+    { texto: "Música: suena sola al abrir «Música», también en la terraza, y se nota cuando alguien pincha.", requiere: "musica" },
     "Cada personaje enseña solo lo suyo.",
     "Bombo, más gato que nunca.",
     "Letras y números más claros, y burbujas de decir y pensar nuevas.",
