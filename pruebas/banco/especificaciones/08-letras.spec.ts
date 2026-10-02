@@ -272,7 +272,7 @@ test("8 · las letras de la casa", async ({ browser }) => {
                 pincel.fillStyle = "#1c1715";
                 pincel.textBaseline = "alphabetic";
                 const lineas: [string, string][] = [
-                    ['500 44px "Pixelify Sans"', "Pixelify 500: 0123456789 S5 B8 C G a o €"],
+                    ['500 44px "Pixelify Sans"', "Pixelify 500: 0123456789 S5 B8 C G a o c Z2 j (1) €"],
                     ['500 44px "Pixelify Sans"', frase],
                     ['700 44px "Pixelify Sans"', "Pixelify 700: 0123456789 S5 B8 C G a o €"],
                     ['400 40px "Silkscreen"', "Silkscreen 400: 0123456789 A4"],
@@ -295,6 +295,8 @@ test("8 · las letras de la casa", async ({ browser }) => {
                         "B y 8 (Pixelify)": distintos("B", "8", pixelify),
                         "a y o (Pixelify)": distintos("a", "o", pixelify),
                         "C y G (Pixelify)": distintos("C", "G", pixelify),
+                        "c y o (Pixelify)": distintos("c", "o", pixelify),
+                        "Z y 2 (Pixelify)": distintos("Z", "2", pixelify),
                         "S y S (control: tiene que dar 0)": distintos("S", "S", pixelify),
                     },
                     muestra: muestra.toDataURL("image/png"),

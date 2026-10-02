@@ -253,7 +253,7 @@ test("6 · la barra de botones, sin llamada y en llamada", async ({ browser }) =
 
         // Con el chat abierto la barra tiene menos sitio (el chat ocupa un lado de la ventana): es fácil que pase en una
         // llamada, porque el chat de la conversación se abre para escribirse.
-        await comprobar(P, "en-llamada-con-chat-1280x800", "EN llamada y con el chat abierto, 1280×800: botones del mapa a la vista", [alicia], async () => {
+        await comprobar(P, "en-llamada-con-chat-1280x800", "EN llamada y con el chat abierto, 1280×800: las cuatro acciones a la vista y lo que no cabe, en el menú ☰", [alicia], async () => {
             await alicia.setViewportSize({ width: 1280, height: 800 });
             await espera(1500);
             await alicia.getByTestId("chat-btn").click();
@@ -267,12 +267,28 @@ test("6 · la barra de botones, sin llamada y en llamada", async ({ browser }) =
                 return r ? { x: Math.round(r.x), ancho: Math.round(r.width) } : null;
             });
             const capturas = [await capturaEntera(alicia, "6-pantalla-en-llamada-con-chat-1280x800"), await captura(alicia, "6-barra-en-llamada-con-chat-1280x800", { x: 0, y: 0, width: 1280, height: 110 })];
+            // Lo que no cabe tiene que estar en el menú ☰ (WorkAdventure esconde primero los de la izquierda: en la
+            // oficina el de más a la izquierda es «Música», que no es una acción). Las acciones —los cuatro de la
+            // derecha— tienen que seguir a la vista.
+            let enElMenu: string[] = [];
+            if (m && m.delMapaEscondidos.length > 0) {
+                await alicia.getByTestId("action-user").click();
+                const contenido = alicia.getByTestId("profile-menu");
+                await expect(contenido).toBeVisible();
+                await espera(400);
+                enElMenu = await contenido.locator("img").evaluateAll((imagenes) => imagenes.map((i) => i.getAttribute("alt") ?? "").filter((a) => a.startsWith("Botón")));
+                capturas.push(await capturaEntera(alicia, "6-menu-en-llamada-con-chat-1280x800"));
+                await alicia.getByTestId("action-user").click();
+                await expect(contenido).toBeHidden();
+            }
             await alicia.getByTestId("closeChatButton").click();
             await espera(1500);
+            const cuatroDeLaDerecha = m ? ["Botón 2", "Botón 3", "Botón 4", "Botón 5"].every((n) => m.delMapaALaVista.some((v) => v.startsWith(n))) : false;
+            const escondidosEnElMenu = m ? m.delMapaEscondidos.every((n) => enElMenu.includes(n)) : false;
             return {
-                estado: m && m.delMapaALaVista.length === 5 ? "bien" : "mal",
+                estado: m && cuatroDeLaDerecha && escondidosEnElMenu ? "bien" : "mal",
                 dato: m
-                    ? { aLaVista: m.delMapaALaVista, escondidos: m.delMapaEscondidos, anchoDeLaBarra: m.anchoDeLaBarra, chat }
+                    ? { aLaVista: m.delMapaALaVista, escondidos: m.delMapaEscondidos, escondidosEnElMenu: enElMenu, anchoDeLaBarra: m.anchoDeLaBarra, chat }
                     : { nota: "con el chat abierto la barra entera desaparece", chat },
                 capturas,
             };
