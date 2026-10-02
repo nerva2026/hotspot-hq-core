@@ -1094,3 +1094,10 @@ mark.hallazgo.actual {
         scroll-behavior: auto !important;
     }
 }
+
+/* ---------- móvil (≤ 600 px): las carpetas llegan a 44 px ---------- */
+@media (max-width: 600px) {
+    .carpeta-item {
+        min-height: 44px;
+    }
+}

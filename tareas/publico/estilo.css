@@ -2329,3 +2329,49 @@ table.lista {
     text-align: center;
     pointer-events: none;
 }
+
+/* ---------- móvil (≤ 600 px): lo que se toca llega a 44 px de alto y de ancho ----------
+   Lo que ya los tenía está en los bloques de arriba; aquí va lo que faltaba. */
+@media (max-width: 600px) {
+    .barra-vista .btn.pequeno {
+        min-width: 44px;
+    }
+    .enlace:not([hidden]) {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 8px;
+    }
+    .ficha-titulo {
+        min-height: 44px;
+    }
+    /* calendario: carriles de 44 px (la fila de «+N más» solo ocupa lo que lleva) */
+    .cal-rejilla {
+        --cal-carril: 44px;
+        --cal-mas: auto;
+    }
+    .cal-barra {
+        height: 44px;
+    }
+    .cal-mas {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    /* cronograma: filas y barras de 44 px (la barra de un solo día, también de ancho) */
+    .crono-fila {
+        height: 45px;
+    }
+    .crono-nombre {
+        min-height: 44px;
+    }
+    .crono-barra {
+        top: 0;
+        height: 44px;
+        min-width: 44px;
+    }
+    .crono-fuera {
+        top: 14px;
+        margin-left: 12px; /* la barra de un día ya no mide 32 px sino 44: el título de al lado no se queda debajo */
+    }
+}

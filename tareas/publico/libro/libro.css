@@ -793,3 +793,12 @@ strong.cifra-pixel {
         display: none;
     }
 }
+
+/* ---------- móvil (≤ 600 px): los botones de elegir y las filas del gráfico llegan a 44 px (el «enlace» está en estilo.css) ---------- */
+@media (max-width: 600px) {
+    .tipo-libro,
+    .eleccion,
+    .fila-grafico {
+        min-height: 44px;
+    }
+}

@@ -530,3 +530,12 @@ a.pestana {
         transition: none;
     }
 }
+
+/* ---------- móvil (≤ 600 px): el enlace de las instrucciones llega a 44 px sin cambiar la altura de la línea ---------- */
+@media (max-width: 600px) {
+    .musica li a {
+        display: inline-block;
+        padding: 14px 0;
+        margin: -14px 0;
+    }
+}

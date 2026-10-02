@@ -51,7 +51,7 @@ export function pintarCalendario(cont, ctx, ev) {
         const lunes = sumarDias(desde, s * 7);
         const domingo = sumarDias(lunes, 6);
         const semana = h("div", { class: "cal-semana", dataset: { lunes } });
-        const rejilla = h("div", { class: "cal-rejilla", style: { gridTemplateRows: `24px repeat(${CARRILES}, 22px) 18px` } });
+        const rejilla = h("div", { class: "cal-rejilla", style: { gridTemplateRows: `24px repeat(${CARRILES}, var(--cal-carril, 22px)) var(--cal-mas, 18px)` } });
         // Días (fondo y número)
         for (let d = 0; d < 7; d++) {
             const dia = sumarDias(lunes, d);

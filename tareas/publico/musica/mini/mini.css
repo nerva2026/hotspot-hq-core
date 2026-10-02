@@ -364,3 +364,12 @@ body.pagina-mini {
         animation: none !important;
     }
 }
+
+/* ---------- barra pequeña (su marco mide 360 px, así que esto vale también en el escritorio de la oficina):
+   el botón de abrir la cabina llega a 44 px ---------- */
+@media (max-width: 600px) {
+    .mini-abrir {
+        width: 44px;
+        height: 44px;
+    }
+}
