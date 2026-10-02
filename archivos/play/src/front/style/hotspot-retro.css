@@ -70,7 +70,7 @@
     font-weight: 400 549;
     font-style: normal;
     font-display: swap;
-    unicode-range: U+28-29, U+30-39, U+42-43, U+47, U+5A, U+61, U+63, U+6A, U+E0-E1, U+20AC;
+    unicode-range: U+28-29, U+30-39, U+42-43, U+45, U+47, U+5A, U+61, U+63, U+66, U+6A, U+74, U+C9, U+E0-E1, U+ED, U+20AC;
 }
 @font-face {
     font-family: "Pixelify Sans";
@@ -78,7 +78,7 @@
     font-weight: 550 700;
     font-style: normal;
     font-display: swap;
-    unicode-range: U+28-29, U+30-39, U+42-43, U+47, U+5A, U+61, U+63, U+6A, U+E0-E1, U+20AC;
+    unicode-range: U+28-29, U+30-39, U+42-43, U+45, U+47, U+5A, U+61, U+63, U+66, U+6A, U+74, U+C9, U+E0-E1, U+ED, U+20AC;
 }
 
 /* ---------- colores ---------- */
@@ -231,16 +231,22 @@ textarea {
 
 /* ---------- decir y pensar: las burbujas sobre la cabeza ---------- */
 /* WorkAdventure las escribe con una letra de cómic (Comic Jens) sobre una pastilla blanca medio transparente: ni se leía
-   bien ni era de la casa. Ahora van con Pixelify Sans a 11 px (su tamaño exacto: un píxel de la letra es un píxel de
-   pantalla, y con el zoom del juego crece limpio), en tinta sobre crema y con borde, como los carteles del mapa.
+   bien ni era de la casa. Ahora van con Pixelify Sans, en tinta sobre crema y con borde, como los carteles del mapa, y a
+   un tamaño que la oficina calcula (parche 13) para que cada punto de la letra mida puntos enteros de la pantalla.
    Las dos burbujas viven dentro del juego (un elemento DOM de Phaser que se amplía con la cámara): los tamaños de aquí
    son «de mapa», no de pantalla. */
 .say-bubble,
+.thinking-cloud,
+.thinking-cloud .thinking-text {
+    /* El tamaño lo pone la oficina (parche 13) para que la letra caiga en puntos enteros de la pantalla con cualquier
+       ampliación del juego; sin él, 11 px. */
+    font-size: var(--hs-letra, 11px) !important;
+    line-height: var(--hs-interlinea, 13px) !important;
+}
+.say-bubble,
 .thinking-cloud .thinking-text {
     font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace !important;
-    font-size: 11px !important;
     font-weight: 500 !important;
-    line-height: 13px !important;
     letter-spacing: 0.02em;
     color: var(--hs-tinta) !important;
     text-align: center;
@@ -254,7 +260,7 @@ textarea {
     box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
     padding: 3px 7px 4px !important;
     min-width: 24px;
-    max-width: 176px !important;
+    max-width: 16em !important;
     width: max-content;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
@@ -288,7 +294,7 @@ textarea {
     border-radius: 0 !important;
     padding: 4px 8px 5px !important;
     min-width: 24px;
-    max-width: 176px !important;
+    max-width: 16em !important;
     box-shadow:
         0 -1px 0 0 var(--hs-tinta),
         0 1px 0 0 var(--hs-tinta),

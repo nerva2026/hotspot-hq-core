@@ -7,6 +7,8 @@ Qué arregla (todo se veía en pantalla y costaba leerlo):
   parecía una «o» con rabo y el € era una mancha.
 - También en Pixelify Sans: la «c» se cerraba hasta parecer una «o» en cuanto la letra engordaba un poco («discusión»
   se leía «disousión»), la Z era el dibujo de un 2, la «j» no tenía punto y los paréntesis parecían llaves.
+- Y la «f» y la «t» dejaban detrás un hueco que parecía un espacio («Caf é», «Ent endido»), y la tilde de la «í» se
+  confundía con el punto de la «i» («dias», «Victor»). La E era redonda, casi un € sin rayas.
 - En Silkscreen (los títulos), el 4 parecía otra letra y el 2 una Z.
 
 Este guion dibuja esos caracteres píxel a píxel, con las mismas medidas que cada letra, y los guarda en cuatro
@@ -50,19 +52,24 @@ TEXTO = {
     '9': ['.###.', '#...#', '#...#', '.####', '....#', '...#.', '.##..'],
     'B': ['####.', '#...#', '#...#', '####.', '#...#', '#...#', '####.'],
     'C': ['.####', '#....', '#....', '#....', '#....', '#....', '.####'],
+    'E': ['#####', '#....', '#....', '####.', '#....', '#....', '#####'],
+    'É': ['...#.', '..#..', '.....', '#####', '#....', '#....', '####.', '#....', '#....', '#####'],
     'G': ['.####', '#....', '#....', '#..##', '#...#', '#...#', '.###.'],
     'Z': ['#####', '....#', '...#.', '..#..', '.#...', '#....', '#####'],
     'a': ['.###.', '....#', '.####', '#...#', '.####'],
     'c': ['.####', '#....', '#....', '#....', '.####'],
     'j': ['.#', '..', '##', '.#', '.#', '.#', '.#', '.#', '#.'],
-    '(': ['..#', '.#.', '#..', '#..', '#..', '.#.', '..#'],
-    ')': ['#..', '.#.', '..#', '..#', '..#', '.#.', '#..'],
+    'f': ['..##', '.#..', '####', '.#..', '.#..', '.#..', '.#..'],
+    't': ['.#..', '.#..', '####', '.#..', '.#..', '.#..', '..##'],
+    'í': ['.#', '#.', '..', '#.', '#.', '#.', '#.', '#.'],
+    '(': ['.#', '#.', '#.', '#.', '#.', '#.', '#.', '#.', '.#'],
+    ')': ['#.', '.#', '.#', '.#', '.#', '.#', '.#', '.#', '#.'],
     'á': ['...#.', '..#..', '.....', '.###.', '....#', '.####', '#...#', '.####'],
     'à': ['.#...', '..#..', '.....', '.###.', '....#', '.####', '#...#', '.####'],
     '€': ['..###', '.#...', '####.', '.#...', '####.', '.#...', '..###'],
 }
 # Cuántas filas de cada dibujo quedan por debajo de la línea de base (la «j» baja dos, como la «g» o la «y»).
-BAJAN = {'j': 2}
+BAJAN = {'j': 2, '(': 1, ')': 1}
 # Para los títulos (Silkscreen): cifras de 4 × 5 píxeles, como sus mayúsculas.
 TITULO = {
     '0': ['.##.', '#..#', '#..#', '#..#', '.##.'],
