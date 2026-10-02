@@ -479,6 +479,8 @@ function cambiarVista(id) {
     E.vista = id;
     guardarLocal("vista", id);
     cerrarMenu();
+    // Al volver a una vista se pinta de nuevas: que se coloque otra vez en hoy (el calendario y el cronograma).
+    if (E.porVista[id]) E.porVista[id].centrado = false;
     pintarYa();
 }
 

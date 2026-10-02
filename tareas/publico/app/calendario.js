@@ -33,7 +33,7 @@ export function pintarCalendario(cont, ctx, ev) {
         h("button", { type: "button", class: "btn pequeno", title: "Mes anterior", onclick: () => ((ev.mes = sumarMeses(ev.mes, -1)), ctx.pintar()) }, "‹"),
         h("h2", { class: "titulo-mes" }, `${MESES[mes - 1]} ${anio}`),
         h("button", { type: "button", class: "btn pequeno", title: "Mes siguiente", onclick: () => ((ev.mes = sumarMeses(ev.mes, 1)), ctx.pintar()) }, "›"),
-        h("button", { type: "button", class: "btn pequeno", onclick: () => ((ev.mes = primeroDeMes(hoy())), ctx.pintar()) }, "Hoy"),
+        h("button", { type: "button", class: "btn pequeno", onclick: () => ((ev.mes = primeroDeMes(hoy())), (ev.centrado = false), ctx.pintar()) }, "Hoy"),
         h("span", { class: "crece" }),
         h(
             "label",
@@ -121,7 +121,18 @@ export function pintarCalendario(cont, ctx, ev) {
         mesEl.appendChild(semana);
     }
 
-    const cuerpo = h("div", { class: ["cal-cuerpo", ev.verSinFecha && "con-lateral"] }, h("div", { class: "cal-principal", "data-desplazar": "calendario" }, mesEl));
+    // El mes va en un marco que marca con una sombra el lado por el que sigue (en un móvil no caben los siete días).
+    const principal = h("div", { class: "cal-principal", "data-desplazar": "calendario", tabindex: "-1" }, mesEl);
+    const marco = h("div", { class: "cal-marco" }, principal);
+    const marcarBordes = () => {
+        // «--desplazado»: con él, el título de una barra que empieza antes del borde izquierdo se corre hasta lo que se ve.
+        principal.style.setProperty("--desplazado", `${Math.round(principal.scrollLeft)}px`);
+        marco.classList.toggle("sigue-izquierda", principal.scrollLeft > 2);
+        marco.classList.toggle("sigue-derecha", principal.scrollLeft + principal.clientWidth < principal.scrollWidth - 2);
+    };
+    principal.addEventListener("scroll", marcarBordes, { passive: true });
+    if (typeof ResizeObserver === "function") new ResizeObserver(marcarBordes).observe(principal);
+    const cuerpo = h("div", { class: ["cal-cuerpo", ev.verSinFecha && "con-lateral"] }, marco);
     if (ev.verSinFecha) {
         const sinFecha = tareas.filter((t) => !rango(t)).sort((a, b) => pesoPrioridad(a.prioridad) - pesoPrioridad(b.prioridad) || a.orden - b.orden);
         const lista = h(
@@ -149,6 +160,30 @@ export function pintarCalendario(cont, ctx, ev) {
         cuerpo.appendChild(h("aside", { class: "cal-sinfecha" }, h("h3", null, "Sin fecha ", h("span", { class: "cuenta" }, sinFecha.length)), h("p", { class: "nota" }, "Arrastra una al calendario para darle fecha."), lista));
     }
     cont.append(barra, cuerpo);
+    // La primera vez (y al pulsar «Hoy») el calendario se abre desplazado hasta hoy: en un móvil, que enseña tres o
+    // cuatro días, el de hoy no puede quedarse fuera. Después se respeta por dónde lo haya dejado cada uno.
+    if (!ev.centrado) {
+        ev.centrado = true;
+        irAHoy(principal);
+        requestAnimationFrame(() => irAHoy(principal)); // otra vez cuando principal.js ha repuesto el desplazamiento de antes
+    }
+    marcarBordes();
+}
+
+// Desplaza el mes hasta el día de hoy, si está en el mes que se ve y no cabe entero: la semana de hoy arriba y el día a
+// la izquierda, con un trozo del día anterior asomando para que se note que hay más a los dos lados.
+function irAHoy(principal) {
+    const dia = principal.querySelector(".cal-dia.hoy");
+    if (!dia || !principal.isConnected) return;
+    const caja = principal.getBoundingClientRect();
+    const rd = dia.getBoundingClientRect();
+    if (principal.scrollWidth > principal.clientWidth + 1) principal.scrollLeft = Math.max(0, principal.scrollLeft + rd.left - caja.left - Math.min(40, rd.width * 0.4));
+    if (principal.scrollHeight > principal.clientHeight + 1) {
+        const cabecera = principal.querySelector(".cal-cabecera");
+        const semana = dia.closest(".cal-semana").getBoundingClientRect();
+        const arriba = principal.scrollTop + semana.top - caja.top - (cabecera ? cabecera.offsetHeight : 0);
+        principal.scrollTop = arriba < 8 ? 0 : arriba; // la primera semana, desde el principio (con el borde del mes)
+    }
 }
 
 // Los cumpleaños de ese día (todo el día, sin hora) junto al número: una tarta y los nombres (cortados si no caben).
@@ -172,7 +207,7 @@ function barraTarea(tr, i0, i1, carril, ctx) {
         {
             type: "button",
             class: ["cal-barra", "arrastrable", t.estado === "hecho" && "hecha", atrasada && "atrasada", tr.antes && "sigue-antes", tr.despues && "sigue-despues"],
-            style: { gridColumn: `${i0 + 1} / ${i1 + 2}`, gridRow: `${carril + 2}`, background: prio.color, color: prio.texto },
+            style: { gridColumn: `${i0 + 1} / ${i1 + 2}`, gridRow: `${carril + 2}`, "--col": String(i0), background: prio.color, color: prio.texto },
             dataset: { id: t.id },
             onclick: (e) => e.detail === 0 && ctx.abrir(t.id), // con el teclado
             title: `${t.titulo}${t.inicio && t.fin && t.inicio !== t.fin ? ` · del ${fechaMedia(t.inicio)} al ${fechaMedia(t.fin)}` : t.fin ? ` · ${fechaMedia(t.fin)}` : ""}`,
