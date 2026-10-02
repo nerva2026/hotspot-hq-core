@@ -216,8 +216,9 @@ function pintar() {
                     { class: "mini-textos" },
                     // PROVISIONAL-v0.3.1 («Pinchas tú», para quien pincha)
                     h("p", { class: "mini-dj" }, h("span", { class: ["led", s.reproduciendo && "encendido"] }), soyDj() ? "Pinchas tú" : `Pincha ${dj.nombre}`, s.reproduciendo ? null : h("span", { class: "mini-pausa" }, " · en pausa")),
-                    h("p", { class: "mini-titulo" }, s.enlace ? h("a", { href: s.enlace, target: "_blank", rel: "noopener", title: "Abrir en Spotify" }, s.titulo) : s.titulo),
-                    h("p", { class: "mini-artistas" }, s.enlace ? h("a", { class: "mini-spotify", href: s.enlace, target: "_blank", rel: "noopener", title: "Abrir en Spotify", "aria-label": "Abrir en Spotify" }, iconoSpotify()) : iconoSpotify(), h("span", null, s.artistas.map((a) => a.nombre).join(", "))),
+                    // El título entero sale al pasar el ratón y, si no cabe y está sonando, se desplaza solo (ver «marquesina»).
+                    tituloQueCorre(s.titulo, s.enlace ? h("a", { href: s.enlace, target: "_blank", rel: "noopener", title: s.titulo }, s.titulo) : s.titulo, s.reproduciendo),
+                    h("p", { class: "mini-artistas" }, s.enlace ? h("a", { class: "mini-spotify", href: s.enlace, target: "_blank", rel: "noopener", title: "Abrir en Spotify", "aria-label": "Abrir en Spotify" }, iconoSpotify()) : iconoSpotify(), h("span", { title: s.artistas.map((a) => a.nombre).join(", ") }, s.artistas.map((a) => a.nombre).join(", "))),
                 ),
             ),
         );
@@ -281,7 +282,7 @@ function pintar() {
                     local: "Es un archivo local del DJ: aquí no se oye.",
                 };
                 partes = [
-                    h("p", { class: "mini-titulo" }, s.titulo),
+                    tituloQueCorre(s.titulo, s.titulo, s.reproduciendo),
                     h("p", { class: "mini-linea" }, textos[estado] || textos.cargando),
                     estado === "fallo"
                         ? h(
@@ -302,7 +303,52 @@ function pintar() {
     // Con algo que decir en la cabeza (quién pincha, silenciar) ocupa su fila; si no, solo queda el botón de abrir, en la esquina.
     mini.dataset.cabeza = rotulo.childElementCount || zonaEscuchar.childElementCount ? "si" : "no";
     pintarProgreso();
+    correrTitulos();
 }
+
+// ---------- marquesina: un título que no cabe se desplaza solo, despacio, mientras suena ----------
+
+// Va y vuelve a 20 px por segundo, de píxel en píxel, con una pausa larga en cada extremo: se lee entero sin marear.
+// Parado (en pausa, o con «menos movimiento» en el sistema) se queda con sus «…» de siempre; entero sale siempre al
+// pasar el ratón (title).
+const MARQUESINA = { velocidad: 20, pausa: 2500 };
+let relojMarquesina = { texto: null, desde: 0 }; // para que un repintado no la devuelva al principio
+
+function tituloQueCorre(texto, contenido, suena) {
+    return h("p", { class: "mini-titulo", title: texto }, h("span", { class: "mini-corre", dataset: { corre: suena ? "si" : "no" } }, contenido));
+}
+
+function correrTitulos() {
+    if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    for (const tira of document.querySelectorAll('.mini-corre[data-corre="si"]')) {
+        const caja = tira.parentElement;
+        if (!caja.clientWidth || typeof tira.animate !== "function") continue; // escondido (o un navegador sin animaciones)
+        const sobra = Math.ceil(caja.scrollWidth - caja.clientWidth);
+        if (sobra < 3) continue; // cabe: no hay nada que mover
+        caja.classList.add("corre"); // sin «…» mientras se mueve
+        const ida = (sobra / MARQUESINA.velocidad) * 1000;
+        const total = ida + MARQUESINA.pausa * 2;
+        const quieto = MARQUESINA.pausa / total;
+        const animacion = tira.animate(
+            [
+                { transform: "translateX(0)", offset: 0 },
+                { transform: "translateX(0)", offset: quieto, easing: `steps(${sobra}, end)` },
+                { transform: `translateX(${-sobra}px)`, offset: 1 - quieto },
+                { transform: `translateX(${-sobra}px)`, offset: 1 },
+            ],
+            { duration: total, iterations: Infinity, direction: "alternate" },
+        );
+        // El mismo título sigue por donde iba aunque la barra se repinte (llega un aviso cada pocos segundos).
+        const texto = caja.title;
+        if (relojMarquesina.texto !== texto) relojMarquesina = { texto, desde: performance.now() };
+        animacion.currentTime = performance.now() - relojMarquesina.desde;
+    }
+}
+// Las letras llegan después de pintar y cambian lo que mide el título: se mira otra vez.
+document.fonts?.ready?.then(() => {
+    for (const tira of document.querySelectorAll(".mini-corre")) tira.getAnimations?.().forEach((a) => a.cancel());
+    correrTitulos();
+});
 
 function pintarProgreso() {
     const s = E.sonando;

@@ -556,8 +556,9 @@ function pintarHistorial() {
                           h(
                               "div",
                               { class: "sonado-datos" },
-                              h("span", { class: "sonado-titulo" }, c.enlace ? h("a", { href: c.enlace, target: "_blank", rel: "noopener", title: "Abrir en Spotify" }, c.titulo) : c.titulo),
-                              h("span", { class: "sonado-artistas" }, c.artistas.join(", ")),
+                              // Se cortan con «…» si no caben: enteros, al pasar el ratón.
+                              h("span", { class: "sonado-titulo", title: c.titulo }, c.enlace ? h("a", { href: c.enlace, target: "_blank", rel: "noopener", title: c.titulo }, c.titulo) : c.titulo),
+                              h("span", { class: "sonado-artistas", title: c.artistas.join(", ") }, c.artistas.join(", ")),
                           ),
                           h("span", { class: "sonado-quien", title: `Lo puso ${c.dj.nombre}` }, avatar(usuario(c.dj.id) || c.dj, { tam: "mini" }), h("span", { class: "sonado-cuando" }, haceCuanto(c.cuando))),
                           c.enlace ? h("a", { class: "sonado-spotify", href: c.enlace, target: "_blank", rel: "noopener", title: "Abrir en Spotify", "aria-label": `Abrir «${c.titulo}» en Spotify` }, iconoSpotify()) : h("span", { class: "sonado-spotify" }),

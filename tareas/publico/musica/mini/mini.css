@@ -282,6 +282,14 @@ body.pagina-mini {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+/* Un título que no cabe se desplaza solo mientras suena (musica-mini.js, «marquesina»): entonces va sin «…». */
+.mini-titulo.corre {
+    text-overflow: clip;
+}
+.mini-titulo.corre .mini-corre {
+    display: inline-block;
+    will-change: transform;
+}
 .mini-titulo a {
     text-decoration: none;
 }

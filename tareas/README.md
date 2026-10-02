@@ -299,7 +299,9 @@ pueden poner. Por eso **no suena sola en la oficina**: cada persona la oye cuand
   puede dejar libre la cabina de otro.
 - **`/tareas/musica/mini/`**: la misma música en una barra de 360 × 128 px sin desplazamiento (portada,
   título y artistas, quién pincha, escuchar y enlace a la cabina; «cabina vacía», «sin sesión», «sin
-  configurar» y «sin conexión»). La oficina la abre como un panel flotante; si la cabina y el pequeño están
+  configurar» y «sin conexión»). Un título que no cabe se corta con «…»: entero sale al pasar el ratón y, mientras
+  suena, se desplaza solo, despacio, de un extremo a otro (quieto si el sistema pide menos movimiento).
+  La oficina la abre como un panel flotante; si la cabina y el pequeño están
   abiertos a la vez, solo suena uno. Los paneles de la oficina tienen que dejar pasar el sonido
   (`allow="autoplay; encrypted-media"` en el marco). El botón «Música» de la barra y la cabina del DJ del
   mapa se ponen en el repositorio de mapas, no aquí.
