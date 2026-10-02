@@ -21,7 +21,7 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
 
 | Ruta | Qué es |
 | --- | --- |
-| `parches/01…12-*.patch` | Cambios sobre WorkAdventure, en orden (tabla en `README.md`). |
+| `parches/01…13-*.patch` | Cambios sobre WorkAdventure, en orden (tabla en `README.md`). |
 | `archivos/` | Archivos propios que se copian encima (estilo retro, letras, marca, muñecos `hs-…`). |
 | `herramientas/retoques.py` | Dibuja los retoques de las letras (`hs-retoques-*.woff`: cifras claras y unas pocas letras de Pixelify Sans que se confundían) y los deja en `archivos/…/fonts/hotspot/` y en `tareas/publico/fuentes/`. |
 | `.github/workflows/hotspot-imagen.yml` | Construye la imagen `ghcr.io/nerva2026/hotspot-hq-play` (~7 min). |

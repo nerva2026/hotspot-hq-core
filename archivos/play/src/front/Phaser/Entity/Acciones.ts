@@ -219,13 +219,17 @@ export class Acciones {
                 this.mirar(postura.mira);
                 this.mover(SENTADO);
                 propia = true;
-            } else if (postura.nombre === "saludar" || postura.nombre === "aplaudir") {
-                this.mirar("down");
-                propia = true;
-            } else if (postura.nombre === "bailar") {
-                propia = true;
             } else {
-                this.mover(0);
+                // De pie. Si venía de estar sentado, los dibujos seguían bajados (saludaba «agachado»): a su sitio.
+                // El baile y el aplauso los vuelven a mover en cada fotograma (alActualizar), solo mientras no se
+                // estén moviendo ya, para no cortar un bote a medias.
+                if (!this.animando) this.mover(0);
+                if (postura.nombre === "saludar" || postura.nombre === "aplaudir") {
+                    this.mirar("down");
+                    propia = true;
+                } else if (postura.nombre === "bailar") {
+                    propia = true;
+                }
             }
             const seMueve = postura.nombre !== "sentado" || postura.efecto !== undefined;
             if (seMueve) this.empezar();
