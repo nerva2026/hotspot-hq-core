@@ -16,7 +16,7 @@ import path from "node:path";
 const [carpeta = "resultados", orden = "escribir", cuales = ""] = process.argv.slice(2);
 
 /** Los puntos del encargo, por orden, con las comprobaciones que tiene que haber en cada uno. */
-const ACCIONES = ["bailar", "sentado-abajo", "sentado-izquierda", "saludar", "aplaudir", "sentado-abajo-gotas", "sentado-abajo-nube", "quieto-burbujas", "sentado-abajo-zetas", "quieto-corazones", "quieto-chispas"];
+const ACCIONES = ["bailar", "sentado-abajo", "sentado-izquierda", "sentado-derecha", "sentado-arriba", "saludar", "aplaudir", "sentado-abajo-mano", "sentado-abajo-palmas", "bailar-mano", "sentado-abajo-gotas", "sentado-abajo-nube", "quieto-burbujas", "sentado-abajo-zetas", "quieto-corazones", "quieto-chispas"];
 const OBJETOS = ["lata", "cafe", "agua", "cana", "snack", "disco"];
 const TAMANOS = ["1280x800", "1024x768", "1440x900"];
 const PUNTOS = [
@@ -35,6 +35,7 @@ const PUNTOS = [
             "no-existe-sentado-abajo-nada",
             "no-existe-lleva",
             "saludar-tras-sentarse",
+            "de-pie-tras-sentarse",
             "andando",
         ],
     },

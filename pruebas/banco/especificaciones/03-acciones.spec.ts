@@ -28,8 +28,13 @@ const ACCIONES: [string, boolean][] = [
     ["bailar", true],
     ["sentado:abajo", false],
     ["sentado:izquierda", false],
+    ["sentado:derecha", false],
+    ["sentado:arriba", false],
     ["saludar", true],
     ["aplaudir", true],
+    ["sentado:abajo+mano", true],
+    ["sentado:abajo+palmas", true],
+    ["bailar+mano", true],
     ["sentado:abajo+gotas", true],
     ["sentado:abajo+nube", true],
     ["quieto+burbujas", true],
@@ -212,6 +217,22 @@ test("3 · acciones y cosas en la mano (parche 08)", async ({ browser }) => {
                 },
                 capturas: [enteroDesdeNada, enteroDesdeSentado],
             };
+        });
+
+        // Sentado se recortan las piernas del dibujo: al dejar de estar sentado tiene que quedar EXACTAMENTE como antes.
+        await comprobar(P, "de-pie-tras-sentarse", "Tras estar sentado (hacia los cuatro lados), el muñeco sin hacer nada vuelve a ser el de la referencia", [pagina], async () => {
+            const peores: Record<string, number> = {};
+            const capturas: string[] = [];
+            for (const mira of ["abajo", "izquierda", "derecha", "arriba"]) {
+                await guardarVariable(pagina, "accion", `sentado:${mira}`);
+                await espera(500);
+                await guardarVariable(pagina, "accion", null);
+                await espera(700);
+                const ahora = await captura(pagina, `3-de-pie-tras-sentado-${mira}`, recorte);
+                capturas.push(ahora);
+                peores[mira] = (await diferencia(pagina, referencia, ahora)).distintos;
+            }
+            return { estado: Object.values(peores).every((n) => n === 0) ? "bien" : "mal", dato: { pixelesDistintosDeLaReferencia: peores }, capturas };
         });
 
         await comprobar(P, "andando", "Al echar a andar se deja la postura (y al parar, vuelve)", [pagina], async () => {

@@ -78,14 +78,31 @@ test("8 · las letras de la casa", async ({ browser }) => {
             };
         };
 
+        /**
+         * ¿Cae la letra de la burbuja en puntos enteros de la pantalla? Pixelify Sans es de píxeles: a 10,75 px cada punto
+         * suyo mide 1 px. El parche 13 elige el tamaño según la ampliación del juego; aquí se mide lo que ha salido.
+         */
+        const nitidez = async (tamano: string): Promise<{ enPantalla_px: number; puntosDePantallaPorPuntoDeLetra: number; limpia: boolean }> => {
+            const porCasilla = (await aPantalla(pagina, { x: 32, y: 0 })).x - (await aPantalla(pagina, { x: 0, y: 0 })).x;
+            const densidad = await pagina.evaluate(() => window.devicePixelRatio);
+            const enPantalla = parseFloat(tamano) * (porCasilla / 32);
+            const puntos = (enPantalla * densidad) / 10.75;
+            return {
+                enPantalla_px: Math.round(enPantalla * 100) / 100,
+                puntosDePantallaPorPuntoDeLetra: Math.round(puntos * 1000) / 1000,
+                limpia: Math.abs(puntos - Math.round(puntos)) < 0.05 && enPantalla >= 14.5,
+            };
+        };
+
         await comprobar(P, "decir", "(a) La burbuja de «decir» (dos líneas)", [pagina], async () => {
             await decir(FRASE);
             const capturas = [await capturaDeElemento(pagina, ".say-bubble", "8a-decir", 14), await captura(pagina, "8a-decir-muneco", recorte)];
             const letra = await letraDe(pagina, ".say-bubble");
             const sitioDeLaBurbuja = await solape(".say-bubble");
-            const letraBien = !!letra && letra.familia.startsWith('"Pixelify Sans"') && letra.tamano === "11px" && letra.texto === FRASE;
+            const nitida = letra ? await nitidez(letra.tamano) : null;
+            const letraBien = !!letra && letra.familia.startsWith('"Pixelify Sans"') && !!nitida && nitida.limpia && letra.texto === FRASE;
             const sitioBien = sitioDeLaBurbuja.elNombreTapaElPico === false;
-            return { estado: letraBien && sitioBien ? "bien" : "mal", dato: { letra, sitioDeLaBurbuja }, capturas };
+            return { estado: letraBien && sitioBien ? "bien" : "mal", dato: { letra, nitidez: nitida, sitioDeLaBurbuja }, capturas };
         });
 
         await comprobar(P, "decir-corto", "(a) La burbuja de «decir» con un texto corto (una línea)", [pagina], async () => {
@@ -110,8 +127,9 @@ test("8 · las letras de la casa", async ({ browser }) => {
             const capturas = [await capturaDeElemento(pagina, ".thinking-cloud", "8b-pensar", 22), await captura(pagina, "8b-pensar-muneco", recorte)];
             const letra = await letraDe(pagina, ".thinking-cloud .thinking-text");
             const sitioDeLaBurbuja = await solape(".thinking-cloud");
-            const bien = !!letra && letra.familia.startsWith('"Pixelify Sans"') && letra.tamano === "11px" && sitioDeLaBurbuja.laBurbujaPisaElNombre === false;
-            return { estado: bien ? "bien" : "mal", dato: { letra, sitioDeLaBurbuja }, capturas };
+            const nitida = letra ? await nitidez(letra.tamano) : null;
+            const bien = !!letra && letra.familia.startsWith('"Pixelify Sans"') && !!nitida && nitida.limpia && sitioDeLaBurbuja.laBurbujaPisaElNombre === false;
+            return { estado: bien ? "bien" : "mal", dato: { letra, nitidez: nitida, sitioDeLaBurbuja }, capturas };
         });
 
         await comprobar(P, "zoom", "Con qué ampliación se ve el juego (de ella depende que las letras de las burbujas salgan limpias)", [pagina], async () => {
@@ -272,7 +290,7 @@ test("8 · las letras de la casa", async ({ browser }) => {
                 pincel.fillStyle = "#1c1715";
                 pincel.textBaseline = "alphabetic";
                 const lineas: [string, string][] = [
-                    ['500 44px "Pixelify Sans"', "Pixelify 500: 0123456789 S5 B8 C G a o c Z2 j (1) €"],
+                    ['500 44px "Pixelify Sans"', "Pixelify 500: 0123456789 S5 B8 C G a o c Z2 j (1) € Efectivo: día"],
                     ['500 44px "Pixelify Sans"', frase],
                     ['700 44px "Pixelify Sans"', "Pixelify 700: 0123456789 S5 B8 C G a o €"],
                     ['400 40px "Silkscreen"', "Silkscreen 400: 0123456789 A4"],
