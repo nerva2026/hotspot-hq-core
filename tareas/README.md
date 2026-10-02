@@ -39,6 +39,11 @@ cualquier navegador.
 
 - **Vistas:** tablero por columnas (Por hacer, En marcha, Esperando, Hecho), lista tipo Notion,
   calendario y cronograma.
+- **Pantallas pequeñas:** con 600 px o menos la cabecera cabe en una línea (las vistas, en un solo botón con el nombre de
+  la de ahora; los filtros, con la búsqueda, plegados detrás de «Filtros») y, si no hay una vista guardada, se abre la
+  lista (por fecha) en vez del tablero. En el panel de la oficina, de 930 px o más caben las cuatro columnas (miden entre
+  215 y 300 px, sin tocar la letra); en uno de 721 a 929 px «Hecho» se pliega en una etiqueta con su número, que se
+  despliega al pulsarla. En un móvil la oficina abre el tablón casi a pantalla completa (`src/hq.js` del repositorio de mapas).
 - **Cada tarea tiene:** título, estado, prioridad (urgente, alta, media, baja; cada una con su color),
   para quién, pedido por, fecha de inicio y fecha límite, etiquetas, subtareas y notas.
 - **En directo:** lo que cambia uno lo ve el otro al momento (Server-Sent Events).

@@ -23,16 +23,22 @@ const VISTAS = [
 
 const FILTROS_VACIOS = { texto: "", persona: "todos", prioridades: [], etiqueta: null, ocultarHechas: false };
 
+// «Móvil» = ventana de hasta 600 px, el mismo corte que el CSS (también un panel estrecho de la oficina).
+function enMovil() {
+    return window.matchMedia("(max-width: 600px)").matches;
+}
+
 const E = {
     yo: null,
     usuarios: [],
     tareas: new Map(),
-    vista: leerLocal("vista", "tablero"),
+    vista: leerLocal("vista", null),
     filtros: { ...FILTROS_VACIOS, ...leerLocal("filtros", {}), texto: "" },
     porVista: {}, // estado propio de cada vista (mes del calendario, zoom del cronograma…)
     oficina: null, // { hoy, cumples, proximos } de /api/oficina: el día de la oficina y sus cumpleaños
 };
-if (!VISTAS.some((v) => v.id === E.vista)) E.vista = "tablero";
+// Sin vista guardada: en el móvil, la lista (por fecha), que allí se lee mejor que el tablero; en el resto, el tablero.
+if (!VISTAS.some((v) => v.id === E.vista)) E.vista = enMovil() ? "lista" : "tablero";
 
 const raiz = document.getElementById("app");
 let dejarDeEscuchar = null;
@@ -253,12 +259,15 @@ function montar() {
                     ),
                 ),
             ),
+            // Solo en el móvil (≤ 600 px): las vistas en un botón y los filtros plegados detrás de otro, para que la cabecera quepa en una línea.
+            h("button", { type: "button", class: "boton-vista", id: "boton-vista", "aria-haspopup": "menu", title: "Vistas", onclick: (e) => menuVistas(e.currentTarget) }),
+            h("button", { type: "button", class: "filtro boton-filtros", id: "boton-filtros", "aria-controls": "filtros", "aria-expanded": "false", onclick: () => alternarFiltros() }, "Filtros", h("span", { class: "flecha" }, "▾")),
             h("div", { class: "barra-derecha" }, h("button", { type: "button", class: "btn primario", id: "boton-nueva", title: "Nueva tarea (N)", onclick: () => nuevaTarea() }, "+ Nueva"), h("button", { type: "button", class: "boton-yo", id: "boton-yo", onclick: (e) => menuYo(e.currentTarget) })),
         ),
         h("div", { id: "cumple-aviso", class: "cumple-zona", hidden: true }),
         h(
             "div",
-            { class: "filtros" },
+            { class: "filtros", id: "filtros" },
             h("input", {
                 id: "buscar",
                 class: "campo buscar",
@@ -377,6 +386,11 @@ function pintarBarra() {
     if (yo) yo.replaceChildren(avatar(E.yo), h("span", { class: "nombre-yo" }, E.yo.nombre), h("span", { class: "flecha" }, "▾"));
 
     const f = E.filtros;
+    const vistaActual = VISTAS.find((v) => v.id === E.vista);
+    const botonVista = $("#boton-vista");
+    if (botonVista) botonVista.replaceChildren(vistaActual.nombre, h("span", { class: "flecha" }, "▾"));
+    const hayFiltros = Boolean(f.texto || f.persona !== "todos" || f.prioridades.length || f.etiqueta || f.ocultarHechas);
+    $("#boton-filtros")?.classList.toggle("activo", hayFiltros);
     const persona = $("#filtro-persona");
     if (persona) {
         const u = ctx.usuario(f.persona);
@@ -397,7 +411,7 @@ function pintarBarra() {
     const hechas = $("#filtro-hechas");
     if (hechas) hechas.checked = f.ocultarHechas;
     const limpiar = $("#limpiar-filtros");
-    if (limpiar) limpiar.hidden = !(f.texto || f.persona !== "todos" || f.prioridades.length || f.etiqueta || f.ocultarHechas);
+    if (limpiar) limpiar.hidden = !hayFiltros;
 
     // Resumen: lo mío que vence hoy o ya ha vencido.
     const mias = [...E.tareas.values()].filter((t) => t.estado !== "hecho" && t.responsables.includes(E.yo.id) && t.fin);
@@ -443,6 +457,20 @@ function limpiarFiltros() {
     if (b) b.value = "";
     guardarFiltros();
     pintar();
+}
+
+// En el móvil los filtros (con la búsqueda) están plegados detrás del botón «Filtros»; en pantallas anchas siempre se ven.
+function alternarFiltros(abrir) {
+    const panel = $("#filtros");
+    if (!panel) return;
+    const abierto = abrir ?? !panel.classList.contains("abiertos");
+    panel.classList.toggle("abiertos", abierto);
+    $("#boton-filtros")?.setAttribute("aria-expanded", String(abierto));
+}
+
+// En el móvil las pestañas son un solo botón con el nombre de la vista de ahora; este es su menú.
+function menuVistas(ancla) {
+    abrirMenu(ancla, () => opcionesMenu(VISTAS.map((v) => ({ contenido: v.nombre, marcado: v.id === E.vista, accion: () => cambiarVista(v.id) }))));
 }
 
 function cambiarVista(id) {
@@ -1066,6 +1094,7 @@ document.addEventListener("keydown", (e) => {
         nuevaTarea();
     } else if (e.key === "/") {
         e.preventDefault();
+        alternarFiltros(true); // en el móvil la búsqueda está dentro de los filtros plegados
         $("#buscar")?.focus();
     } else {
         const v = VISTAS.find((x) => x.tecla === e.key);

@@ -604,7 +604,9 @@ kbd {
     align-items: stretch;
 }
 .columna {
-    flex: 0 0 300px;
+    /* 300 px, y se encoge hasta 215 px para que las cuatro quepan en el panel de la oficina (944 px en un portátil de 1366) */
+    flex: 0 1 300px;
+    min-width: 215px;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -1862,7 +1864,8 @@ table.lista {
         margin-left: 0;
     }
     .columna {
-        flex-basis: min(290px, 85vw);
+        flex: 0 0 min(290px, 85vw);
+        min-width: 0;
     }
     .cal-cuerpo {
         flex-direction: column;
@@ -2171,5 +2174,121 @@ table.lista {
     }
     .cumple-tarta:hover {
         transform: none;
+    }
+}
+
+/* ---------- tablero: «Hecho» se pliega en una etiqueta con su número cuando las cuatro columnas no caben ---------- */
+.plegar-hecho {
+    display: none;
+}
+@media (max-width: 1270px) {
+    /* con las columnas encogidas, ninguna letra del tablero baja de 12 px (en una ventana ancha todo se queda como siempre) */
+    .tablero .chip.prioridad,
+    .tablero .cuenta,
+    .tablero .avatar {
+        font-size: 12px;
+    }
+}
+@media (min-width: 721px) and (max-width: 929px) {
+    .tablero.hecho-abierto .columna {
+        min-width: 190px;
+    }
+    .plegar-hecho {
+        display: inline-grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        color: var(--tinta);
+        background: transparent;
+        border: 2px solid transparent;
+        font: 400 12px/1 var(--titulo);
+    }
+    .plegar-hecho:hover {
+        border-color: var(--tinta);
+        background: var(--papel);
+    }
+    .columna.plegable:not(.abierta) {
+        flex: 0 0 52px;
+        min-width: 0;
+    }
+    .columna.plegable:not(.abierta) > :not(.columna-cabecera) {
+        display: none;
+    }
+    .columna.plegable:not(.abierta) .columna-cabecera {
+        position: relative;
+        flex: 1;
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: 10px;
+        padding: 40px 0 12px;
+        border-bottom: 0;
+        box-shadow: inset 4px 0 0 var(--color-estado);
+    }
+    .columna.plegable:not(.abierta) .columna-cabecera .crece {
+        display: none;
+    }
+    .columna.plegable:not(.abierta) .columna-cabecera h2 {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+    }
+    /* toda la etiqueta es el botón de desplegar */
+    .columna.plegable:not(.abierta) .plegar-hecho {
+        position: absolute;
+        inset: 0;
+        width: auto;
+        height: auto;
+        place-items: start center;
+        padding-top: 8px;
+    }
+}
+
+/* ---------- móvil (≤ 600 px): la cabecera cabe en una línea y los filtros se despliegan con un botón ---------- */
+.boton-vista,
+.boton-filtros {
+    display: none;
+}
+@media (max-width: 600px) {
+    .barra {
+        flex-wrap: nowrap;
+        gap: 6px;
+        padding: 8px;
+    }
+    .marca,
+    .pestanas {
+        display: none;
+    }
+    .boton-vista {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 0 10px;
+        color: var(--tinta);
+        background: var(--crema);
+        border: 2px solid var(--crema);
+        box-shadow: 2px 2px 0 var(--naranja);
+        font: 400 12px/1 var(--titulo);
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+    .boton-filtros {
+        display: inline-flex;
+        /* está en la barra oscura: sin esto heredaba la letra crema y no se leía sobre el fondo claro del botón */
+        color: var(--tinta);
+        border-color: var(--crema);
+    }
+    .barra-derecha {
+        gap: 6px;
+    }
+    .filtros {
+        display: none;
+    }
+    .filtros.abiertos {
+        display: flex;
+    }
+    .filtros .buscar {
+        flex: 1 1 100%;
     }
 }
