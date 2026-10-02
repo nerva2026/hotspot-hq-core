@@ -12,16 +12,20 @@ export function aplicacion(nombre, texto) {
 }
 
 function marco(...contenido) {
-    return h(
+    // Cada pantalla tiene un solo h1: si el contenido no trae el suyo, el nombre de la app (el mismo de siempre) hace de h1.
+    const nombre = h("strong", null, nombreApp);
+    const pantalla = h(
         "main",
         { class: "acceso" },
         h(
             "div",
             { class: "acceso-caja" },
-            h("div", { class: "acceso-marca" }, h("span", { class: "logo" }, "HS"), h("div", null, h("strong", null, nombreApp), h("small", null, "HOT SPOT S.L."))),
+            h("div", { class: "acceso-marca" }, h("span", { class: "logo" }, "HS"), h("div", null, nombre, h("small", null, "HOT SPOT S.L."))),
             ...contenido,
         ),
     );
+    if (!pantalla.querySelector("h1")) nombre.replaceWith(h("h1", null, nombreApp));
+    return pantalla;
 }
 
 function campo(etiqueta, props) {

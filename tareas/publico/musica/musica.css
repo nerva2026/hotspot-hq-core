@@ -97,7 +97,7 @@ a.pestana {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     padding: 5px 7px 4px;
@@ -244,7 +244,7 @@ a.pestana {
 .tiempos {
     display: flex;
     justify-content: space-between;
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     color: var(--tenue-oscuro);
 }
 .ahora-dj {
@@ -374,7 +374,7 @@ a.pestana {
     gap: 6px;
 }
 .etiqueta-pequena {
-    font: 400 10px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--tinta-suave);

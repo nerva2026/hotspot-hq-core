@@ -2,8 +2,8 @@
 
 :root {
     --gasto: #c4461f;
-    --ingreso: #2f8a50;
-    --pago: #3b82c4;
+    --ingreso: #297946;
+    --pago: #3472ac;
 }
 
 .libro {
@@ -51,10 +51,10 @@ a.pestana {
     letter-spacing: 0.02em;
 }
 .cifra-pixel {
-    font-size: 0.85em;
+    font-size: max(12px, 0.85em);
 }
 strong.cifra-pixel {
-    font-size: 0.95em;
+    font-size: max(12px, 0.95em);
     font-weight: 700;
 }
 .frase-deuda strong.cifra-pixel {
@@ -196,7 +196,7 @@ strong.cifra-pixel {
     gap: 4px;
 }
 .total span {
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--tinta-suave);
@@ -341,7 +341,7 @@ strong.cifra-pixel {
     gap: 10px;
     background: transparent;
     border: 0;
-    border-top: 2px dashed var(--crema-osc);
+    border-top: 1px dashed var(--tenue);
     padding: 8px 16px;
     text-align: left;
     color: var(--tinta);
@@ -352,13 +352,13 @@ strong.cifra-pixel {
 .mov-fecha {
     width: 56px;
     flex: none;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--tinta-suave);
 }
 .mov-tipo {
-    width: 64px;
+    width: 78px;
     flex: none;
-    font: 400 10px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     padding: 4px 4px 3px;
@@ -396,7 +396,7 @@ strong.cifra-pixel {
 }
 .mov .chip {
     flex: none;
-    font: 400 10px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     text-transform: uppercase;
 }
 .mov-importe {
@@ -467,7 +467,7 @@ strong.cifra-pixel {
     background: var(--gasto);
 }
 .cifra {
-    font-size: 11px;
+    font-size: 12px;
     text-align: right;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
@@ -533,7 +533,7 @@ strong.cifra-pixel {
     background: var(--ingreso);
 }
 .mes-nombre {
-    font-size: 11px;
+    font-size: 12px;
     text-align: center;
     padding: 3px 0 2px;
     white-space: nowrap;
@@ -781,7 +781,7 @@ strong.cifra-pixel {
     .mov-fecha {
         width: 50px;
         white-space: nowrap;
-        font-size: 10px;
+        font-size: 12px;
     }
     .descargas .nota {
         display: none;

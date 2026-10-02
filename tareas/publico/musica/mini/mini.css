@@ -84,7 +84,7 @@ body.pagina-mini {
     height: 24px;
     color: var(--crema);
     background: transparent;
-    border: 2px solid var(--tinta-suave);
+    border: 2px solid var(--tenue);
     text-decoration: none;
 }
 .mini-abrir:hover {
@@ -107,7 +107,7 @@ body.pagina-mini {
     align-items: center;
     gap: 6px;
     min-width: 0;
-    font: 400 11px/1.1 var(--titulo);
+    font: 400 12px/1.1 var(--titulo);
     letter-spacing: 0.03em;
     text-transform: uppercase;
     color: var(--amarillo);
@@ -131,7 +131,7 @@ body.pagina-mini {
 }
 .mini-chip {
     flex: none;
-    font: 400 10px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     color: var(--tinta);
     background: var(--amarillo);
     padding: 3px 5px 2px;

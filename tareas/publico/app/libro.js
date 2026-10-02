@@ -174,7 +174,7 @@ function montar() {
         h(
             "header",
             { class: "barra" },
-            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("span", { class: "nombre-app" }, "CUENTAS")),
+            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app" }, "CUENTAS")),
             h("nav", { class: "pestanas", "aria-label": "Aplicaciones" }, h("a", { class: "pestana", href: "../" }, "Tareas"), h("span", { class: "pestana activa", "aria-current": "page" }, "Cuentas"), h("a", { class: "pestana", href: "../pizarra/" }, "Pizarra"), h("a", { class: "pestana", href: "../archivo/" }, "Archivo"), h("a", { class: "pestana", href: "../musica/" }, "Música")),
             h(
                 "div",

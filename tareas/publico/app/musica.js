@@ -104,7 +104,7 @@ function montar() {
         h(
             "header",
             { class: "barra" },
-            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("span", { class: "nombre-app" }, "MÚSICA")),
+            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app" }, "MÚSICA")),
             h(
                 "nav",
                 { class: "pestanas", "aria-label": "Aplicaciones" },

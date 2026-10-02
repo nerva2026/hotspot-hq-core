@@ -241,7 +241,7 @@ function montar() {
         h(
             "header",
             { class: "barra" },
-            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("span", { class: "nombre-app" }, "TAREAS")),
+            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app" }, "TAREAS")),
             h(
                 "nav",
                 { class: "pestanas", "aria-label": "Vistas" },

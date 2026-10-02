@@ -34,6 +34,7 @@ raiz.replaceChildren(
     h(
         "div",
         { class: "mini", id: "mini", "data-vista": "cargando" },
+        h("h1", { class: "oculto" }, "Música"),
         h(
             "div",
             { class: "mini-cabeza" },

@@ -43,7 +43,7 @@ a.pestana {
     gap: 6px;
     height: 36px;
     padding: 0 10px 0 5px;
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     letter-spacing: 0.03em;
     text-transform: uppercase;
 }
@@ -78,7 +78,7 @@ a.pestana {
 }
 .boton-icono.texto-zoom {
     min-width: 62px;
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.02em;
 }
 .zoom {
@@ -328,7 +328,7 @@ body[data-herramienta="mover"] .elegida .redimensionar {
     background: var(--color);
     border: 2px solid var(--tinta);
     box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.25);
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     white-space: nowrap;
 }
 
@@ -392,7 +392,7 @@ body[data-herramienta="mover"] .elegida .redimensionar {
     background: transparent;
     color: var(--crema);
     border: 2px solid transparent;
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     letter-spacing: 0.03em;
     text-transform: uppercase;
     text-decoration: none;
@@ -479,6 +479,69 @@ body[data-herramienta="mover"] .elegida .redimensionar {
     .grosor {
         width: 38px;
         height: 38px;
+    }
+}
+/* Por debajo de 600 px (móvil) todos los controles de la barra miden 44 px o más. Las muestras de color siguen
+   pintándose de 24 px: el botón mide 44 px y el cuadrito (con su borde y su sombra) va en ::before. */
+@media (max-width: 599.98px) {
+    .herramientas-pizarra {
+        gap: 4px 8px;
+    }
+    .herramienta {
+        min-width: 44px;
+        height: 44px;
+        justify-content: center;
+        padding: 0 6px;
+    }
+    .boton-icono {
+        min-width: 44px;
+        height: 44px;
+    }
+    .boton-icono.texto-zoom {
+        min-width: 60px;
+        padding: 0 2px;
+        white-space: nowrap;
+        letter-spacing: 0;
+    }
+    .grupo-herramientas.derecha {
+        display: contents;
+    }
+    .grosor {
+        width: 44px;
+        height: 44px;
+    }
+    .colores-pizarra {
+        flex-wrap: wrap;
+        gap: 0;
+    }
+    .color-trazo {
+        position: relative;
+        width: 44px;
+        height: 44px;
+        padding: 10px;
+        border: 0;
+        box-shadow: none;
+        background-clip: content-box !important;
+    }
+    .color-trazo::before {
+        content: "";
+        position: absolute;
+        inset: 10px;
+        border: 2px solid var(--tinta);
+        box-shadow: var(--sombra-p);
+        pointer-events: none;
+    }
+    .color-trazo:active::before {
+        transform: translate(2px, 2px);
+        box-shadow: none;
+    }
+    .color-trazo.activo {
+        outline: 0;
+    }
+    .color-trazo.activo::before {
+        outline: 2px solid var(--tinta);
+        outline-offset: 2px;
+        box-shadow: none;
     }
 }
 @media (prefers-reduced-motion: reduce) {

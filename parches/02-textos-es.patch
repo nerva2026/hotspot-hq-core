@@ -54,7 +54,8 @@ index 686263f..295707e 100644
  const companion: DeepPartial<Translation["cowebsite"]> = {
      open: "Abrir",
 +    openWebsite: "Abrir",
-     close: "Cerca",
+-    close: "Cerca",
++    close: "Cerrar",
      bigBlueButton: "BigBlueButton",
      jitsi: "Jitsi",
 diff --git a/play/src/i18n/es-ES/externalModule.ts b/play/src/i18n/es-ES/externalModule.ts

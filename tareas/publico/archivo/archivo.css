@@ -3,17 +3,6 @@
 a.pestana {
     text-decoration: none;
 }
-.oculto {
-    position: absolute !important;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    border: 0;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-}
 mark {
     background: var(--amarillo);
     color: inherit;
@@ -117,7 +106,7 @@ mark {
 }
 .carpetas-titulo {
     margin: 16px 4px 6px;
-    font: 400 10px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--tinta-suave);
@@ -209,13 +198,13 @@ mark {
     color: var(--tinta-insignia, #fff);
     border: 2px solid var(--tinta);
     box-shadow: 2px 2px 0 var(--tinta);
-    font: 700 10px/1 var(--titulo);
+    font: 700 12px/1 var(--titulo);
     letter-spacing: 0.02em;
 }
 .insignia.grande {
     min-width: 48px;
     height: 48px;
-    font-size: 11px;
+    font-size: 12px;
 }
 .miniatura-caja {
     flex: none;
@@ -289,7 +278,7 @@ mark {
 }
 .chip-fijado {
     padding: 3px 5px 2px;
-    font: 400 9px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     background: var(--amarillo);
@@ -316,7 +305,7 @@ mark {
     overflow-wrap: anywhere;
 }
 .coincidencias {
-    color: var(--tenue);
+    color: var(--tinta-suave);
     font-size: 12px;
 }
 .tarjeta-pie {
@@ -442,7 +431,7 @@ mark {
 }
 .subidas-cab {
     padding: 8px 12px;
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     background: var(--tinta);
@@ -643,7 +632,7 @@ mark {
 }
 .indice-titulo {
     padding: 12px 14px 8px;
-    font: 400 11px/1 var(--titulo);
+    font: 400 12px/1 var(--titulo);
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--tinta-suave);
@@ -817,7 +806,7 @@ mark {
 .documento .imagen-omitida {
     padding: 0 0.4em;
     font-size: 0.85em;
-    color: var(--tenue);
+    color: var(--tinta-suave);
     background: var(--crema-osc);
 }
 .documento.docx > table {
@@ -847,7 +836,7 @@ mark.hallazgo {
 }
 mark.hallazgo.actual {
     color: #fff;
-    background: var(--naranja);
+    background: var(--acento);
     outline: 2px solid var(--tinta);
 }
 
@@ -1002,7 +991,7 @@ mark.hallazgo.actual {
     .visor-titulo .insignia.grande {
         min-width: 38px;
         height: 38px;
-        font-size: 10px;
+        font-size: 12px;
     }
     .visor-titulos h1 {
         font-size: 15px;
@@ -1015,7 +1004,7 @@ mark.hallazgo.actual {
     }
     .visor-acciones .btn {
         padding: 6px 6px 5px;
-        font-size: 10px;
+        font-size: 12px;
         letter-spacing: 0;
     }
     .visor-acciones .largo {

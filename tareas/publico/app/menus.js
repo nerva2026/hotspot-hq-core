@@ -123,9 +123,32 @@ export function menuPrioridad(ancla, actual, alElegir) {
     );
 }
 
+// La letra de un avatar es blanca si llega a 4,5:1 con el color de la persona; si no, tinta (con el naranja de la casa:
+// 4,68:1 con tinta y solo 3,79:1 con blanco). Si ninguna de las dos llega, se oscurece un poco el fondo y la letra va en blanco.
+const luzDe = (c) => {
+    const f = (v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]);
+};
+const razonDe = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+const TINTA_RGB = [28, 23, 21];
+function letraSobre(fondo) {
+    const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(fondo || "");
+    if (!m) return { fondo, letra: "#fff" };
+    const rgb = [m[1], m[2], m[3]].map((x) => parseInt(x, 16));
+    for (let t = 0; t <= 0.5; t += 0.05) {
+        const c = rgb.map((v, i) => Math.round(v * (1 - t) + TINTA_RGB[i] * t));
+        const luz = luzDe(c);
+        if (razonDe(1, luz) >= 4.5) return { fondo: t ? "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("") : fondo, letra: "#fff" };
+        if (t === 0 && razonDe(luz, luzDe(TINTA_RGB)) >= 4.5) return { fondo, letra: "#1c1715" };
+    }
+    return { fondo, letra: "#fff" };
+}
+
 export function avatar(u, { tam = "" } = {}) {
     if (!u) return h("span", { class: ["avatar", "vacio", tam], title: "Sin asignar" }, "?");
-    return h("span", { class: ["avatar", tam], style: { background: u.color }, title: u.nombre }, inicial(u.nombre));
+    const { fondo, letra } = letraSobre(u.color);
+    const estilo = letra === "#fff" ? { background: fondo } : { background: fondo, color: letra, textShadow: "none" };
+    return h("span", { class: ["avatar", tam], style: estilo, title: u.nombre }, inicial(u.nombre));
 }
 
 // Selección de varias personas (responsables).
