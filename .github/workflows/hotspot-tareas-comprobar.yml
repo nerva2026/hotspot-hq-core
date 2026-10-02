@@ -50,7 +50,7 @@ jobs:
           hechos = 0
           for paso in pasos:
               guion = paso.get("run")
-              if not guion or "${{" in guion:
+              if not guion or ("$" + "{{") in guion:
                   continue  # acciones (uses:) y pasos con expresiones de GitHub: son los de publicar
               nombre = paso.get("name", "Comprobar el código")
               print(f"::group::{nombre}", flush=True)
