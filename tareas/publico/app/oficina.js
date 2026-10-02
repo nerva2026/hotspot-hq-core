@@ -15,11 +15,14 @@
 //   hsTareas   { abiertas, hoy, atrasadas } | null               sus tareas sin terminar, las que vencen hoy y las
 //                                                                atrasadas (como las cuenta la Jefa de Producción)
 //   hsCumples  { hoy: "AAAA-MM-DD", cumples: [{ id, nombre }] } | null    cumpleaños de hoy en la oficina
+//   hsMusica   { configurado } | null                            si el servidor tiene conectado Spotify (SPOTIFY_CLIENT_ID y
+//                                                                SPOTIFY_CLIENT_SECRET); el mapa solo pone el botón «Música» si es true
 //
-// Sin sesión: hsSesion false y las otras dos a null. También saca el aviso de los cumpleaños de hoy (una vez al día
+// Sin sesión: hsSesion false y las otras tres a null. También saca el aviso de los cumpleaños de hoy (una vez al día
 // en cada navegador; el día visto se recuerda aquí, porque el mapa no puede recordar nada).
-// Se actualiza con los avisos en directo del tablón (/api/eventos); cada minuto se recuentan las tareas (a
-// medianoche cambian «hoy» y «atrasadas»). Sin sesión se vuelve a probar cada vez más espaciado (1, 2, 4… hasta
+// Se actualiza con los avisos en directo del tablón (/api/eventos), y al reconectar se vuelve a leer todo (también si
+// han conectado Spotify al reiniciar el servidor); cada minuto se recuentan las tareas (a medianoche cambian «hoy» y
+// «atrasadas»). Sin sesión se vuelve a probar cada vez más espaciado (1, 2, 4… hasta
 // 15 minutos, para no llenar la consola de 401) y al momento cuando se vuelve a la pestaña o se entra en el tablón
 // en este navegador (el tablón lo anuncia en localStorage, «hs-tablon:sesion»). Al cerrarse la página, se para.
 // Fuera de la oficina (sin WA, por ejemplo abierta en una pestaña) no hace nada.
@@ -33,7 +36,7 @@ import { textoCumples } from "./cumple.js";
 const OPCIONES = { public: false, persist: false, scope: "room" };
 const CLAVE_AVISO = "hs-oficina:aviso-cumple";
 const MINUTO = 60 * 1000;
-const RATO = 10 * 60 * 1000; // cada cuánto se vuelve a preguntar el día y los cumpleaños de la oficina
+const RATO = 10 * 60 * 1000; // cada cuánto se vuelve a preguntar el día, los cumpleaños de la oficina y si hay música
 const ESPERA_MAXIMA = 15 * MINUTO;
 const AVISO_DEL_TABLON = "hs-tablon:sesion"; // lo escribe el tablón cada vez que arranca con sesión
 
@@ -44,6 +47,7 @@ const tareas = new Map();
 let dejarDeEscuchar = null;
 let reloj = null;
 let ultimaOficina = 0;
+let ultimaMusica = 0;
 let espera = MINUTO; // sin sesión: lo que se espera antes de volver a probar (se dobla cada vez)
 let reintento = null;
 let avisoSinAlmacen = null; // el día del último aviso, si el navegador no deja guardar nada
@@ -118,7 +122,7 @@ async function leerOficina() {
     try {
         oficina = await api.oficina();
     } catch (e) {
-        if (e.estado === 401) sinSesion();
+        if (e.estado === 401 && yo) sinSesion(); // (si otra lectura ya la ha dado por perdida, no se repite)
         return; // sin conexión: se vuelve a probar más tarde
     }
     if (parado || !yo) return;
@@ -127,6 +131,22 @@ async function leerOficina() {
     avisarCumples(oficina);
 }
 const releerOficina = retrasar(leerOficina, 1000);
+
+// ¿Está conectada la música (Spotify) en el servidor? Es lo único que se saca del estado de la cabina. Si no
+// contesta, no se escribe nada (y mientras tanto el mapa no pone el botón «Música») y se vuelve a probar luego.
+async function leerMusica() {
+    if (parado || !yo) return;
+    let musica;
+    try {
+        musica = await api.musica();
+    } catch (e) {
+        if (e.estado === 401 && yo) sinSesion();
+        return;
+    }
+    if (parado || !yo) return;
+    ultimaMusica = Date.now();
+    escribir("hsMusica", { configurado: musica?.configurado === true });
+}
 
 // ---------- todo ----------
 
@@ -146,7 +166,7 @@ async function actualizar() {
     for (const t of datos.tareas) tareas.set(t.id, t);
     escribir("hsSesion", true);
     escribir("hsTareas", contarTareas());
-    await leerOficina();
+    await Promise.all([leerOficina(), leerMusica()]);
     if (!dejarDeEscuchar && !parado && yo) dejarDeEscuchar = escuchar(alRecibir, actualizar);
 }
 
@@ -158,6 +178,7 @@ function sinSesion() {
     escribir("hsSesion", false);
     escribir("hsTareas", null);
     escribir("hsCumples", null);
+    escribir("hsMusica", null);
     reintentarEn(espera);
     espera = Math.min(espera * 2, ESPERA_MAXIMA);
 }
@@ -193,6 +214,7 @@ function cadaMinuto() {
     if (parado || !yo) return;
     escribir("hsTareas", contarTareas());
     if (Date.now() - ultimaOficina > RATO) leerOficina();
+    if (Date.now() - ultimaMusica > RATO) leerMusica();
 }
 
 function parar() {

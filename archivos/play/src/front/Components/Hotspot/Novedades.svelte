@@ -6,6 +6,9 @@
      *   no encima de las pantallas de nombre, muñeco, compañero o cámara, ni del tutorial de WorkAdventure.
      * - Se cierra con el botón, con Esc o pulsando fuera. Se vuelve a abrir pulsando la etiqueta de la versión.
      * - Qué versión es y qué novedades salen: novedades.ts (no hay que tocar este archivo).
+     * - Las novedades con `requiere: "musica"` solo salen si el servidor tiene Spotify conectado: se le pregunta (con la
+     *   cookie de la sesión del tablón, esperando como mucho 2 s) antes de abrir el aviso. Si no contesta, o la música no
+     *   está conectada, esa línea no sale.
      */
     import { onDestroy, tick } from "svelte";
     import { gameSceneIsLoadedStore } from "../../Stores/GameSceneStore";
@@ -18,18 +21,52 @@
     import { pwaInstallSceneVisibleStore } from "../../Stores/PwaInstallStore";
     import { onboardingStore } from "../../Stores/OnboardingStore";
     import { inputFormFocusStore } from "../../Stores/UserInputStore";
-    import { NOVEDADES, TITULO, VERSION } from "./novedades";
+    import { NOVEDADES, TITULO, VERSION, type Novedad } from "./novedades";
 
     /** En localStorage: la última versión cuyo aviso ya salió. */
     const CLAVE_VISTA = "hotspot-novedades-vistas";
     /** Se deja ver el mapa un momento antes de poner el aviso. */
     const ESPERA_MS = 1500;
+    /** El estado de la música en el servidor del tablón (misma web que la oficina: lleva la cookie de la sesión). */
+    const URL_MUSICA = "/tareas/api/musica";
+    /** Lo máximo que se espera a que el servidor diga si la música está conectada. */
+    const ESPERA_MUSICA_MS = 2000;
 
     let abierto = $state(false);
     let botonCerrar: HTMLButtonElement | undefined = $state();
     let origenDelFoco: HTMLElement | null = null;
     /** Aunque localStorage no funcione, el aviso no sale más de una vez por visita. */
     let yaSalio = false;
+    /** ¿Está conectada la música? Solo es true si el servidor lo ha dicho a tiempo (sin sesión, sin respuesta o sin Spotify: false). */
+    let musicaConectada = $state(false);
+    let preguntando: Promise<void> | null = null;
+
+    /** Pregunta al servidor si la música está conectada, con tope de ESPERA_MUSICA_MS. Nunca falla. */
+    function preguntarPorLaMusica(): Promise<void> {
+        if (preguntando) return preguntando;
+        preguntando = (async () => {
+            const control = new AbortController();
+            const tope = setTimeout(() => control.abort(), ESPERA_MUSICA_MS);
+            let conectada = false;
+            try {
+                const respuesta = await fetch(URL_MUSICA, { credentials: "same-origin", cache: "no-store", signal: control.signal });
+                if (respuesta.ok) conectada = (await respuesta.json())?.configurado === true;
+            } catch {
+                // sin respuesta, sin sesión o respuesta rara: la línea de la música no sale
+            } finally {
+                clearTimeout(tope);
+            }
+            musicaConectada = conectada;
+        })().finally(() => {
+            preguntando = null;
+        });
+        return preguntando;
+    }
+
+    /** ¿Sale esta línea? Las que piden música solo salen si está conectada. */
+    const sale = (novedad: Novedad): boolean => typeof novedad === "string" || novedad.requiere !== "musica" || musicaConectada;
+    const textoDe = (novedad: Novedad): string => (typeof novedad === "string" ? novedad : novedad.texto);
+    const novedades = $derived(NOVEDADES.filter(sale).map(textoDe));
 
     function versionVista(): string | null {
         try {
@@ -63,8 +100,9 @@
 
     $effect(() => {
         if (!enElMapa || yaSalio || versionVista() === VERSION) return;
-        const espera = setTimeout(() => {
+        const espera = setTimeout(async () => {
             yaSalio = true;
+            await preguntarPorLaMusica(); // hasta 2 s: el aviso sale ya con sus líneas definitivas
             apuntarVista();
             void abrir();
         }, ESPERA_MS);
@@ -78,6 +116,12 @@
         inputFormFocusStore.set(true); // mientras está abierto, las flechas y el espacio no mueven al muñeco
         await tick();
         botonCerrar?.focus();
+    }
+
+    /** Al pulsar la etiqueta de la versión: sale ya, y la línea de la música aparece si el servidor contesta a tiempo. */
+    function abrirAMano(): void {
+        void preguntarPorLaMusica();
+        void abrir();
     }
 
     function cerrar(): void {
@@ -118,7 +162,7 @@
     type="button"
     title="Novedades de esta versión"
     aria-haspopup="dialog"
-    onclick={abrir}
+    onclick={abrirAMano}
 >
     {VERSION}
 </button>
@@ -131,7 +175,7 @@
             <div class="hs-cuerpo">
                 <h2 id="hs-novedades-titulo" class="hs-titulo">{TITULO}</h2>
                 <ul class="hs-lista">
-                    {#each NOVEDADES as novedad}
+                    {#each novedades as novedad}
                         <li>{novedad}</li>
                     {/each}
                 </ul>

@@ -352,7 +352,7 @@ assert.equal(modulo.status, 200);
 assert.match(modulo.headers.get("content-type") || "", /^text\/javascript/);
 const codigo = await modulo.text();
 assert.ok(codigo.includes('"/iframe_api.js"'), "carga la API de la oficina de la misma web");
-for (const variable of ["hsSesion", "hsTareas", "hsCumples"]) assert.ok(codigo.includes(`"${variable}"`), `escribe ${variable}`);
+for (const variable of ["hsSesion", "hsTareas", "hsCumples", "hsMusica"]) assert.ok(codigo.includes(`"${variable}"`), `escribe ${variable}`);
 for (const dependencia of ["api.js", "util.js", "cumple.js"]) {
     const r = await fetch(`${base}/app/${dependencia}`);
     assert.equal(r.status, 200, dependencia);

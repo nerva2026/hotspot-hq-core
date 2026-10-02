@@ -1,3 +1,37 @@
+diff --git a/play/src/front/Components/PopUp/PopupCowebsite.svelte b/play/src/front/Components/PopUp/PopupCowebsite.svelte
+index f90e98c..badc7ce 100644
+--- a/play/src/front/Components/PopUp/PopupCowebsite.svelte
++++ b/play/src/front/Components/PopUp/PopupCowebsite.svelte
+@@ -1,6 +1,7 @@
+ <script lang="ts">
+     import { onMount, onDestroy } from "svelte";
+     import type { UserInputManager } from "../../Phaser/UserInput/UserInputManager";
++    import LL from "../../../i18n/i18n-svelte";
+     import Button from "../UI/Button.svelte";
+     import PopUpContainer from "./PopUpContainer.svelte";
+ 
+@@ -24,6 +25,8 @@
+ <PopUpContainer reduceOnSmallScreen={true}>
+     {message}
+     {#snippet buttons()}
+-        <Button variant="secondary" size="sm" class="w-full max-w-96" onclick={click}>Open Website</Button>
++        <Button variant="secondary" size="sm" class="w-full max-w-96" onclick={click}
++            >{$LL.cowebsite.openWebsite()}</Button
++        >
+     {/snippet}
+ </PopUpContainer>
+diff --git a/play/src/i18n/en-US/cowebsite.ts b/play/src/i18n/en-US/cowebsite.ts
+index 6af9ca0..91de0a0 100644
+--- a/play/src/i18n/en-US/cowebsite.ts
++++ b/play/src/i18n/en-US/cowebsite.ts
+@@ -3,6 +3,7 @@ import type { Translation } from "../i18n-types";
+ 
+ const companion: DeepPartial<Translation["cowebsite"]> = {
+     open: "Open",
++    openWebsite: "Open Website",
+     close: "Close",
+     bigBlueButton: "BigBlueButton",
+     jitsi: "Jitsi",
 diff --git a/play/src/i18n/es-ES/actionbar.ts b/play/src/i18n/es-ES/actionbar.ts
 index 3b2a5df..5209a86 100644
 --- a/play/src/i18n/es-ES/actionbar.ts
@@ -11,6 +45,18 @@ index 3b2a5df..5209a86 100644
          },
          todolist: {
              title: "Lista de tareas",
+diff --git a/play/src/i18n/es-ES/cowebsite.ts b/play/src/i18n/es-ES/cowebsite.ts
+index 686263f..295707e 100644
+--- a/play/src/i18n/es-ES/cowebsite.ts
++++ b/play/src/i18n/es-ES/cowebsite.ts
+@@ -3,6 +3,7 @@ import type { Translation } from "../i18n-types";
+ 
+ const companion: DeepPartial<Translation["cowebsite"]> = {
+     open: "Abrir",
++    openWebsite: "Abrir",
+     close: "Cerca",
+     bigBlueButton: "BigBlueButton",
+     jitsi: "Jitsi",
 diff --git a/play/src/i18n/es-ES/externalModule.ts b/play/src/i18n/es-ES/externalModule.ts
 index e907ab3..d7ca0bd 100644
 --- a/play/src/i18n/es-ES/externalModule.ts

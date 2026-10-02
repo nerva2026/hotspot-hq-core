@@ -174,9 +174,11 @@ ve nadie más ni se guardan (`scope: "world"` sin `persist: true` lo rechaza Wor
 | `hsSesion` | `true` si quien juega ha entrado en el tablón; `false` si no (o si se le ha caducado la sesión). |
 | `hsTareas` | `{ abiertas, hoy, atrasadas }`: sus tareas sin terminar, las que vencen hoy y las atrasadas (como las cuenta la Jefa de Producción). `null` sin sesión. Es lo que necesita el número del botón «Tareas». |
 | `hsCumples` | `{ hoy: "AAAA-MM-DD", cumples: [{ id, nombre }] }`: de quién es el cumple hoy en la oficina. `null` sin sesión. |
+| `hsMusica` | `{ configurado }`: si el servidor tiene conectado Spotify (lo lee de `/api/musica`). `null` sin sesión. El mapa solo pone el botón «Música» si `configurado` es `true` (mientras no llegue la respuesta, no hay botón). |
 
 - **Al día:** se actualiza con los avisos en directo del tablón; cada minuto recuenta las tareas (a medianoche
-  cambian «hoy» y «atrasadas») y cada 10 minutos vuelve a preguntar qué día es y quién cumple. Sin sesión vuelve a
+  cambian «hoy» y «atrasadas») y cada 10 minutos vuelve a preguntar qué día es, quién cumple y si la música está conectada (y lo vuelve a leer todo al
+  reconectar, por ejemplo tras reiniciar el servidor con Spotify). Sin sesión vuelve a
   probar cada vez más espaciado (1, 2, 4… hasta 15 minutos) y al momento si se vuelve a la pestaña o se entra en el
   tablón en ese navegador.
 - **Aviso de cumpleaños:** lo saca él mismo (`WA.ui.banner.openBanner`, amarillo, se cierra a mano): «¡Hoy es el

@@ -148,7 +148,8 @@ function pintar() {
             ),
         );
     } else if (E.vista === "sin-configurar") {
-        contenido = mensaje("Música del estudio", "Aún no está conectada con Spotify.", enlace(CABINA, "Ver cómo ↗"));
+        // «Ver cómo» lleva a los pasos de la cabina, que solo ve quien administra: el resto ve solo que aún no está conectada.
+        contenido = mensaje("Música del estudio", "Aún no está conectada con Spotify.", E.yo?.admin ? enlace(CABINA, "Ver cómo ↗") : null);
     } else if (E.vista === "sin-conexion") {
         contenido = mensaje("Sin conexión", "No llego a la oficina.", boton("primario", null, "Reintentar", reintentar));
     } else if (!dj) {
