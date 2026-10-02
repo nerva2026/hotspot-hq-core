@@ -309,14 +309,52 @@ a.pestana {
     /* Las esquinas del reproductor de Spotify son redondas: sin esto, en algunos navegadores sale un fondo blanco. */
     border-radius: 12px;
 }
+/* Qué pasa con el sonido y qué hay que hacer: encima del reproductor de Spotify. */
+.ayuda-reproductor {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+}
+.accion-reproductor {
+    flex: none;
+    display: flex;
+}
+.accion-reproductor:empty {
+    display: none;
+}
 .nota-reproductor {
+    flex: 1 1 280px;
+    min-width: 0;
     color: var(--tenue-oscuro);
     font-size: 13px;
 }
-.nota-reproductor[data-estado="bloqueado"],
 .nota-reproductor[data-estado="fallo"],
-.nota-reproductor[data-estado="a-mano"] {
+.nota-reproductor[data-estado="a-mano"],
+.nota-reproductor[data-estado="muestra"],
+.nota-reproductor[data-estado="muestra-acabada"] {
     color: var(--amarillo);
+    font-size: 14px;
+}
+/* Falta que la persona pulse ▶: se dice grande, señalando al reproductor (que queda justo debajo). */
+.ayuda-reproductor[data-estado="bloqueado"] {
+    background: var(--amarillo);
+    border: 2px solid #000;
+    box-shadow: 2px 2px 0 #000;
+    padding: 9px 12px;
+}
+.ayuda-reproductor[data-estado="bloqueado"] .nota-reproductor {
+    color: var(--tinta);
+    font-size: 16px;
+    font-weight: 700;
+}
+.ayuda-reproductor[data-estado="bloqueado"] .nota-reproductor::before {
+    content: "▼ ";
+}
+.reproductor[data-estado="bloqueado"] {
+    outline: 3px solid var(--amarillo);
+    outline-offset: 2px;
+    border-radius: 12px;
 }
 .aviso-musica {
     background: var(--amarillo);
@@ -374,6 +412,19 @@ a.pestana {
     flex-wrap: wrap;
     gap: 6px 4px;
     font-size: 14px;
+}
+/* Cómo le va a cada persona que escucha: verde si le suena, naranja si le falta algo. */
+.como-le-va {
+    color: var(--tinta-suave);
+    white-space: nowrap;
+}
+.persona[data-estado="suena"] .como-le-va {
+    color: var(--verde);
+}
+.persona[data-estado="muestra"] .como-le-va,
+.persona[data-estado="falta-pulsar"] .como-le-va,
+.persona[data-estado="fallo"] .como-le-va {
+    color: var(--naranja-osc);
 }
 .cuenta-conectada {
     display: flex;

@@ -74,7 +74,7 @@ Node 22 sin dependencias:
 | `publico/` | Las pantallas (tablón, `libro/`, `pizarra/`, `archivo/`, `musica/`, `musica/mini/`, `oficina/` y `cumples/`): HTML, CSS y módulos de JavaScript sin compilar. |
 | `publico/app/markdown.js` | Markdown a HTML seguro (todo escapado), para el visor del archivo. |
 | `publico/app/archivo*.js` | El archivo en pantalla: la lista (`archivo.js`), el visor con índice y buscador (`archivo-visor.js`) y piezas comunes (`archivo-comun.js`). |
-| `publico/app/musica*.js` | La música en pantalla: la cabina (`musica.js`), el reproductor pequeño (`musica-mini.js`) y piezas comunes (`musica-comun.js`). |
+| `publico/app/musica*.js` | La música en pantalla: la cabina (`musica.js`), el reproductor pequeño (`musica-mini.js`), piezas comunes (`musica-comun.js`) y los estados del reproductor, sin página, para poder probarlos en Node (`musica-seguidor.js`). |
 | `publico/app/cumple.js`, `confeti.js`, `oficina.js`, `cumples.js` | Los cumpleaños (cuentas y textos), el confeti, el puente invisible de la oficina (`/tareas/oficina/`) y el cartel de cumpleaños (`/tareas/cumples/`). |
 | `publico/app/solo.js` | El modo «solo lo suyo» (`?solo=1`): cuándo se pone y cómo se conserva en las direcciones (ver «Solo lo suyo»). |
 | `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar, una por pantalla y cada una con su servidor y su puerto (tabla en «Las pruebas»). |
@@ -234,13 +234,20 @@ ve nadie más ni se guardan (`scope: "world"` sin `persist: true` lo rechaza Wor
 | `hsSesion` | `true` si quien juega ha entrado en el tablón; `false` si no (o si se le ha caducado la sesión). |
 | `hsTareas` | `{ abiertas, hoy, atrasadas }`: sus tareas sin terminar, las que vencen hoy y las atrasadas (como las cuenta la Jefa de Producción). `null` sin sesión. Es lo que necesita el número del botón «Tareas». |
 | `hsCumples` | `{ hoy: "AAAA-MM-DD", cumples: [{ id, nombre }] }`: de quién es el cumple hoy en la oficina. `null` sin sesión. |
-| `hsMusica` | `{ configurado }`: si el servidor tiene conectado Spotify (lo lee de `/api/musica`). `null` sin sesión. El mapa solo pone el botón «Música» si `configurado` es `true` (mientras no llegue la respuesta, no hay botón). |
+| `hsMusica` | `{ configurado, dj, suena }` (siempre las tres; `null` sin sesión). `configurado`: `true` si el servidor tiene conectado Spotify; el mapa solo pone el botón «Música» si lo es (mientras no llegue la respuesta, no hay botón). `dj`: el nombre de quien pincha, o `null` si la cabina está libre. `suena`: `true` si ahora mismo suena algo que se puede oír; `false` si no (pausa, anuncio, archivo local del DJ, cabina libre… o si no se sabe, ver abajo). |
 
 - **Al día:** se actualiza con los avisos en directo del tablón; cada minuto recuenta las tareas (a medianoche
-  cambian «hoy» y «atrasadas») y cada 10 minutos vuelve a preguntar qué día es, quién cumple y si la música está conectada (y lo vuelve a leer todo al
+  cambian «hoy» y «atrasadas») y cada 10 minutos vuelve a preguntar qué día es, quién cumple y cómo está la música (y lo vuelve a leer todo al
   reconectar, por ejemplo tras reiniciar el servidor con Spotify). Sin sesión vuelve a
   probar cada vez más espaciado (1, 2, 4… hasta 15 minutos) y al momento si se vuelve a la pestaña o se entra en el
   tablón en ese navegador.
+- **`hsMusica` en directo:** el puente la lee de `GET /api/musica` (`configurado`, `cabina.dj.nombre` y `suena`) y
+  la cambia al momento cuando el servidor avisa por el canal general con `{ tipo: "musica-cabina", dj, suena }`: al
+  entrar o salir alguien de la cabina y cuando empieza o deja de sonar (un cambio de canción no avisa). Si quien pincha
+  cambia de nombre, se vuelve a leer. El puente **no** abre el canal de la música: el servidor solo mira el Spotify del
+  DJ mientras alguien tiene la música abierta (la cabina o el reproductor pequeño), y por eso `suena` solo se sabe
+  entonces; con la música cerrada para todos es `false` aunque el DJ tenga algo puesto. Para avisar de que alguien
+  pincha, el mapa tiene que fiarse de `dj`; `suena` es un extra. El mapa todavía solo usa `configurado`.
 - **Aviso de cumpleaños:** lo saca él mismo (`WA.ui.banner.openBanner`, amarillo, se cierra a mano): «¡Hoy es el
   cumple de Diego!», «…de Diego y Víctor!» y, a quien cumple, «¡Feliz cumpleaños, Diego!». Una vez al día en cada
   navegador: el día visto lo recuerda en su `localStorage`, porque el mapa no puede recordar nada.
@@ -256,7 +263,7 @@ mira qué le suena al DJ y lo cuenta a todos por el canal en directo; cada naveg
 el reproductor oficial de Spotify (Embed, `https://open.spotify.com/embed/iframe-api/v1`) y salta al mismo
 punto. Si esa persona ha entrado en Spotify en su navegador suena entera; si no, Spotify solo deja 30 segundos
 de muestra (la pantalla lo avisa). Los anuncios, los archivos locales del DJ y lo que no está en Spotify no se
-pueden poner.
+pueden poner. Por eso **no suena sola en la oficina**: cada persona la oye cuando abre «Música».
 
 - **`/tareas/musica/`** (la cabina): lo que suena (portada, título, artistas, por dónde va), «Escuchar» /
   «Silenciar», «Pinchar yo» / «Dejar la cabina», conectar y desconectar tu Spotify, las últimas 20 canciones
@@ -270,18 +277,66 @@ pueden poner.
   mapa se ponen en el repositorio de mapas, no aquí.
 - Spotify no deja iniciar sesión dentro de un marco: «Conectar mi Spotify» se abre en una pestaña nueva y la
   página de la oficina se actualiza sola (por el canal en directo) cuando termina.
+
+### Los dos recorridos
+
+- **Quien pincha:** «Conectar mi Spotify» → Spotify → vuelta. Si la cabina está libre, **al volver ya está en la
+  cabina** (no hace falta pulsar «Pinchar yo») y la página «¡Listo!» (o el aviso de la cabina, fuera de la oficina) dice
+  el paso siguiente: poner música en su Spotify. Si pincha otra persona, se conecta pero no entra, y se le dice que
+  pulse «Pinchar yo» cuando quede libre. «Pinchar yo» sigue estando para quien ya tiene su Spotify conectado. Quien
+  pincha no se oye a sí mismo: si tenía la música sonando en la cabina o en el pequeño, se calla sola al pasar a
+  pinchar (ya lo oye en su Spotify) y vuelve al dejar la cabina.
+- **A quién le suena de verdad:** en «Escuchan ahora», junto a cada nombre: «suena», «solo 30 s», «le falta pulsar ▶»,
+  «lo ha pausado», «cargando», «esperando» o «no le carga». Lo cuenta la pestaña de cada oyente (abajo, la API).
+- **Quien escucha:** abrir el reproductor pequeño ya es querer oír. La preferencia de cada navegador
+  (`localStorage`, `hs-tablon:musica-escuchar`) tiene tres valores: nunca dicho (sin la clave), sí (`1`, pulsó
+  «Escuchar») y no (`0`, pulsó «Silenciar»). Con «nunca dicho» o «sí», el pequeño arranca solo al abrirse; con «no»,
+  se respeta y enseña «Escuchar». La cabina solo arranca sola con «sí». Arrancar solo no cambia la preferencia.
+- **Lo que se ve según cómo vaya** (estados del reproductor, `publico/app/musica-seguidor.js`):
+
+| Estado | Qué pasa | En el pequeño | En la cabina |
+| --- | --- | --- | --- |
+| `cargando` | Se está poniendo el reproductor de Spotify. | Aviso sobre el hueco del reproductor. | Nota. |
+| `arrancando` | Se le ha pedido que suene y aún no lo ha confirmado. Nunca se da por «sonando» sin confirmación. | Quién pincha. | Nota. |
+| `sonando` | Suena la canción entera, a la vez que la cabina. | Quién pincha y a cuántos más les suena. | Nota. |
+| `bloqueado` | A los 4,5 s de pedírselo no ha sonado: el navegador no le deja empezar solo. | Franja amarilla «Pulsa ▶ aquí abajo» y el reproductor con borde amarillo. | Caja amarilla grande encima del reproductor. |
+| `muestra` | Suena, pero solo la muestra de 30 s (Spotify no reconoce a la persona en ese navegador). | Una línea a la vista con el enlace para entrar en Spotify. | La explicación completa y el botón para entrar en Spotify. |
+| `muestra-acabada` | La muestra ha terminado: silencio hasta la canción siguiente. | Aviso sobre el reproductor, con el enlace. | La explicación completa y el botón. |
+| `fallo` | El script de Spotify no llega, o el reproductor no dice que está listo en 12 s. | Aviso con «Reintentar» y «Abrir en Spotify». | Nota y «Reintentar». |
+| `pausa`, `a-mano`, `esperando`, `local` | El DJ ha pausado; lo ha pausado la persona; no hay nada que poner; es un archivo local del DJ. | Una línea. | Nota. |
+
+  Tras pulsar el enlace para entrar en Spotify, al volver a la pestaña se pone otra vez el reproductor, para que Spotify
+  reconozca la sesión.
+- **Textos:** los nuevos o cambiados en la v0.3.1 están marcados en el código con `PROVISIONAL-v0.3.1` hasta que los
+  decida el equipo.
+
+### API, datos y variables
+
 - **API** (con sesión del crew; lo que cambia algo lleva además la cabecera `x-tablon: 1`): `GET /api/musica` (estado),
   `POST` y `DELETE /api/musica/cabina` (entrar y dejar la cabina), `POST /api/musica/desconectar`,
-  `POST /api/musica/escucho` (esta pestaña escucha o no, con `x-cliente`), `GET /api/musica/conectar` (lleva a
-  Spotify) y `GET /api/musica/vuelta` (la dirección de vuelta de Spotify). En `GET /api/eventos?musica=1&cliente=…`
-  llegan `musica`, `musica-oyentes` y `musica-yo`.
+  `POST /api/musica/escucho` (lo que cuenta cada pestaña, con `x-cliente`), `GET /api/musica/conectar` (lleva a
+  Spotify) y `GET /api/musica/vuelta` (la dirección de vuelta de Spotify; con la cabina libre, quien conecta entra en
+  ella). En `GET /api/eventos?musica=1&cliente=…` llegan `musica`, `musica-oyentes` y `musica-yo`; por el canal general
+  (`GET /api/eventos`, el del tablón y el puente), solo el aviso ligero `musica-cabina` (`{ dj, suena }`).
+- **`POST /api/musica/escucho`** con `{ si, estado }`: `si` dice si esa pestaña escucha y `estado`, cómo le va, de
+  una lista cerrada: `suena`, `muestra`, `falta-pulsar`, `pausado`, `cargando`, `espera` o `fallo` (sin `estado`,
+  `cargando`; cualquier otra cosa, 400 y no cambia nada). Se guarda con la pestaña (solo en memoria) y sale en
+  `oyentes: [{ id, estado }]`, tanto en `GET /api/musica` como en el evento `musica-oyentes` (que sigue llevando
+  `escuchando`, la lista de ids). Si alguien escucha en dos pestañas cuenta la que mejor va. El pequeño y la cabina
+  lo mandan al momento al ponerse o quitarse y, con un poco de calma (0,8 s), cuando cambia su estado.
+- **`GET /api/musica`** lleva además `suena` (lo mismo que el aviso `musica-cabina`; es lo que lee el puente).
+- **Número de serie:** el estado (`GET /api/musica`) y los avisos `musica` y `musica-oyentes` llevan `serie`, un número
+  que solo crece (empieza en la hora del arranque, así que tampoco retrocede al reiniciar el servidor). La cabina y el
+  pequeño no aplican un estado con una serie menor que la última que han visto: así, una respuesta pedida antes que
+  llega después de un aviso más nuevo no deja puesta una canción que ya no suena (o callada una que sí).
 - **Lo que se guarda:** `musica.json` en la carpeta de datos (permisos 600): quién está en la cabina, las
   últimas 20 canciones y el token de refresco de cada persona que ha conectado Spotify. Los tokens no salen
   del servidor (ni por la API, ni al registro) y el de acceso solo vive en memoria. Se pide únicamente permiso
   de lectura (`user-read-currently-playing user-read-playback-state`). Quien sale del crew, quita el permiso
   en Spotify o pulsa «Desconectar» pierde su token y deja la cabina.
-- **Cuánto se pregunta a Spotify:** solo mientras haya alguien con la música abierta, cada 5 segundos
-  (`MUSICA_INTERVALO_MS`); si Spotify pide calma (429) se espera lo que diga.
+- **Cuánto se pregunta a Spotify:** solo mientras haya alguien con la música abierta (la cabina o el reproductor
+  pequeño; el puente de la oficina no cuenta), cada 5 segundos (`MUSICA_INTERVALO_MS`); si Spotify pide calma (429) se
+  espera lo que diga.
 - **Variables** (en el `.env` del servidor, nunca en el repositorio): `SPOTIFY_CLIENT_ID` y
   `SPOTIFY_CLIENT_SECRET` (la aplicación de Spotify); opcionales `SPOTIFY_REDIRECT_URI` (por defecto
   `<TAREAS_URL>api/musica/vuelta`, o sea `https://oficina.hot-spot.es/tareas/api/musica/vuelta`) y
@@ -319,7 +374,12 @@ TAREAS_DATOS=/tmp/m node pruebas/musica.mjs http://127.0.0.1:3995/tareas <códig
 ```
 
 El script de Spotify (Embed) no carga sin salida a internet; para ver las pantallas sin él, una prueba en
-navegador puede definir `window.onSpotifyIframeApiReady` con un reproductor de mentira.
+navegador puede definir `window.onSpotifyIframeApiReady` con un reproductor de mentira: se le llama con un objeto que
+tenga `createController(elemento, { uri, width, height }, alCrear)`, y `alCrear` recibe el reproductor (`addListener`,
+`loadUri`, `play`, `resume`, `pause`, `seek`, `destroy`), que emite `ready` y `playback_update` con
+`{ data: { isPaused, isBuffering, duration, position } }`. Con eso se ven todos los casos: que suene, que no arranque
+solo (no emitir nada tras `play`), la muestra (`duration` de 30000) y su final, y que no cargue (no emitir `ready`).
+La lógica de esos estados se prueba sin navegador con `node pruebas/reproductor.mjs`.
 
 ## En el servidor
 
@@ -357,7 +417,8 @@ sus variables, están en el workflow.
 | Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). |
 | Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje, puente `/tareas/oficina/` y cartel `/tareas/cumples/` (la API y lo que sirve; en pantalla se mira con un navegador). |
 | Probar el archivo | `pruebas/archivo.mjs` | 3992 | Subir un documento de cada tipo, enlaces, papelera, búsqueda, lo que no debe entrar, Markdown y Word escapados y el límite total (`ARCHIVO_MAXIMO_MB=40`). |
-| Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify y lo que suena en directo; y la música «sin configurar». |
+| Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify (y entrar en la cabina al conectar, libre u ocupada), lo que suena en directo, cómo le va a cada oyente, el aviso a la oficina y el puente con `hsMusica` (el módulo de verdad con una oficina de mentira); y la música «sin configurar». |
+| Probar el reproductor de la música | `pruebas/reproductor.mjs` | ninguno (sin servidor ni navegador) | Los estados del reproductor (`publico/app/musica-seguidor.js`) con un Embed y un reloj de mentira: suena entera, la muestra de 30 s y su final, no arranca solo, no carga, y el cambio de canción. |
 | Probar el modo solo | `pruebas/solo.mjs` | 3990 | `?solo=1` sin navegador: lo que sirve el servidor (las cinco pantallas, `app/solo.js`, la regla de `estilo.css`, la vuelta de entrar), la lógica del módulo y que las pantallas marcan sus enlaces a las demás y no pierden el modo al cambiar de dirección. |
 | Probar el acceso de la oficina | `pruebas/oficina-oidc.mjs` y `pruebas/google-falso.mjs` | 3998 y 8412 (el Google de mentira) | Entrar por `/cuentas` con `openid-client` 5 (la librería de WorkAdventure): PKCE, `userinfo` y revocar. Es el único paso que instala un paquete (`npm install`). |
 

@@ -40,6 +40,7 @@ jobs:
       # ninguno), y lo para al acabar. Puertos: servidor 3999 · libro 3991 · pizarra 3997 · tablón 3993 ·
       # cumpleaños 3994 · archivo 3992 · música 3995 (la prueba arranca otro sin Spotify en el 3996 y usa el
       # Spotify de mentira del 8614) · modo solo 3990 · acceso de la oficina 3998 (con el Google de mentira del 8412).
+      # El reproductor de la música es solo lógica: no arranca servidor ni usa puerto.
       - name: Probar el servidor
         working-directory: tareas
         run: |
@@ -139,6 +140,18 @@ jobs:
             exit 1
           fi
           cat /tmp/prueba-musica.log
+
+      - name: Probar el reproductor de la música
+        working-directory: tareas
+        run: |
+          # Sin servidor ni navegador: los estados del reproductor (publico/app/musica-seguidor.js) con un reproductor
+          # de Spotify de mentira y un reloj de mentira.
+          if ! node pruebas/reproductor.mjs > /tmp/prueba-reproductor.log 2>&1; then
+            cat /tmp/prueba-reproductor.log
+            tail -n 15 /tmp/prueba-reproductor.log | sed 's/%/%25/g' | while IFS= read -r linea; do echo "::error::reproductor: $linea"; done
+            exit 1
+          fi
+          cat /tmp/prueba-reproductor.log
 
       - name: Probar el archivo
         working-directory: tareas

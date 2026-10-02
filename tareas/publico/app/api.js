@@ -64,7 +64,7 @@ export const api = {
     cambiarYo: (datos) => llamar("PATCH", "yo", datos),
     // la oficina: qué día es hoy allí y de quién es el cumple (hoy, los próximos 30 días y todos los del crew), y el mío
     oficina: () => llamar("GET", "oficina"),
-    // la música: el estado de la cabina (el puente de la oficina solo mira «configurado»)
+    // la música: el estado de la cabina (el puente de la oficina mira «configurado», quién pincha y «suena»)
     musica: () => llamar("GET", "musica"),
     crear: (tarea) => llamar("POST", "tareas", tarea),
     // «antes»: el texto en el que se basan los cambios de las notas; si ya no es el que hay, el servidor contesta 409

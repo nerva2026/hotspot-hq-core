@@ -3,16 +3,22 @@
 //
 // Aquí no pasa audio por nuestro servidor: cada navegador pone la canción del DJ con el reproductor de Spotify y salta
 // al mismo punto. Si esa persona ha entrado en Spotify en su navegador, suena entera; si no, 30 segundos de muestra.
+// La lógica de los estados del reproductor (cuándo «suena» de verdad, la muestra, el bloqueo, el fallo de carga) está
+// en musica-seguidor.js, sin página, para poder probarla en Node; aquí va lo que toca la página.
 
 import { h } from "./util.js";
 import { llamar, BASE_API, CLIENTE } from "./api.js";
+import { Seguidor, PLAZO_LISTO, conLlegada, posicionAhora, estadoDeOyente, vigiaDeSerie } from "./musica-seguidor.js";
+
+export { conLlegada, posicionAhora, estadoDeOyente, vigiaDeSerie };
 
 export const apiMusica = {
     estado: () => llamar("GET", "musica"),
     tomar: () => llamar("POST", "musica/cabina"),
     dejar: () => llamar("DELETE", "musica/cabina"),
     desconectar: () => llamar("POST", "musica/desconectar"),
-    escucho: (si) => llamar("POST", "musica/escucho", { si }),
+    // «estado»: cómo le va a esta pestaña (de la lista cerrada ESTADOS_OYENTE), para que lo vea quien pincha
+    escucho: (si, estado = null) => llamar("POST", "musica/escucho", si && estado ? { si, estado } : { si }),
 };
 
 // Conectar Spotify: se abre en una pestaña (Spotify no deja entrar desde un marco); «volver» = en esta misma pestaña.
@@ -86,15 +92,7 @@ export function tiempo(ms) {
     return horas ? `${horas}:${String(minutos).padStart(2, "0")}:${segundos}` : `${minutos}:${segundos}`;
 }
 
-// Lo que suena, con la hora de llegada (reloj de este navegador, para no depender de la hora del servidor).
-export const conLlegada = (sonando) => (sonando ? { ...sonando, recibido: performance.now() } : null);
-
-// Por dónde va ahora mismo la canción del DJ (avanza sola entre avisos del servidor).
-export function posicionAhora(s) {
-    if (!s) return 0;
-    const avance = s.reproduciendo ? performance.now() - s.recibido : 0;
-    return Math.min(s.duracion || Infinity, s.posicion + avance);
-}
+// (conLlegada y posicionAhora —lo que suena con su hora de llegada, y por dónde va ahora— están en musica-seguidor.js)
 
 export function horaCorta(iso) {
     const d = new Date(iso);
@@ -164,13 +162,16 @@ export function portada(url, { clase = "portada", alt = "" } = {}) {
 
 // ---------- recordar si se quiere escuchar (en este navegador) ----------
 
+// Tres valores: "si" (pulsó «Escuchar»), "no" (pulsó «Silenciar») y null (nunca lo ha dicho). Con «nunca dicho», abrir
+// el reproductor pequeño ya es querer oír (arranca solo); la cabina espera a que se pulse «Escuchar».
 const CLAVE_ESCUCHAR = "hs-tablon:musica-escuchar";
 export const preferencia = {
     leer() {
         try {
-            return localStorage.getItem(CLAVE_ESCUCHAR) === "1";
+            const valor = localStorage.getItem(CLAVE_ESCUCHAR);
+            return valor === "1" ? "si" : valor === "0" ? "no" : null;
         } catch {
-            return false;
+            return null;
         }
     },
     guardar(si) {
@@ -247,279 +248,72 @@ function pedirApi() {
         if (estadoApi !== "cargando") return;
         estadoApi = "fallo";
         avisarApi();
-    }, 15000);
+    }, PLAZO_LISTO);
 }
 
-const MARGEN_DERIVA = 4000; // ms de diferencia con el DJ a partir de los que se salta
-const CALMA_SALTOS = 6000; // y no más de un salto cada tantos ms
-
-// Sigue al DJ con el reproductor oficial de Spotify (Embed). «estado» para la pantalla:
-//   apagado · cargando · fallo · esperando (no hay nada que poner) · local (archivo del DJ, no está en Spotify) ·
-//   sonando · pausa (el DJ ha pausado) · bloqueado (el navegador no deja empezar solo) · a-mano (lo has pausado tú)
-// «muestra»: suena la muestra de 30 s (no has entrado en Spotify en este navegador).
-export class Reproductor {
-    constructor(hueco, { alto = 152, alCambiar = () => {} } = {}) {
-        this.hueco = hueco;
-        this.alto = alto;
-        this.alCambiar = alCambiar;
-        this.encendido = false;
-        this.control = null;
-        this.listo = false;
-        this.cargada = null;
-        this.objetivo = null;
-        this.esLocal = false;
-        this.local = { pausado: true, buffer: false, posicion: 0, duracion: 0, actualizado: 0, uri: null };
-        this.muestra = false;
-        this.manual = false; // la persona lo ha pausado en el reproductor: no se le vuelve a poner en marcha
-        this.bloqueado = false;
-        this.buscarAlEmpezar = false;
-        this.ultimoSalto = 0;
-        this.pausaMia = 0;
-        this.pedidoTocar = 0;
-        this.vigiaTocar = null;
-        this.alApi = () => this.conApi();
-        this.estadoAnterior = "";
-    }
-
-    get estado() {
-        if (!this.encendido) return "apagado";
-        if (this.esLocal) return "local";
-        if (!this.objetivo) return "esperando";
-        if (!this.control || !this.listo) return estadoApi === "fallo" && !this.control ? "fallo" : "cargando";
-        if (!this.objetivo.reproduciendo) return "pausa";
-        if (this.manual) return "a-mano";
-        if (this.bloqueado) return "bloqueado";
-        return "sonando";
-    }
-
-    avisar() {
-        const info = { estado: this.estado, muestra: this.muestra && this.encendido, local: this.local };
-        this.alCambiar(info);
-    }
-
-    // La persona quiere escuchar.
-    encender() {
-        if (this.encendido) return;
-        this.encendido = true;
-        this.manual = false;
-        this.bloqueado = false;
-        avisosApi.add(this.alApi);
-        if (estadoApi === "fallo") estadoApi = "sin-pedir"; // otro intento
-        pedirApi();
-        this.conApi();
-        this.avisar();
-    }
-
-    // Se calla y quita el reproductor.
-    apagar() {
-        this.encendido = false;
-        avisosApi.delete(this.alApi);
-        clearTimeout(this.vigiaTocar);
-        const control = this.control;
-        this.control = null;
-        this.listo = false;
-        this.cargada = null;
-        this.muestra = false;
-        this.local = { pausado: true, buffer: false, posicion: 0, duracion: 0, actualizado: 0, uri: null };
-        if (control) {
-            try {
-                control.pause();
-            } catch {
-                /* ya no está */
-            }
-            try {
-                control.destroy();
-            } catch {
-                /* ya no está */
-            }
-        }
-        this.hueco.replaceChildren();
-        this.avisar();
-    }
-
-    // Lo que suena en la cabina (de conLlegada(); null si nada).
-    seguir(sonando) {
-        const antes = this.objetivo;
-        this.esLocal = Boolean(sonando?.local);
-        this.objetivo = sonando && !sonando.local && sonando.uri ? sonando : null;
-        if (!this.encendido) return;
-        const o = this.objetivo;
-        if (!o) {
-            if (this.control && this.listo && !this.local.pausado) this.pausar();
-            return this.avisar();
-        }
-        if (!this.control) {
-            this.conApi();
-            return this.avisar();
-        }
-        if (!this.listo) return this.avisar();
-        if (this.cargada !== o.uri) {
-            this.cargar();
-            return this.avisar();
-        }
-        if (antes && antes.uri === o.uri) {
-            if (antes.reproduciendo !== o.reproduciendo) {
-                if (o.reproduciendo) {
-                    this.manual = false;
-                    this.buscarAlEmpezar = !this.muestra;
-                    this.reanudar();
-                } else this.pausar();
-            } else if (o.reproduciendo && !this.manual && !this.muestra && Math.abs(posicionAhora(antes) - posicionAhora(o)) > 2500) {
-                this.saltar(); // el DJ ha saltado a otro punto
-            }
-        }
-        this.avisar();
-    }
-
-    conApi() {
-        if (!this.encendido) return;
-        if (estadoApi !== "lista") return this.avisar();
-        if (this.control || this.creando || !this.objetivo) return this.avisar();
-        this.creando = true;
-        const sitio = document.createElement("div");
-        this.hueco.replaceChildren(sitio);
-        const uri = this.objetivo.uri;
-        try {
-            IFrameAPI.createController(sitio, { uri, width: "100%", height: this.alto }, (control) => {
-                this.creando = false;
-                if (!this.encendido) {
-                    try {
-                        control.destroy();
-                    } catch {
-                        /* nada */
-                    }
-                    return;
-                }
-                this.control = control;
-                this.cargada = uri;
-                control.addListener("ready", () => this.alEstarListo());
-                control.addListener("playback_update", (e) => this.alActualizar(e?.data || {}));
-                this.avisar();
-            });
-        } catch (error) {
-            this.creando = false;
+// Quien sabe poner el reproductor de Spotify en la página (lo que Seguidor llama «fábrica», ver musica-seguidor.js).
+function fabricaDeSpotify(hueco, alto) {
+    return {
+        estado: () => (estadoApi === "sin-pedir" ? "cargando" : estadoApi),
+        pedir(alCambiar) {
+            avisosApi.add(alCambiar);
+            if (estadoApi === "fallo") estadoApi = "sin-pedir"; // otro intento
+            pedirApi();
+            return () => avisosApi.delete(alCambiar);
+        },
+        crear(uri, alCrear) {
+            const sitio = document.createElement("div");
+            hueco.replaceChildren(sitio);
+            IFrameAPI.createController(sitio, { uri, width: "100%", height: alto }, alCrear);
+        },
+        fallo(error) {
             console.warn("No se ha podido poner el reproductor de Spotify:", error);
             estadoApi = "fallo";
-            this.avisar();
-        }
-    }
+        },
+        vaciar: () => hueco.replaceChildren(),
+    };
+}
 
-    alEstarListo() {
-        if (!this.control) return;
-        const primeraVez = !this.listo;
-        this.listo = true;
-        if (primeraVez) {
-            const o = this.objetivo;
-            if (o && this.cargada !== o.uri) this.cargar();
-            else if (o?.reproduciendo) {
-                this.buscarAlEmpezar = true;
-                this.tocar();
-            }
-        }
-        this.avisar();
+// Sigue al DJ con el reproductor oficial de Spotify (Embed), puesto en «hueco». Los estados que da para la pantalla
+// («alCambiar({ estado, muestra, local })») están explicados en musica-seguidor.js.
+export class Reproductor extends Seguidor {
+    constructor(hueco, { alto = 152, alCambiar = () => {} } = {}) {
+        super(fabricaDeSpotify(hueco, alto), { alCambiar });
+        this.hueco = hueco;
     }
+}
 
-    cargar() {
-        const o = this.objetivo;
-        this.cargada = o.uri;
-        this.muestra = false;
-        this.manual = false;
-        this.local = { ...this.local, posicion: 0, duracion: 0, uri: o.uri };
-        this.buscarAlEmpezar = true;
-        try {
-            this.control.loadUri(o.uri);
-        } catch {
-            /* el reproductor se ha ido */
-        }
-        if (o.reproduciendo) this.tocar();
-    }
+// ---------- contar al servidor cómo le va a esta pestaña ----------
 
-    tocar() {
-        this.pedidoTocar = performance.now();
-        try {
-            this.control.play();
-        } catch {
-            /* el reproductor se ha ido */
-        }
-        this.vigilarTocar();
+// Quien pincha ve junto a cada nombre si le suena de verdad («suena», «solo 30 s», «le falta pulsar ▶»…). Se cuenta al
+// momento al ponerse a escuchar o al dejarlo, y con un poco de calma lo demás: entre canción y canción el reproductor
+// pasa un instante por «cargando», y eso no hace falta contarlo.
+export function avisadorDeEscucha(reproductor, calma = 800) {
+    let enviado = null;
+    let espera = null;
+    function enviar() {
+        clearTimeout(espera);
+        espera = null;
+        const si = reproductor.encendido;
+        const estado = si ? estadoDeOyente(reproductor.estado) : null;
+        const clave = `${si}·${estado}`;
+        if (clave === enviado) return;
+        const nada = enviado === null && !si; // no escucha y el servidor no sabe nada de esta pestaña: nada que contar
+        enviado = clave;
+        if (nada) return;
+        apiMusica.escucho(si, estado).catch(() => {
+            if (enviado === clave) enviado = null; // no ha llegado: la próxima vez se vuelve a contar
+        });
     }
-
-    reanudar() {
-        this.pedidoTocar = performance.now();
-        try {
-            this.control.resume();
-        } catch {
-            /* el reproductor se ha ido */
-        }
-        this.vigilarTocar();
-    }
-
-    // Si al poco de pedirle que suene sigue parado, el navegador no le deja empezar solo: hay que pulsar ▶.
-    vigilarTocar() {
-        clearTimeout(this.vigiaTocar);
-        this.vigiaTocar = setTimeout(() => {
-            if (!this.encendido || !this.control || !this.objetivo?.reproduciendo || this.manual) return;
-            if (this.local.pausado && !this.local.buffer) {
-                this.bloqueado = true;
-                this.avisar();
-            }
-        }, 4500);
-    }
-
-    pausar() {
-        this.pausaMia = performance.now();
-        try {
-            this.control.pause();
-        } catch {
-            /* el reproductor se ha ido */
-        }
-    }
-
-    saltar() {
-        if (!this.control || !this.objetivo || this.muestra) return;
-        const destino = posicionAhora(this.objetivo);
-        if (this.local.duracion && destino >= this.local.duracion - 1000) return;
-        this.ultimoSalto = performance.now();
-        try {
-            this.control.seek(Math.max(0, destino / 1000));
-        } catch {
-            /* el reproductor se ha ido */
-        }
-    }
-
-    alActualizar(d) {
-        const antes = this.local;
-        const ahora = performance.now();
-        this.local = {
-            pausado: Boolean(d.isPaused),
-            buffer: Boolean(d.isBuffering),
-            posicion: Number(d.position) || 0,
-            duracion: Number(d.duration) || 0,
-            actualizado: ahora,
-            uri: this.cargada,
-        };
-        const o = this.objetivo;
-        if (!o) return this.avisar();
-        // Muestra de 30 s: el reproductor dice que dura mucho menos que la canción del DJ.
-        this.muestra = this.local.duracion > 0 && o.duracion > 0 && this.local.duracion <= 31000 && this.local.duracion < o.duracion - 5000;
-        if (!this.local.pausado) {
-            this.bloqueado = false;
-            this.manual = false;
-            if (this.buscarAlEmpezar) {
-                this.buscarAlEmpezar = false;
-                if (!this.muestra && o.reproduciendo) this.saltar();
-            } else if (o.reproduciendo && !this.muestra && ahora - this.ultimoSalto > CALMA_SALTOS && Math.abs(this.local.posicion - posicionAhora(o)) > MARGEN_DERIVA) {
-                this.saltar(); // se ha quedado atrás (o adelantado)
-            }
-        } else if (!antes.pausado && o.reproduciendo && ahora - this.pausaMia > 1500 && !this.local.buffer) {
-            // Estaba sonando y se ha parado sin que lo pidiéramos: o se ha acabado la muestra, o lo ha pausado la persona.
-            const alFinal = this.local.duracion > 0 && this.local.posicion >= this.local.duracion - 1500;
-            if (!alFinal) this.manual = true;
-        }
-        const estado = `${this.estado}·${this.muestra}`;
-        if (estado !== this.estadoAnterior) {
-            this.estadoAnterior = estado;
-            this.avisar();
-        }
-    }
+    return {
+        ya: enviar,
+        luego() {
+            if (!espera) espera = setTimeout(enviar, calma);
+        },
+        // El canal en directo se ha abierto (otra vez): el servidor no sabe nada de esta pestaña.
+        repetir() {
+            enviado = null;
+            if (reproductor.encendido) enviar();
+        },
+    };
 }
