@@ -183,4 +183,31 @@ try {
     globalThis.fetch = fetchReal;
 }
 
+// La franja «Sin conexión…» (app/conexion.js): sale cuando el canal lleva caído un rato y se quita sola al volver
+const { vigilante, TEXTO_SIN_CONEXION } = await import(new URL("conexion.js", carpetaApp).href);
+const puestas = [];
+globalThis.document = {
+    createElement: () => ({ setAttribute() {}, isConnected: false, remove() { this.isConnected = false; } }),
+    body: { append(e) { e.isConnected = true; puestas.push(e); } },
+};
+try {
+    const pausa = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
+    const v = vigilante(40);
+    v.cayo();
+    v.cayo(); // cada intento fallido de reconectar avisa otra vez: solo cuenta el primero
+    await pausa(10);
+    v.volvio();
+    await pausa(80);
+    assert.equal(puestas.length, 0, "un corte corto no la saca");
+    v.cayo();
+    await pausa(90);
+    assert.equal(puestas.length, 1, "sale si sigue caído");
+    assert.equal(puestas[0].textContent, TEXTO_SIN_CONEXION);
+    assert.equal(puestas[0].isConnected, true);
+    v.volvio();
+    assert.equal(puestas[0].isConnected, false, "se quita sola al volver");
+} finally {
+    delete globalThis.document;
+}
+
 console.log("Tablón (notas que no se pisan): bien");

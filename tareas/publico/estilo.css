@@ -2312,3 +2312,20 @@ table.lista {
         flex: 1 1 100%;
     }
 }
+
+/* ---------- franja «Sin conexión…» (app/conexion.js): fija abajo, sin tapar clics ni mover nada ---------- */
+.aviso-conexion {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    padding: 4px 10px;
+    background: #7a1016;
+    color: #fff;
+    border-top: 2px solid #000;
+    font-size: 13px;
+    line-height: 18px;
+    text-align: center;
+    pointer-events: none;
+}

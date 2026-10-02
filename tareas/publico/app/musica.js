@@ -6,6 +6,7 @@
 
 import { h, $, vaciar, haceCuanto } from "./util.js";
 import { api, cuandoSePierdaLaSesion } from "./api.js";
+import { vigilante } from "./conexion.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
 import { abrirMenu, cerrarMenu, aviso, ventana, avatar } from "./menus.js";
 import {
@@ -49,7 +50,6 @@ const raiz = document.getElementById("app");
 let canal = null;
 let reproductor = null;
 let reloj = null;
-let caidoDesde = 0;
 const enOficina = dentroDeLaOficina();
 
 const usuario = (id) => E.usuarios.find((u) => u.id === id) || null;
@@ -119,7 +119,6 @@ function montar() {
         h(
             "main",
             { class: "musica", id: "musica" },
-            h("div", { class: "aviso-conexion", id: "aviso-conexion", role: "status", hidden: true }, "Sin conexión con la oficina: reintentando…"),
             h(
                 "div",
                 { class: "musica-contenido", id: "musica-contenido" },
@@ -657,21 +656,20 @@ function alEvento(ev) {
     }
 }
 
+const franja = vigilante(); // la franja «Sin conexión…», la misma de todas las pantallas (app/conexion.js)
+
 function abrirCanal() {
     canal?.cerrar();
+    franja.parar();
     canal = canalMusica({
         alEvento,
         alAbrir: () => {
-            caidoDesde = 0;
-            mostrarConexion(true);
+            franja.volvio();
             recargar();
             if (reproductor?.encendido) apiMusica.escucho(true).catch(() => {});
         },
         alCaer: async (cerrado) => {
-            if (!caidoDesde) caidoDesde = Date.now();
-            setTimeout(() => {
-                if (caidoDesde && Date.now() - caidoDesde >= 3000) mostrarConexion(false);
-            }, 3100);
+            franja.cayo(); // sale si sigue caído pasados unos segundos
             if (!cerrado) return;
             // El navegador se ha rendido: ¿se ha caído el servidor o ha caducado la sesión?
             try {
@@ -681,11 +679,6 @@ function abrirCanal() {
             }
         },
     });
-}
-
-function mostrarConexion(bien) {
-    const el = $("#aviso-conexion");
-    if (el) el.hidden = bien;
 }
 
 function empezar(datos) {

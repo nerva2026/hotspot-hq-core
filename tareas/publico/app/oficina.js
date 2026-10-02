@@ -167,7 +167,7 @@ async function actualizar() {
     escribir("hsSesion", true);
     escribir("hsTareas", contarTareas());
     await Promise.all([leerOficina(), leerMusica()]);
-    if (!dejarDeEscuchar && !parado && yo) dejarDeEscuchar = escuchar(alRecibir, actualizar);
+    if (!dejarDeEscuchar && !parado && yo) dejarDeEscuchar = escuchar(alRecibir, actualizar, { aviso: false }); // invisible: sin franja
 }
 
 function sinSesion() {

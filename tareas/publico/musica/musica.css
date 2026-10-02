@@ -325,17 +325,7 @@ a.pestana {
     padding: 7px 10px;
     font-size: 14px;
 }
-.aviso-conexion {
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    background: #7a1016;
-    color: #fff;
-    text-align: center;
-    padding: 6px 10px;
-    font-size: 14px;
-    border-bottom: 2px solid #000;
-}
+/* (la franja «Sin conexión…» es la de todas las pantallas: .aviso-conexion en estilo.css) */
 
 /* ---------- la cabina y tu Spotify ---------- */
 .cabina-estado {

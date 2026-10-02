@@ -1,5 +1,7 @@
 // Conversación con el servidor del tablón (y del libro de cuentas, que usa la misma API).
 
+import { vigilante } from "./conexion.js";
+
 // La API está en /tareas/api/ vista desde cualquier página (el tablón en /tareas/, el libro en /tareas/libro/…).
 export const BASE_API = new URL("../api/", import.meta.url);
 
@@ -145,16 +147,20 @@ export function subirDocumento(archivo, { carpeta = "", alProgreso } = {}) {
 }
 
 // Cambios en directo: el servidor avisa de todo lo que hacen los demás (y, con «pizarra», de lo que pasa en ella).
-export function escuchar(alRecibir, alReconectar, { pizarra } = {}) {
+// «aviso»: que salga la franja «Sin conexión…» (app/conexion.js) mientras el canal esté caído. Todas las pantallas la
+// sacan por este mismo código; solo el puente invisible de la oficina no la quiere.
+export function escuchar(alRecibir, alReconectar, { pizarra, aviso = true } = {}) {
     let fuente = null;
     let cayo = false;
     let parado = false;
+    const franja = aviso ? vigilante() : null;
     function abrir() {
         if (parado) return;
         const direccion = new URL("eventos", BASE_API);
         if (pizarra) direccion.searchParams.set("pizarra", pizarra);
         fuente = new EventSource(direccion);
         fuente.onopen = () => {
+            franja?.volvio();
             if (cayo) alReconectar();
             cayo = false;
         };
@@ -169,6 +175,7 @@ export function escuchar(alRecibir, alReconectar, { pizarra } = {}) {
         };
         fuente.onerror = () => {
             cayo = true;
+            franja?.cayo();
             // El navegador reintenta solo; si se rinde (p. ej. el servidor se está actualizando), se vuelve
             // a pedir todo (así, si la sesión ha caducado, se pasa a la pantalla de entrada) y se reabre.
             if (fuente.readyState === EventSource.CLOSED && !parado) {
@@ -183,6 +190,7 @@ export function escuchar(alRecibir, alReconectar, { pizarra } = {}) {
     abrir();
     return () => {
         parado = true;
+        franja?.parar();
         fuente?.close();
     };
 }
