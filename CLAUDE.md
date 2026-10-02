@@ -11,7 +11,8 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
 - Los textos visibles se deciden con el equipo: no inventar cifras, nombres ni contenido.
 - Estilo: pixel art retro (tipo Habbo). Paleta: tinta `#1c1715`, crema `#f3e6d8`, naranja `#e0562a`,
   acento `#c4461f`, amarillo `#ffd84a`. Letras Silkscreen (títulos) y Pixelify Sans (texto), sin ligaduras
-  (Pixelify dibuja «fi» como una A).
+  (Pixelify dibuja «fi» como una A). Las cifras (importes, fechas, horas, contadores), siempre a un tamaño de la
+  rejilla de su letra: Silkscreen a 16 px (8, 24…); Pixelify Sans a 11, 16 o 21–22 px (ver `tareas/README.md`).
 - **El servidor no es accesible desde Claude.** Lo que haya que hacer allí se prepara como un bloque para
   pegar en la consola (escrito a un archivo y ejecutado con `bash`, con copias `*.antes-…` de lo que toca),
   se prueba antes en seco con un `docker` falso y lo ejecuta una persona del equipo.
@@ -42,7 +43,7 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
 
 ```sh
 cd tareas
-node pruebas/google-falso.mjs &            # Google de mentira en :8412
+node pruebas/google-falso.mjs &            # Google de mentira en :8412 (otro puerto: node pruebas/google-falso.mjs 8422)
 TAREAS_DATOS=/tmp/t TAREAS_PUERTO=8413 TAREAS_URL=http://localhost:8413/tareas/ \
 GOOGLE_CLIENT_ID=cliente-google GOOGLE_CLIENT_SECRET=secreto-google \
 GOOGLE_AUTH_URL=http://localhost:8412/auth GOOGLE_TOKEN_URL=http://localhost:8412/token \
@@ -71,9 +72,11 @@ datos y su puerto, ninguno repetido) y lo para al acabar; los comandos exactos e
 | Probar el acceso de la oficina | `oficina-oidc.mjs` + `google-falso.mjs` (instala `openid-client`) | 3998 y 8412 |
 
 Una prueba nueva lleva su puerto, su carpeta de datos y su registro propios. Y una pantalla nueva se enlaza en las
-demás (pestañas de arriba y menú de la cuenta, con los nombres de siempre: «Tablón de tareas», «Libro de cuentas»,
-«Pizarra», «Archivo» y «Música»), marcando cada enlace con la clase `otra-pantalla`: con `?solo=1` (como las abre el
-mapa desde un personaje o un objeto) esos enlaces no salen. Detalles en `tareas/README.md` («Solo lo suyo»).
+demás (pestañas de arriba, las mismas en las cinco pantallas, y menú de la cuenta, con los nombres de siempre: «Tablón
+de tareas», «Libro de cuentas», «Pizarra», «Archivo» y «Música»), marcando cada enlace y la fila de pestañas entera con
+la clase `otra-pantalla`: con `?solo=1` (como las abre el mapa desde un personaje o un objeto) no salen. El nombre de
+la pantalla va siempre en la cabecera (`.nombre-app`). Detalles en `tareas/README.md` («Solo lo suyo»); lo vigila
+`pruebas/solo.mjs`.
 El cartel de cumpleaños (`/tareas/cumples/`) y el puente (`/tareas/oficina/`) no se enlazan: solo los abre el mapa.
 
 ## El servidor (VPS en Hostinger)

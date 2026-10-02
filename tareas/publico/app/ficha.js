@@ -1,7 +1,7 @@
 // Ficha de una tarea: panel lateral para verla y editarla entera, como una página de Notion.
 
 import { h, rellenar, retrasar, estadoDe, prioridadDe, plazo, fechaMedia, fechaCorta, fechaLarga, haceCuanto } from "./util.js";
-import { menuEstado, menuPrioridad, menuPersonas, menuPersona, menuFecha, menuEtiquetas, avatar, chipEtiqueta, cerrarMenu, aviso } from "./menus.js";
+import { menuEstado, menuPrioridad, menuPersonas, menuPersona, menuFecha, menuEtiquetas, avatar, chipEtiqueta, cerrarMenu, aviso, colocarAvisos } from "./menus.js";
 
 let abierta = null; // id
 let panel = null;
@@ -30,6 +30,7 @@ export function cerrarFicha({ forzar = false } = {}) {
     cerrarMenu();
     panel.remove();
     panel = null;
+    colocarAvisos(); // los avisos que estuvieran al pie de la ficha vuelven abajo
     const id = abierta;
     abierta = null;
     document.body.classList.remove("con-ficha");
@@ -219,6 +220,7 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
     );
     document.body.appendChild(panel);
     document.body.classList.add("con-ficha");
+    colocarAvisos(); // los avisos que hubiera a la vista pasan al pie de la ficha, para no taparla
 
     panel.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && !document.querySelector(".menu")) {

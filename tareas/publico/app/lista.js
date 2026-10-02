@@ -63,7 +63,7 @@ export function pintarLista(cont, ctx, ev) {
 
     const barra = h(
         "div",
-        { class: "barra-vista" },
+        { class: "barra-vista barra-lista" },
         h("span", { class: "tenue" }, "Agrupar por"),
         h(
             "div",
@@ -163,6 +163,11 @@ export function pintarLista(cont, ctx, ev) {
     );
 }
 
+// En una pantalla estrecha (≤ 720 px, el mismo corte que estilo.css) cada fila es una ficha pequeña: el título y,
+// debajo, lo esencial. Ahí, y donde no hay ratón, un toque en la fila abre la tarea.
+const filaEstrecha = () => window.matchMedia("(max-width: 720px)").matches;
+const sinRaton = () => window.matchMedia("(hover: none)").matches;
+
 function celda(clase, contenido, alPulsar, titulo) {
     return h("td", { class: clase }, h("button", { type: "button", class: "celda", title: titulo, onclick: (e) => alPulsar(e.currentTarget) }, contenido));
 }
@@ -192,9 +197,31 @@ function fila(t, ctx) {
             else e.target.value = t.titulo;
         },
     });
+    const subtareas = () => (t.subtareas.length ? h("span", { class: "chip tenue" }, `☑ ${t.subtareas.filter((s) => s.hecha).length}/${t.subtareas.length}`) : null);
+    const notas = () => (t.notas.trim() ? h("span", { class: "chip tenue", title: "Tiene notas" }, "¶") : null);
+    // Lo esencial de la tarea en una línea, para la fila estrecha (en la ancha cada cosa tiene su columna).
+    const resumen = h(
+        "div",
+        { class: "fila-resumen" },
+        h("span", { class: "resumen-estado" }, h("span", { class: "punto-estado", style: { background: est.color } }), est.nombre),
+        t.prioridad ? h("span", { class: "chip prioridad", style: { background: prio.color, color: prio.texto } }, prio.nombre) : null,
+        responsables.length === 1 ? h("span", { class: "persona" }, avatar(responsables[0]), responsables[0].nombre) : responsables.length ? h("span", { class: "avatares" }, responsables.map((u) => avatar(u))) : null,
+        p ? h("span", { class: ["chip", "plazo", p.clase], title: t.fin }, p.texto) : null,
+        subtareas(),
+        notas(),
+    );
     return h(
         "tr",
-        { class: ["fila", hecha && "hecha"], dataset: { id: t.id }, style: { "--color-prioridad": prio.color } },
+        {
+            class: ["fila", hecha && "hecha"],
+            dataset: { id: t.id },
+            style: { "--color-prioridad": prio.color },
+            onclick: (e) => {
+                // Fuera de lo que ya hace algo (la casilla, el texto que se edita, los botones de cada celda).
+                if (!(filaEstrecha() || sinRaton()) || e.target.closest("input, button, a, label, select, textarea")) return;
+                ctx.abrir(t.id);
+            },
+        },
         h(
             "td",
             { class: "col-hecha" },
@@ -218,10 +245,12 @@ function fila(t, ctx) {
                 "div",
                 { class: "titulo-celda" },
                 titulo,
-                t.subtareas.length ? h("span", { class: "chip tenue" }, `☑ ${t.subtareas.filter((s) => s.hecha).length}/${t.subtareas.length}`) : null,
-                t.notas.trim() ? h("span", { class: "chip tenue", title: "Tiene notas" }, "¶") : null,
+                h("span", { class: "titulo-texto" }, t.titulo),
+                subtareas(),
+                notas(),
                 h("button", { type: "button", class: "btn pequeno abrir", title: "Abrir la tarea", onclick: () => ctx.abrir(t.id) }, "Abrir"),
             ),
+            resumen,
         ),
         celda("col-estado", [h("span", { class: "punto-estado", style: { background: est.color } }), est.nombre], (a) => menuEstado(a, t.estado, (v) => ctx.cambiar(t.id, { estado: v }))),
         celda(

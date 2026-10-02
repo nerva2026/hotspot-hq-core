@@ -190,12 +190,18 @@ export function pintarCronograma(cont, ctx, ev) {
         h("div", { class: "crono-cabecera" }, h("div", { class: "crono-esquina" }, `${tareas.length} tarea${tareas.length === 1 ? "" : "s"}`), escala),
         cuerpo,
     );
-    const scroll = h("div", { class: "crono", "data-desplazar": `crono-${zoom.id}` }, lienzo);
+    // «--desplazado» es cuánto se ha corrido la línea de tiempo: con él, el título de una barra que empieza antes del
+    // borde izquierdo se pega al borde visible en vez de salir cortado por delante (ver .crono-barra .texto).
+    const alDesplazar = () => scroll.style.setProperty("--desplazado", `${Math.round(scroll.scrollLeft)}px`);
+    const scroll = h("div", { class: "crono", "data-desplazar": `crono-${zoom.id}`, onscroll: alDesplazar }, lienzo);
     cont.append(barra, scroll);
+    // pintarYa() recoloca el desplazamiento después de pintar (sin avisar si no cambia): se mira otra vez entonces.
+    requestAnimationFrame(alDesplazar);
     if (!ev.centrado) {
         ev.centrado = true;
         irAHoy(false);
     }
+    alDesplazar();
 }
 
 function fila(t, { px, desde, dias, ancho, x, ctx, sinFechas }) {
@@ -221,7 +227,7 @@ function fila(t, { px, desde, dias, ancho, x, ctx, sinFechas }) {
         "div",
         {
             class: ["crono-barra", t.estado === "hecho" && "hecha", atrasada && "atrasada", !t.inicio && "solo-fin"],
-            style: { left: `${x(a) + 1}px`, width: `${(diasEntre(a, b) + 1) * px - 2}px`, background: prio.color, color: prio.texto },
+            style: { left: `${x(a) + 1}px`, "--izq": `${x(a) + 1}px`, width: `${(diasEntre(a, b) + 1) * px - 2}px`, background: prio.color, color: prio.texto },
             title: `${t.titulo} · ${a === b ? fechaMedia(a) : `${fechaMedia(a)} → ${fechaMedia(b)}`}`,
             tabindex: 0,
             role: "button",
@@ -277,6 +283,7 @@ function fila(t, { px, desde, dias, ancho, x, ctx, sinFechas }) {
             c.na = na;
             c.nb = nb;
             barra.style.left = `${x(na) + 1}px`;
+            barra.style.setProperty("--izq", `${x(na) + 1}px`);
             barra.style.width = `${(diasEntre(na, nb) + 1) * px - 2}px`;
             c.etiqueta.textContent = na === nb ? fechaMedia(na) : `${fechaMedia(na)} → ${fechaMedia(nb)}`;
             c.etiqueta.style.left = `${e.clientX + 12}px`;

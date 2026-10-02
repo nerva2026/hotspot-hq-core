@@ -3,7 +3,9 @@
 // Sin navegador. Comprueba lo que sirve el servidor (las cinco pantallas con ?solo=1, el módulo app/solo.js, la regla
 // de estilo.css, que la dirección sin barra final no pierde el parámetro y que la vuelta de entrar lo conserva), la
 // lógica del módulo (cuándo es modo solo y cómo quedan las direcciones) y que el código de las pantallas marca todos
-// sus enlaces a las demás y no construye direcciones propias que pierdan el modo.
+// sus enlaces a las demás y no construye direcciones propias que pierdan el modo. Y las pestañas de arriba: las
+// mismas cinco en las cinco pantallas, con la fila entera marcada (en modo solo no queda ni la pestaña propia) y el
+// nombre de la pantalla siempre en la cabecera.
 
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
@@ -17,13 +19,16 @@ const origen = new URL(base).origin;
 const ruta = new URL(base).pathname; // /tareas
 
 // Las cinco pantallas: su carpeta, su módulo y los enlaces que tiene a las demás.
+// «pestana» es el nombre de su pestaña (la que sale marcada) y «enlaces», cuántos lleva a las otras cuatro: las pestañas
+// y el menú de la cuenta (y, en el libro, el botón «Ir al tablón de tareas» de quien no tiene parte).
 const PANTALLAS = [
-    { nombre: "tablón", carpeta: "", modulo: "principal.js", otras: ["libro/", "pizarra/", "archivo/", "musica/"], enlaces: 4 },
-    { nombre: "libro", carpeta: "libro/", modulo: "libro.js", otras: ["../", "../pizarra/", "../archivo/", "../musica/"], enlaces: 9 },
-    { nombre: "pizarra", carpeta: "pizarra/", modulo: "pizarra.js", otras: ["../", "../libro/", "../archivo/", "../musica/"], enlaces: 8 },
-    { nombre: "archivo", carpeta: "archivo/", modulo: "archivo.js", otras: ["../", "../libro/", "../pizarra/", "../musica/"], enlaces: 8 },
-    { nombre: "música", carpeta: "musica/", modulo: "musica.js", otras: ["../", "../libro/", "../pizarra/", "../archivo/"], enlaces: 8 },
+    { nombre: "tablón", carpeta: "", modulo: "principal.js", pestana: "Tareas", otras: ["libro/", "pizarra/", "archivo/", "musica/"], enlaces: 8 },
+    { nombre: "libro", carpeta: "libro/", modulo: "libro.js", pestana: "Cuentas", otras: ["../", "../pizarra/", "../archivo/", "../musica/"], enlaces: 9 },
+    { nombre: "pizarra", carpeta: "pizarra/", modulo: "pizarra.js", pestana: "Pizarra", otras: ["../", "../libro/", "../archivo/", "../musica/"], enlaces: 8 },
+    { nombre: "archivo", carpeta: "archivo/", modulo: "archivo.js", pestana: "Archivo", otras: ["../", "../libro/", "../pizarra/", "../musica/"], enlaces: 8 },
+    { nombre: "música", carpeta: "musica/", modulo: "musica.js", pestana: "Música", otras: ["../", "../libro/", "../pizarra/", "../archivo/"], enlaces: 8 },
 ];
+const PESTANAS = ["Tareas", "Cuentas", "Pizarra", "Archivo", "Música"]; // las mismas, y en este orden, en las cinco
 
 // ---------- lo que sirve el servidor ----------
 
@@ -177,6 +182,39 @@ for (const p of PANTALLAS) {
         assert.match(linea, /sinSolo\(location\.href|location\.href\.split\("#"\)\[0\]\.split\("\?"\)\[0\]/, `${p.modulo}: ${linea.trim().slice(0, 160)}`);
     }
 }
+// Las pestañas de arriba: las mismas cinco en las cinco pantallas. La fila entera lleva la marca («otra-pantalla»), así
+// que en modo solo no queda ni la pestaña de la propia pantalla: el nombre lo dice la cabecera.
+for (const p of PANTALLAS) {
+    const codigo = fuente(p.modulo);
+    const filas = codigo.match(/\{ class: "pestanas[^"]*", "aria-label": "Aplicaciones" \}/g) || [];
+    assert.equal(filas.length, 1, `${p.modulo}: una fila de pestañas a las otras pantallas`);
+    assert.equal(filas[0], '{ class: "pestanas pantallas otra-pantalla", "aria-label": "Aplicaciones" }', `${p.modulo}: la fila entera desaparece en modo solo`);
+    // Lo que hay dentro de esa fila, hasta el siguiente trozo de la cabecera
+    const desde = codigo.indexOf(filas[0]);
+    const fila = codigo.slice(desde, codigo.indexOf("barra-derecha", desde));
+    const nombres = [...fila.matchAll(/h\("(a|span)", \{ class: "pestana( activa| otra-pantalla)"[^}]*\}, "([^"]+)"\)/g)].map((m) => ({ etiqueta: m[1], clase: m[2].trim(), nombre: m[3] }));
+    assert.deepEqual(nombres.map((n) => n.nombre), PESTANAS, `${p.modulo}: las cinco pestañas, con los nombres de siempre y en su orden`);
+    for (const n of nombres) {
+        if (n.nombre === p.pestana) assert.deepEqual([n.etiqueta, n.clase], ["span", "activa"], `${p.modulo}: su pestaña es la marcada y no es un enlace`);
+        else assert.deepEqual([n.etiqueta, n.clase], ["a", "otra-pantalla"], `${p.modulo}: «${n.nombre}» es un enlace a otra pantalla`);
+    }
+    assert.match(fila, /aria-current": "page" \}/, `${p.modulo}: la pestaña propia dice que es la de ahora`);
+    // «Cuentas» solo se le ofrece a quien puede ver el libro (en el propio libro siempre está: ya está dentro).
+    if (p.modulo !== "libro.js") assert.match(fila, /E\.yo\.libro \? h\("a", \{ class: "pestana otra-pantalla", href: "(\.\.\/)?libro\/" \}, "Cuentas"\) : null/, `${p.modulo}: «Cuentas», solo a quien tiene parte`);
+    // El nombre de la pantalla, siempre en la cabecera (en modo solo y en el móvil no hay pestañas que lo digan).
+    assert.match(codigo, /h\("h1", \{ class: "nombre-app"[^}]*\}, /, `${p.modulo}: el nombre de la pantalla en la cabecera`);
+}
+// La pizarra se llama como ESTA pizarra (la de reuniones, la del despacho…), no «Pizarra» a secas.
+assert.match(fuente("pizarra.js"), /h\("h1", \{ class: "nombre-app", id: "titulo-pizarra" \}, E\.pizarra\.nombre\)/);
+// En el tablón, las vistas (Tablero, Lista…) no son otra pantalla: su fila no lleva la marca y sigue en modo solo.
+assert.match(fuente("principal.js"), /\{ class: "pestanas vistas", "aria-label": "Vistas" \}/);
+assert.match(fuente("principal.js"), /querySelectorAll\("\.vistas \.pestana"\)/, "la vista marcada se busca solo entre las vistas");
+assert.match(estilo, /html:not\(\.solo\) \.barra-tablon \.vistas \{/, "sin modo solo, las vistas del tablón van en su propia línea");
+// En el móvil se esconden las pestañas y el logo, pero no el nombre (en el tablón va dentro del botón de las vistas).
+assert.ok(!/\.marca,\s*\.pestanas \{\s*display: none;/.test(estilo), "el nombre de la pantalla no se esconde en el móvil");
+assert.match(estilo, /\.pestanas,\s*\.marca \.logo,\s*\.barra-tablon \.marca \{\s*display: none;/);
+assert.match(fuente("principal.js"), /class: "boton-vista-pantalla" \}, "Tareas"\)/, "en el móvil, el nombre del tablón va en el botón de las vistas");
+
 assert.match(fuente("principal.js"), /o\.otra && "otra-pantalla"/, "el menú del tablón pone la marca");
 assert.match(fuente("libro.js"), /o\.otra && "otra-pantalla"/, "el menú del libro pone la marca");
 assert.match(fuente("acceso.js"), /from "\.\/solo\.js"/);

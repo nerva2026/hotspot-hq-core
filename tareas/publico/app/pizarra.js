@@ -835,6 +835,7 @@ function prepararMarco(marco) {
     let arrastre = null;
     let inicioRecta = null;
     marco.addEventListener("pointerdown", (ev) => {
+        plegarTrazo(false);
         if (ev.button > 0 || ev.target.closest("#barra-eleccion, .aviso-vacia button")) return;
         const [x, y] = aMundo(ev);
         if (E.herramienta === "mover") {
@@ -1007,7 +1008,9 @@ const alejar = () => zoomA([...ZOOMS].reverse().find((z) => z < E.zoom - 0.01) ?
 
 function pintarZoom() {
     const texto = $("#texto-zoom");
-    if (texto) texto.textContent = `${Math.round(E.zoom * 100)} %`;
+    // El tamaño de verdad: a cuánto se ve la pizarra respecto a su tamaño real (1920 × 1200). Entera en un móvil es un
+    // 19 %, no un «100 %».
+    if (texto) texto.textContent = `${Math.round(escala * 100)} %`;
     document.body.classList.toggle("acercada", E.zoom > 1);
 }
 
@@ -1120,7 +1123,10 @@ function pintarCabecera() {
     zona.title = otros.length ? `También tienen la pizarra abierta: ${otros.map((u) => u.nombre).join(", ")}` : "";
     $("#boton-yo")?.replaceChildren(avatar(E.yo), h("span", { class: "nombre-yo" }, E.yo.nombre), h("span", { class: "flecha" }, "▾"));
     const titulo = $("#titulo-pizarra");
-    if (titulo) titulo.textContent = E.pizarra.nombre;
+    if (titulo) {
+        titulo.textContent = E.pizarra.nombre;
+        titulo.title = E.pizarra.nombre;
+    }
     document.title = `${E.pizarra.nombre} · HOT SPOT S.L.`;
 }
 
@@ -1191,13 +1197,14 @@ function montar() {
         h(
             "header",
             { class: "barra" },
-            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app" }, "PIZARRA")),
+            // El nombre es el de ESTA pizarra (la de reuniones, la del despacho…): así se sabe cuál es también en modo solo y en el móvil.
+            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app", id: "titulo-pizarra" }, E.pizarra.nombre)),
             h(
                 "nav",
-                { class: "pestanas", "aria-label": "Aplicaciones" },
+                { class: "pestanas pantallas otra-pantalla", "aria-label": "Aplicaciones" },
                 h("a", { class: "pestana otra-pantalla", href: "../" }, "Tareas"),
                 E.yo.libro ? h("a", { class: "pestana otra-pantalla", href: "../libro/" }, "Cuentas") : null,
-                h("span", { class: "pestana activa", id: "titulo-pizarra", "aria-current": "page" }, E.pizarra.nombre),
+                h("span", { class: "pestana activa", "aria-current": "page" }, "Pizarra"),
                 h("a", { class: "pestana otra-pantalla", href: "../archivo/" }, "Archivo"),
                 h("a", { class: "pestana otra-pantalla", href: "../musica/" }, "Música"),
             ),
@@ -1224,9 +1231,16 @@ function montar() {
                         h("span", { class: "nombre-herramienta" }, t.nombre),
                     ),
                 ),
+                // Solo en el móvil (pizarra.css): el color y el grosor de ahora; al pulsarlo se despliegan los dos.
+                h(
+                    "button",
+                    { type: "button", class: "boton-icono boton-trazo", id: "boton-trazo", title: "Color y grosor", "aria-label": "Color y grosor del lápiz", "aria-expanded": "false", "aria-controls": "trazo-pizarra", onclick: () => plegarTrazo() },
+                    h("span", { class: "muestra-color" }),
+                    h("span", { class: "caja-grosor" }, h("span", { class: "muestra-grosor", id: "muestra-grosor" })),
+                    h("span", { class: "flecha" }, "▾"),
+                ),
             ),
-            colores,
-            grosores,
+            h("div", { class: "trazo-pizarra", id: "trazo-pizarra" }, colores, grosores),
             h(
                 "div",
                 { class: "grupo-herramientas derecha" },
@@ -1242,17 +1256,34 @@ function montar() {
                 botonIcono("rehacer", "Rehacer (Ctrl+Mayús+Z)", rehacer),
                 botonIcono("descargar", "Descargar como imagen", descargar),
                 botonIcono("vaciar", "Vaciar la pizarra", vaciarPizarra, "peligro"),
-                h("button", { type: "button", class: "boton-icono texto", title: "¿Cómo funciona?", "aria-label": "¿Cómo funciona?", onclick: ayuda }, "?"),
+                h("button", { type: "button", class: "boton-icono texto boton-ayuda", title: "¿Cómo funciona?", "aria-label": "¿Cómo funciona?", onclick: ayuda }, "?"),
             ),
         ),
         zona,
     );
     usar(E.herramienta);
+    pintarMuestraTrazo();
     document.body.style.setProperty("--color-lapiz", E.color);
     observador?.disconnect();
     observador = new ResizeObserver(() => ajustar());
     observador.observe(zona);
     ajustar();
+}
+
+// En el móvil el color y el grosor están plegados detrás de un botón (así las herramientas caben en dos filas); se
+// pliegan otra vez al empezar a pintar.
+function plegarTrazo(abrir) {
+    const panel = $("#trazo-pizarra");
+    if (!panel) return;
+    const abierto = abrir ?? !panel.classList.contains("abierto");
+    panel.classList.toggle("abierto", abierto);
+    $("#boton-trazo")?.setAttribute("aria-expanded", String(abierto));
+}
+
+function pintarMuestraTrazo() {
+    const lado = Math.min(20, Math.round(3 + E.grosor / 1.6));
+    const muestra = $("#muestra-grosor");
+    if (muestra) Object.assign(muestra.style, { width: `${lado}px`, height: `${lado}px` });
 }
 
 function elegirColor(c) {
@@ -1271,6 +1302,7 @@ function elegirGrosor(g) {
         b.classList.toggle("activo", Number(b.dataset.grosor) === g);
         b.setAttribute("aria-pressed", String(Number(b.dataset.grosor) === g));
     }
+    pintarMuestraTrazo();
     if (E.herramienta !== "lapiz") usar("lapiz");
 }
 

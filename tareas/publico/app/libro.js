@@ -7,7 +7,7 @@ import { h, $, vaciar, normalizar, hoy, sumarDias, fechaCorta, fechaLarga, MESES
 import { api, escuchar, cuandoSePierdaLaSesion, direccionApi } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
 import { sinSolo } from "./solo.js";
-import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar } from "./menus.js";
+import { abrirMenu, cerrarMenu, hayMenu, aviso, colocarAvisos, ventana, avatar } from "./menus.js";
 
 aplicacion("CUENTAS", "El libro de cuentas es de los socios de HOT SPOT S.L. Entra con tu cuenta de Google.");
 
@@ -176,7 +176,7 @@ function montar() {
             "header",
             { class: "barra" },
             h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app" }, "CUENTAS")),
-            h("nav", { class: "pestanas", "aria-label": "Aplicaciones" }, h("a", { class: "pestana otra-pantalla", href: "../" }, "Tareas"), h("span", { class: "pestana activa", "aria-current": "page" }, "Cuentas"), h("a", { class: "pestana otra-pantalla", href: "../pizarra/" }, "Pizarra"), h("a", { class: "pestana otra-pantalla", href: "../archivo/" }, "Archivo"), h("a", { class: "pestana otra-pantalla", href: "../musica/" }, "Música")),
+            h("nav", { class: "pestanas pantallas otra-pantalla", "aria-label": "Aplicaciones" }, h("a", { class: "pestana otra-pantalla", href: "../" }, "Tareas"), h("span", { class: "pestana activa", "aria-current": "page" }, "Cuentas"), h("a", { class: "pestana otra-pantalla", href: "../pizarra/" }, "Pizarra"), h("a", { class: "pestana otra-pantalla", href: "../archivo/" }, "Archivo"), h("a", { class: "pestana otra-pantalla", href: "../musica/" }, "Música")),
             h(
                 "div",
                 { class: "barra-derecha" },
@@ -1288,6 +1288,7 @@ function sinSesion() {
     E.yo = null;
     cerrarMenu();
     document.querySelector(".fondo-ventana")?.remove();
+    colocarAvisos();
     pantallaEntrar(raiz, entrarYEmpezar);
 }
 cuandoSePierdaLaSesion(() => {
