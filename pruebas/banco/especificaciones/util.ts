@@ -452,6 +452,8 @@ export type Diferencia = {
     /** Píxeles que cambian entre las dos capturas. */
     distintos: number;
     total: number;
+    /** Cuánto cambian, de media, los píxeles que cambian (0 a 255 por color): un tinte suave da poco; un dibujo nuevo, mucho. */
+    cambioMedio: number;
     /** El rectángulo que encierra lo que cambia, en píxeles de la captura (o nada, si son iguales). */
     caja: { x0: number; y0: number; x1: number; y1: number } | null;
     /** Si no se han podido comparar (tamaños distintos…). */
@@ -480,9 +482,10 @@ export async function diferencia(pagina: Page, a: string, b: string): Promise<Di
             const p = await imagen(x);
             const q = await imagen(y);
             if (p.width !== q.width || p.height !== q.height) {
-                return { distintos: -1, total: p.width * p.height, caja: null, error: `tamaños distintos: ${p.width}×${p.height} y ${q.width}×${q.height}` };
+                return { distintos: -1, total: p.width * p.height, cambioMedio: 0, caja: null, error: `tamaños distintos: ${p.width}×${p.height} y ${q.width}×${q.height}` };
             }
             let distintos = 0;
+            let suma = 0;
             let x0 = p.width;
             let y0 = p.height;
             let x1 = -1;
@@ -490,6 +493,7 @@ export async function diferencia(pagina: Page, a: string, b: string): Promise<Di
             for (let i = 0; i < p.data.length; i += 4) {
                 if (p.data[i] !== q.data[i] || p.data[i + 1] !== q.data[i + 1] || p.data[i + 2] !== q.data[i + 2]) {
                     distintos++;
+                    suma += (Math.abs(p.data[i] - q.data[i]) + Math.abs(p.data[i + 1] - q.data[i + 1]) + Math.abs(p.data[i + 2] - q.data[i + 2])) / 3;
                     const px = (i / 4) % p.width;
                     const py = Math.floor(i / 4 / p.width);
                     if (px < x0) x0 = px;
@@ -498,7 +502,12 @@ export async function diferencia(pagina: Page, a: string, b: string): Promise<Di
                     if (py > y1) y1 = py;
                 }
             }
-            return { distintos, total: p.width * p.height, caja: distintos > 0 ? { x0, y0, x1, y1 } : null };
+            return {
+                distintos,
+                total: p.width * p.height,
+                cambioMedio: distintos > 0 ? Math.round((suma / distintos) * 10) / 10 : 0,
+                caja: distintos > 0 ? { x0, y0, x1, y1 } : null,
+            };
         },
         [leer(a), leer(b)],
     );
@@ -507,4 +516,11 @@ export async function diferencia(pagina: Page, a: string, b: string): Promise<Di
 /** Las excepciones y errores de consola que han salido desde una marca (para ver que algo «no hace nada raro»). */
 export function erroresDesde(jugador: Jugador, desde: number): string[] {
     return jugador.consola.slice(desde).filter((l) => l.startsWith("[excepción]") || l.startsWith("[error]"));
+}
+
+/** La caja de un elemento en la pantalla (o nada si no está). */
+export async function cajaDe(pagina: Page, selector: string): Promise<{ x: number; y: number; width: number; height: number } | null> {
+    const elemento = pagina.locator(selector).first();
+    if ((await elemento.count()) === 0) return null;
+    return elemento.boundingBox();
 }

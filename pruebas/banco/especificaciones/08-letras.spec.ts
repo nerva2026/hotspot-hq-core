@@ -9,10 +9,14 @@ import path from "path";
 import { expect, test } from "@playwright/test";
 import {
     RESULTADOS,
+    aPantalla,
+    cajaDe,
     captura,
     capturaDeElemento,
+    capturaEntera,
     centro,
     comprobar,
+    enScript,
     entrar,
     espera,
     letraDe,
@@ -28,7 +32,7 @@ const FRASE = "¿Bailamos a las 17:35? Café con Gabi";
 const MARGEN_ALTO = { lados: 110, arriba: 150, abajo: 32 };
 
 test("8 · las letras de la casa", async ({ browser }) => {
-    test.setTimeout(420_000);
+    test.setTimeout(540_000);
     let a: Jugador | undefined;
     try {
         a = await entrar(browser, "Alicia", { sala: "letras" });
@@ -45,67 +49,178 @@ test("8 · las letras de la casa", async ({ browser }) => {
             return { estado: !!letra && letra.familia.includes("Silkscreen") ? "bien" : "mal", dato: letra, capturas };
         });
 
-        await comprobar(P, "decir", "(a) La burbuja de «decir»", [pagina], async () => {
+        /** Dice algo y espera a que salga la burbuja. */
+        const decir = async (texto: string, pensando = false): Promise<void> => {
+            if (pensando) await pagina.keyboard.down("Control");
             await pagina.keyboard.press("Enter");
+            if (pensando) await pagina.keyboard.up("Control");
             await expect(pagina.getByTestId("say-popup")).toBeVisible();
-            await pagina.keyboard.type(FRASE, { delay: 10 });
+            await pagina.keyboard.type(texto, { delay: 10 });
             await pagina.keyboard.press("Enter");
-            const burbuja = pagina.locator(".say-bubble").first();
-            await expect(burbuja).toBeVisible();
+            await expect(pagina.locator(pensando ? ".thinking-cloud" : ".say-bubble").first()).toBeVisible();
             await espera(500);
+        };
+        /** Cuánto se meten la burbuja (con su pico, de 5 puntos del mapa) y la etiqueta del nombre una en la otra, en píxeles de pantalla. */
+        const solape = async (burbuja: string): Promise<Record<string, unknown>> => {
+            const b = await cajaDe(pagina, burbuja);
+            const n = await cajaDe(pagina, ".username-display");
+            if (!b || !n) return { error: "no se ve la burbuja o el nombre" };
+            const zoom = (await aPantalla(pagina, { x: 32, y: 0 })).x - (await aPantalla(pagina, { x: 0, y: 0 })).x;
+            const pico = 5 * (zoom / 32);
+            const seCruzanALoAncho = b.x < n.x + n.width && n.x < b.x + b.width;
+            return {
+                burbuja: { arriba: Math.round(b.y), abajo: Math.round(b.y + b.height), alto: Math.round(b.height), ancho: Math.round(b.width) },
+                nombre: { arriba: Math.round(n.y), abajo: Math.round(n.y + n.height) },
+                huecoEntreLaBurbujaYElNombre_px: Math.round((n.y - (b.y + b.height)) * 10) / 10,
+                elPicoMide_px: Math.round(pico * 10) / 10,
+                elNombreTapaElPico: seCruzanALoAncho && n.y < b.y + b.height + pico - 0.5,
+                laBurbujaPisaElNombre: seCruzanALoAncho && n.y < b.y + b.height - 0.5,
+            };
+        };
+
+        await comprobar(P, "decir", "(a) La burbuja de «decir» (dos líneas)", [pagina], async () => {
+            await decir(FRASE);
             const capturas = [await capturaDeElemento(pagina, ".say-bubble", "8a-decir", 14), await captura(pagina, "8a-decir-muneco", recorte)];
             const letra = await letraDe(pagina, ".say-bubble");
-            const bien = !!letra && letra.familia.startsWith('"Pixelify Sans"') && letra.tamano === "11px" && letra.texto === FRASE;
-            return { estado: bien ? "bien" : "mal", dato: letra, capturas };
+            const sitioDeLaBurbuja = await solape(".say-bubble");
+            const letraBien = !!letra && letra.familia.startsWith('"Pixelify Sans"') && letra.tamano === "11px" && letra.texto === FRASE;
+            const sitioBien = sitioDeLaBurbuja.elNombreTapaElPico === false;
+            return { estado: letraBien && sitioBien ? "bien" : "mal", dato: { letra, sitioDeLaBurbuja }, capturas };
+        });
+
+        await comprobar(P, "decir-corto", "(a) La burbuja de «decir» con un texto corto (una línea)", [pagina], async () => {
+            await espera(5200); // la anterior se va sola a los 5 s
+            await decir("¡Hola! 5 S");
+            const capturas = [await capturaDeElemento(pagina, ".say-bubble", "8a-decir-corto", 14), await captura(pagina, "8a-decir-corto-muneco", recorte)];
+            const sitioDeLaBurbuja = await solape(".say-bubble");
+            return { estado: sitioDeLaBurbuja.elNombreTapaElPico === false ? "bien" : "mal", dato: { sitioDeLaBurbuja }, capturas };
+        });
+
+        await comprobar(P, "decir-largo", "(a) La burbuja de «decir» con un texto largo (tres líneas o más)", [pagina], async () => {
+            await espera(5200);
+            await decir("¿Bailamos a las 17:35? Café con Gabi y luego 2 cañas en el bar de abajo, a las 20:45");
+            const capturas = [await captura(pagina, "8a-decir-largo-muneco", await recorteDelMuneco(pagina, sitio, { lados: 130, arriba: 170, abajo: 32 }))];
+            const sitioDeLaBurbuja = await solape(".say-bubble");
+            return { estado: sitioDeLaBurbuja.elNombreTapaElPico === false ? "bien" : "mal", dato: { sitioDeLaBurbuja }, capturas };
         });
 
         await comprobar(P, "pensar", "(b) La burbuja de «pensar»", [pagina], async () => {
-            await espera(600);
-            await pagina.keyboard.down("Control");
-            await pagina.keyboard.press("Enter");
-            await pagina.keyboard.up("Control");
-            await expect(pagina.getByTestId("say-popup")).toBeVisible();
-            await pagina.keyboard.type(FRASE, { delay: 10 });
-            await pagina.keyboard.press("Enter");
-            const nube = pagina.locator(".thinking-cloud").first();
-            await expect(nube).toBeVisible();
-            await espera(500);
+            await espera(5200);
+            await decir(FRASE, true);
             const capturas = [await capturaDeElemento(pagina, ".thinking-cloud", "8b-pensar", 22), await captura(pagina, "8b-pensar-muneco", recorte)];
             const letra = await letraDe(pagina, ".thinking-cloud .thinking-text");
-            const bien = !!letra && letra.familia.startsWith('"Pixelify Sans"') && letra.tamano === "11px";
-            return { estado: bien ? "bien" : "mal", dato: letra, capturas };
+            const sitioDeLaBurbuja = await solape(".thinking-cloud");
+            const bien = !!letra && letra.familia.startsWith('"Pixelify Sans"') && letra.tamano === "11px" && sitioDeLaBurbuja.laBurbujaPisaElNombre === false;
+            return { estado: bien ? "bien" : "mal", dato: { letra, sitioDeLaBurbuja }, capturas };
         });
 
-        await comprobar(P, "aviso-de-zona", "(e) Un aviso de zona con el texto de WorkAdventure («Pulse ESPACIO…»)", [pagina], async () => {
+        await comprobar(P, "zoom", "Con qué ampliación se ve el juego (de ella depende que las letras de las burbujas salgan limpias)", [pagina], async () => {
+            const medidas: Record<string, unknown> = {};
+            const capturas: string[] = [];
+            for (const tamano of [
+                { width: 1280, height: 800 },
+                { width: 1440, height: 900 },
+                { width: 1920, height: 1080 },
+            ]) {
+                await pagina.setViewportSize(tamano);
+                await espera(2000);
+                const o = await aPantalla(pagina, { x: 0, y: 0 });
+                const u = await aPantalla(pagina, { x: 32, y: 0 });
+                const ampliacion = (u.x - o.x) / 32;
+                medidas[`${tamano.width}x${tamano.height}`] = { ampliacion, pixelesDePantallaPorPuntoDeLetraDe11: ampliacion, letraDe11pxSeVeA_px: 11 * ampliacion, sale: Number.isInteger(ampliacion) ? "limpia (ampliación entera)" : "con medios píxeles (ampliación no entera)" };
+                if (tamano.width !== 1280) {
+                    await decir(FRASE);
+                    capturas.push(await capturaDeElemento(pagina, ".say-bubble", `8a-decir-${tamano.width}x${tamano.height}`, 14));
+                    await espera(5200);
+                }
+            }
+            await pagina.setViewportSize({ width: 1280, height: 800 });
+            await espera(2000);
+            return { estado: "dato", dato: medidas, capturas };
+        });
+
+        /** La letra del texto y del botón de un aviso de los de abajo (los «popup» de WorkAdventure). */
+        const letrasDelAviso = async (): Promise<{ texto: Record<string, string> | null; boton: Record<string, string> | null; caja: unknown }> => ({
+            texto: await letraDe(pagina, ".popup-container .responsive-message"),
+            boton: await letraDe(pagina, ".popup-container .buttons-wrapper button"),
+            caja: await cajaDe(pagina, ".popup-container"),
+        });
+        const deLaCasa = (letra: Record<string, string> | null): boolean => !!letra && /^"?(Pixelify Sans|Silkscreen)/.test(letra.familia);
+
+        await comprobar(P, "aviso-de-zona", "(e) El aviso de una zona con el texto de WorkAdventure («Pulse ESPACIO…»)", [pagina], async () => {
             await teletransportar(pagina, { x: 10 * 32, y: 7 * 32 }); // el centro de la zona «panel-defecto»
-            const aviso = pagina.locator(".characterTriggerAction").first();
-            await expect(aviso).toBeVisible();
+            await expect(pagina.locator(".popup-container").first()).toBeVisible();
             await espera(900);
-            const aqui = await posicion(pagina);
-            const capturas = [
-                await capturaDeElemento(pagina, ".characterTriggerAction", "8e-aviso-de-zona", 14),
-                await captura(pagina, "8e-aviso-de-zona-muneco", await recorteDelMuneco(pagina, aqui, MARGEN_ALTO)),
-            ];
-            const letra = await letraDe(pagina, ".characterTriggerAction");
-            const bien = !!letra && letra.familia.startsWith('"Pixelify Sans"') && letra.tamano === "11px";
-            return { estado: bien ? "bien" : "mal", dato: letra, capturas };
+            const capturas = [await capturaDeElemento(pagina, ".popup-container", "8e-aviso-de-zona", 14), await capturaEntera(pagina, "8e-aviso-de-zona-pantalla")];
+            const letras = await letrasDelAviso();
+            const avisosJuntoAlMuneco = await pagina.locator(".characterTriggerAction").count();
+            return {
+                estado: deLaCasa(letras.texto) && (letras.boton === null || deLaCasa(letras.boton)) ? "bien" : "mal",
+                dato: { ...letras, avisosJuntoAlMuneco_characterTriggerAction: avisosJuntoAlMuneco },
+                capturas,
+            };
         });
 
-        await comprobar(P, "aviso-del-mapa", "(e) Un aviso de zona con el texto que pone el mapa", [pagina], async () => {
+        await comprobar(P, "aviso-del-mapa", "(e) El aviso de una zona con el texto que pone el mapa", [pagina], async () => {
             await teletransportar(pagina, centro(12, 9));
-            await expect(pagina.locator(".characterTriggerAction")).toHaveCount(0, { timeout: 8_000 }).catch(() => undefined);
+            await expect(pagina.locator(".popup-container")).toHaveCount(0, { timeout: 8_000 }).catch(() => undefined);
             await teletransportar(pagina, { x: 10 * 32, y: 3 * 32 }); // el centro de la zona «panel»
+            await expect(pagina.locator(".popup-container").first()).toBeVisible();
+            await espera(900);
+            const capturas = [await capturaDeElemento(pagina, ".popup-container", "8e-aviso-del-mapa", 14)];
+            const letras = await letrasDelAviso();
+            await teletransportar(pagina, centro(12, 9));
+            await expect(pagina.locator(".popup-container")).toHaveCount(0, { timeout: 8_000 }).catch(() => undefined);
+            return { estado: deLaCasa(letras.texto) && (letras.boton === null || deLaCasa(letras.boton)) ? "bien" : "mal", dato: letras, capturas };
+        });
+
+        await comprobar(P, "aviso-del-script", "(e) Un aviso puesto por el script del mapa con ui.displayActionMessage", [pagina], async () => {
+            await enScript(pagina, () => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const w = window as any;
+                w.bancoAvisoPulsado = 0;
+                w.bancoAviso = w.WA.ui.displayActionMessage({
+                    message: "Pulsa ESPACIO para probar el aviso (17:35)",
+                    type: "message",
+                    callback: () => {
+                        w.bancoAvisoPulsado++;
+                    },
+                });
+            });
+            await expect(pagina.locator(".popup-container").first()).toBeVisible();
+            await espera(900);
+            const capturas = [await capturaDeElemento(pagina, ".popup-container", "8e-aviso-del-script", 14), await capturaEntera(pagina, "8e-aviso-del-script-pantalla")];
+            const letras = await letrasDelAviso();
+            const avisosJuntoAlMuneco = await pagina.locator(".characterTriggerAction").count();
+            await pagina.keyboard.press("Space");
+            await espera(600);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const pulsado = await enScript(pagina, () => (window as any).bancoAvisoPulsado);
+            const sigue = await pagina.locator(".popup-container").count();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await enScript(pagina, async () => { try { await (window as any).bancoAviso.remove(); } catch { /* ya no está */ } });
+            return {
+                estado: deLaCasa(letras.texto) ? "bien" : "mal",
+                dato: { dondeSale: "abajo, en el centro de la pantalla (no junto al muñeco)", ...letras, avisosJuntoAlMuneco_characterTriggerAction: avisosJuntoAlMuneco, espacioLlamaAlCallback: pulsado, trasEspacioElAvisoSigue: sigue > 0 },
+                capturas,
+            };
+        });
+
+        await comprobar(P, "aviso-junto-al-muneco", "(e) Un aviso junto al muñeco (ui.displayPlayerMessage): es el que viste hotspot-retro.css (.characterTriggerAction)", [pagina], async () => {
+            await enScript(pagina, () => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const w = window as any;
+                w.bancoMensaje = w.WA.ui.displayPlayerMessage({ message: "Pulsa ESPACIO para probar (17:35)", type: "message", callback: () => undefined });
+            });
             const aviso = pagina.locator(".characterTriggerAction").first();
             await expect(aviso).toBeVisible();
             await espera(900);
-            const aqui = await posicion(pagina);
-            const capturas = [
-                await capturaDeElemento(pagina, ".characterTriggerAction", "8e-aviso-del-mapa", 14),
-                await captura(pagina, "8e-aviso-del-mapa-muneco", await recorteDelMuneco(pagina, aqui, MARGEN_ALTO)),
-            ];
+            const capturas = [await capturaDeElemento(pagina, ".characterTriggerAction", "8e-aviso-junto-al-muneco", 14), await captura(pagina, "8e-aviso-junto-al-muneco-muneco", recorte)];
             const letra = await letraDe(pagina, ".characterTriggerAction");
-            await teletransportar(pagina, centro(12, 9));
-            return { estado: !!letra && letra.familia.startsWith('"Pixelify Sans"') ? "bien" : "mal", dato: letra, capturas };
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await enScript(pagina, async () => { try { await (window as any).bancoMensaje.remove(); } catch { /* ya no está */ } });
+            const bien = !!letra && letra.familia.startsWith('"Pixelify Sans"') && letra.tamano === "11px";
+            return { estado: bien ? "bien" : "mal", dato: letra, capturas };
         });
 
         await comprobar(P, "fuentes", "Las letras de la casa y sus retoques (hs-retoques-*.woff) se han cargado", [pagina], async () => {

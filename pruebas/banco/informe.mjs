@@ -34,6 +34,7 @@ const PUNTOS = [
             "no-existe-volar",
             "no-existe-sentado-abajo-nada",
             "no-existe-lleva",
+            "saludar-tras-sentarse",
             "andando",
         ],
     },
@@ -42,10 +43,24 @@ const PUNTOS = [
     {
         punto: "6",
         titulo: "BARRA DE BOTONES EN LLAMADA",
-        claves: ["sin-invitar", ...TAMANOS.map((t) => "sin-llamada-" + t), "callback", "sustituir", "llamada", ...TAMANOS.map((t) => "en-llamada-" + t), "callback-en-llamada"],
+        claves: [
+            "sin-invitar",
+            ...TAMANOS.map((t) => "sin-llamada-" + t),
+            "sin-llamada-anchos",
+            "callback",
+            "sustituir",
+            "llamada",
+            ...TAMANOS.map((t) => "en-llamada-" + t),
+            "en-llamada-anchos",
+            "callback-en-llamada",
+        ],
     },
     { punto: "7", titulo: "VOLVER A HABLAR (parche 12)", claves: ["se-forma", "proximidad-corta", "proximidad-vuelve", "no-molestar-corta", "no-molestar-vuelve"] },
-    { punto: "8", titulo: "LETRAS", claves: ["decir", "pensar", "chat", "nombre", "aviso-de-zona", "aviso-del-mapa", "fuentes"] },
+    {
+        punto: "8",
+        titulo: "LETRAS",
+        claves: ["decir", "decir-corto", "decir-largo", "pensar", "chat", "nombre", "aviso-de-zona", "aviso-del-mapa", "aviso-del-script", "aviso-junto-al-muneco", "fuentes", "zoom"],
+    },
     { punto: "9a", titulo: "SONDEO moveTo", claves: ["libre", "pared", "sin-camino"] },
     { punto: "9b", titulo: "SONDEO proximityMeeting", claves: ["avisos"] },
     { punto: "9c", titulo: "SONDEO ui.website", claves: ["abrir"] },
@@ -57,6 +72,10 @@ const PUNTOS = [
     { punto: "9i", titulo: "SONDEO zona con panel", claves: ["zona-panel"] },
     { punto: "9j", titulo: "SONDEO zona silenciosa", claves: ["silencio"] },
 ];
+
+/** En una variante (hoy solo «sin-parche-12») solo se pasan la sonda y la prueba de volver a hablar. */
+const VARIANTE = process.env.BANCO_VARIANTE ?? "";
+if (VARIANTE !== "") PUNTOS.splice(0, PUNTOS.length, ...PUNTOS.filter((p) => p.punto === "0" || p.punto === "7"));
 
 const ORDEN_ESTADOS = ["mal", "no se pudo", "bien", "dato"];
 
@@ -158,6 +177,7 @@ function montar() {
             fecha: new Date().toISOString(),
             workadventure: process.env.WA_VERSION ?? null,
             oficina: process.env.BANCO_VERSION ?? null,
+            variante: VARIANTE === "" ? null : VARIANTE,
             segundosDePruebas: playwright.segundos ?? null,
         },
         cuenta,
@@ -173,7 +193,10 @@ function escribir() {
 
     const e = informe.ejecucion;
     const md = [];
-    md.push("# Banco de pruebas · informe", "");
+    md.push("# Banco de pruebas · informe" + (e.variante ? ` (variante «${e.variante}»)` : ""), "");
+    if (e.variante === "sin-parche-12") {
+        md.push("> Esta ejecución lleva la imagen construida **sin el parche 12** y solo pasa la prueba de «volver a hablar»: sirve para", "> comparar con la ejecución normal. Aquí lo esperado es que la llamada NO vuelva sola.", "");
+    }
     md.push(`- Ejecución: ${e.id ?? "(local)"} (n.º ${e.numero ?? "?"}, intento ${e.intento ?? "?"}) · rama \`${e.rama ?? "?"}\` · commit \`${(e.commit ?? "").slice(0, 7)}\``);
     md.push(`- Fecha: ${e.fecha} · WorkAdventure ${e.workadventure ?? "?"} · oficina ${e.oficina ?? "?"}`);
     md.push(`- Comprobaciones: ${informe.cuenta.bien} bien · ${informe.cuenta.mal} mal · ${informe.cuenta["no se pudo"]} no se pudo · ${informe.cuenta.dato} datos`);

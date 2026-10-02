@@ -13,6 +13,11 @@ on:
   push:
     branches: [banco-pruebas]
   workflow_dispatch:
+    inputs:
+      sin_parche_12:
+        description: "Variante: construir SIN el parche 12 y pasar solo la prueba de «volver a hablar» (para ver la diferencia)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -34,7 +39,27 @@ jobs:
     env:
       BANCO_RESULTADOS: ${{ github.workspace }}/resultados
       COMPOSE: docker compose -f docker-compose.prod.yaml -f tests/docker-compose.test.yaml -f docker-compose.banco.yaml
+    outputs:
+      variante: ${{ steps.variante.outputs.variante }}
     steps:
+      # Lo normal es probarlo todo. La variante «sin-parche-12» (se pide al lanzar el flujo a mano o poniendo
+      # «[sin-parche-12]» en el mensaje del commit) construye la imagen SIN ese parche y pasa solo la prueba de «volver a
+      # hablar»: sirve para ver que es el parche el que hace volver la llamada. Sus resultados van a una carpeta aparte.
+      - name: ¿Qué se prueba?
+        id: variante
+        env:
+          MENSAJE: ${{ github.event.head_commit.message }}
+          PEDIDA: ${{ inputs.sin_parche_12 }}
+        run: |
+          variante=""
+          if [ "$PEDIDA" = "true" ] || printf '%s' "$MENSAJE" | grep -qF "[sin-parche-12]"; then variante="sin-parche-12"; fi
+          echo "variante=$variante" >> "$GITHUB_OUTPUT"
+          echo "BANCO_VARIANTE=$variante" >> "$GITHUB_ENV"
+          if [ -n "$variante" ]; then
+            echo "BANCO_SIN_PARCHE_12=1" >> "$GITHUB_ENV"
+            echo "::notice title=Variante::Esta ejecución construye la imagen SIN el parche 12 y solo pasa la prueba de «volver a hablar»."
+          fi
+
       # En segundo plano: no hace falta esperar a que acabe para seguir.
       - name: Liberar espacio en disco (en segundo plano)
         run: |
@@ -55,6 +80,9 @@ jobs:
         run: |
           set -e
           for p in ../hotspot/parches/*.patch; do
+            case "$(basename "$p")" in
+              12-*) if [ "$BANCO_SIN_PARCHE_12" = "1" ]; then echo "Parche $(basename "$p"): SE SALTA (variante sin-parche-12)"; continue; fi ;;
+            esac
             echo "Parche $(basename "$p")"
             git apply --whitespace=nowarn "$p" || { echo "::error title=Parche que no aplica::$(basename "$p")"; exit 1; }
           done
@@ -118,9 +146,9 @@ jobs:
           build-args: |
             NODE_OPTIONS=--max-old-space-size=12288
           cache-from: |
+            type=gha,scope=${{ steps.variante.outputs.variante != '' && 'banco-sin-parche-12' || 'banco' }}
             type=gha,scope=banco
-            type=gha
-          cache-to: type=gha,mode=max,scope=banco
+          cache-to: type=gha,mode=max,scope=${{ steps.variante.outputs.variante != '' && 'banco-sin-parche-12' || 'banco' }}
           provenance: false
           sbom: false
 
@@ -166,7 +194,11 @@ jobs:
           NODE_TLS_REJECT_UNAUTHORIZED: "0"
         run: |
           set +e
-          npx playwright test --config banco.config.ts
+          if [ -n "$BANCO_VARIANTE" ]; then
+            npx playwright test --config banco.config.ts 00-sonda 07-volver-a-hablar
+          else
+            npx playwright test --config banco.config.ts
+          fi
           echo "salida=$?" >> "$GITHUB_OUTPUT"
           exit 0
 
@@ -238,18 +270,32 @@ jobs:
         working-directory: repositorio
         env:
           RESULTADO_DEL_BANCO: ${{ needs.banco.result }}
+          VARIANTE: ${{ needs.banco.outputs.variante }}
         run: |
           set -e
+          # Lo que hubiera ya en la rama: de ahí se conserva la carpeta «variantes/» (o todo lo demás, si esta ejecución
+          # es una variante).
+          hay=0
+          if git fetch --quiet --depth 1 origin banco-resultados 2> /dev/null; then hay=1; fi
           git checkout --quiet --orphan resultados-de-esta-ejecucion
           git rm -rf --quiet . > /dev/null
-          if [ -d ../resultados ]; then cp -r ../resultados/. .; fi
-          if [ ! -f informe.md ]; then
-            printf '# Banco de pruebas · informe\n\nLa ejecución %s no ha dejado resultados (el job «banco» acabó: %s).\n' \
-              "$GITHUB_RUN_ID" "$RESULTADO_DEL_BANCO" > informe.md
+          if [ "$hay" = "1" ]; then git checkout --quiet FETCH_HEAD -- . ; fi
+          if [ "$VARIANTE" = "sin-parche-12" ]; then
+            rm -rf variantes/sin-parche-12
+            mkdir -p variantes/sin-parche-12
+            if [ -d ../resultados ]; then cp -r ../resultados/. variantes/sin-parche-12/; fi
+            printf '%s\n' "$GITHUB_RUN_ID" > variantes/sin-parche-12/ejecucion.txt
+          else
+            find . -mindepth 1 -maxdepth 1 ! -name .git ! -name variantes -exec rm -rf {} +
+            if [ -d ../resultados ]; then cp -r ../resultados/. .; fi
+            if [ ! -f informe.md ]; then
+              printf '# Banco de pruebas · informe\n\nLa ejecución %s no ha dejado resultados (el job «banco» acabó: %s).\n' \
+                "$GITHUB_RUN_ID" "$RESULTADO_DEL_BANCO" > informe.md
+            fi
+            printf '%s\n' "$GITHUB_RUN_ID" > ejecucion.txt
+            printf 'Resultados del banco de pruebas (rama banco-pruebas). Se sustituyen enteros en cada ejecución.\nEjecución: %s · job «banco»: %s\nLa carpeta variantes/ guarda la última ejecución de cada variante (hoy, solo «sin-parche-12»).\n' \
+              "$GITHUB_RUN_ID" "$RESULTADO_DEL_BANCO" > LEEME.txt
           fi
-          printf '%s\n' "$GITHUB_RUN_ID" > ejecucion.txt
-          printf 'Resultados del banco de pruebas (rama banco-pruebas). Esta rama se sustituye entera en cada ejecución.\nEjecución: %s · job «banco»: %s\n' \
-            "$GITHUB_RUN_ID" "$RESULTADO_DEL_BANCO" > LEEME.txt
           git add -A
           git -c user.name="banco-de-pruebas" -c user.email="banco-de-pruebas@users.noreply.github.com" \
             commit --quiet -m "Resultados del banco: ejecución $GITHUB_RUN_ID"

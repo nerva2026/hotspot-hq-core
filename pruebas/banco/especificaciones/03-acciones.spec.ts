@@ -14,6 +14,7 @@ import {
     espera,
     guardarVariable,
     posicion,
+    recorteDelMapa,
     recorteDelMuneco,
     salir,
     teletransportar,
@@ -167,6 +168,37 @@ test("3 · acciones y cosas en la mano (parche 08)", async ({ browser }) => {
                 estado: conNada.distintos === 0 && errores.length === 0 ? "bien" : "mal",
                 dato: { cambiaRespectoANada: conNada, errores },
                 capturas: [una],
+            };
+        });
+
+        await comprobar(P, "saludar-tras-sentarse", 'El mismo valor se dibuja igual venga de donde venga: "saludar" desde nada y desde "sentado:abajo"', [pagina], async () => {
+            // solo el cuerpo (de la cintura para abajo y sin la mano, que se mueve): si el muñeco está más bajo, cambia
+            const cuerpo = await recorteDelMapa(pagina, sitio.x - 10, sitio.y - 6, sitio.x + 6, sitio.y + 24);
+            await guardarVariable(pagina, "accion", null);
+            await espera(700);
+            const dePie = await captura(pagina, "3-saludar-cuerpo-de-pie-sin-hacer-nada", cuerpo);
+            await guardarVariable(pagina, "accion", "saludar");
+            await espera(1200);
+            const desdeNada = await captura(pagina, "3-saludar-cuerpo-desde-nada", cuerpo);
+            const enteroDesdeNada = await captura(pagina, "3-saludar-desde-nada", recorte);
+            await guardarVariable(pagina, "accion", "sentado:abajo");
+            await espera(700);
+            await guardarVariable(pagina, "accion", "saludar");
+            await espera(1200);
+            const desdeSentado = await captura(pagina, "3-saludar-cuerpo-desde-sentado", cuerpo);
+            const enteroDesdeSentado = await captura(pagina, "3-saludar-desde-sentado", recorte);
+            await guardarVariable(pagina, "accion", null);
+            await espera(600);
+            const d = await diferencia(pagina, desdeNada, desdeSentado);
+            const conDePie = await diferencia(pagina, dePie, desdeNada);
+            return {
+                estado: d.distintos === 0 ? "bien" : "mal",
+                dato: {
+                    elCuerpoCambiaSegunDeDondeVenga: d,
+                    saludandoDesdeNadaElCuerpoEstaComoDePie: conDePie.distintos === 0,
+                    nota: d.distintos === 0 ? "igual" : 'Al pasar de "sentado:…" a "saludar" el muñeco se queda bajado (como sentado); desde nada, saluda de pie. Quien entra después lo ve de pie.',
+                },
+                capturas: [enteroDesdeNada, enteroDesdeSentado],
             };
         });
 

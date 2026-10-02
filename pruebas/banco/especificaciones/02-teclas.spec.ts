@@ -32,12 +32,25 @@ test("2 · teclas del mapa (parche 11)", async ({ browser }) => {
             return { estado: bien ? "bien" : "mal", dato: { codigos, eventos: llegadas } };
         });
 
-        await comprobar(P, "e-no", "La E no llega (no está en la lista)", [pagina], async () => {
+        await comprobar(P, "e-no", "La E no llega (no está en la lista): abre el explorador de la sala, como siempre", [pagina], async () => {
             const antes = (await teclas()).length;
             await pulsar("e");
             const despues = (await teclas()).length;
-            await pagina.keyboard.press("Escape");
-            return { estado: despues === antes ? "bien" : "mal", dato: { eventosNuevos: despues - antes } };
+            const explorador = pagina.getByTestId("closeMapEditorButton");
+            const abierto = await explorador.isVisible().catch(() => false);
+            let conElExploradorAbierto: number | string = "el explorador no se ha abierto";
+            if (abierto) {
+                // con el explorador (o el editor de mapas) abierto, las teclas del mapa no se mandan: así lo dice el parche
+                await pulsar("b");
+                conElExploradorAbierto = (await teclas()).length - despues;
+                await explorador.click();
+                await expect(explorador).toBeHidden();
+                await espera(600);
+            }
+            return {
+                estado: despues === antes && (conElExploradorAbierto === 0 || !abierto) ? "bien" : "mal",
+                dato: { eventosNuevos: despues - antes, laEAbreElExplorador: abierto, eventosConElExploradorAbierto: conElExploradorAbierto },
+            };
         });
 
         await comprobar(P, "con-ctrl", "Con Ctrl o Alt pulsado no llegan", [pagina], async () => {

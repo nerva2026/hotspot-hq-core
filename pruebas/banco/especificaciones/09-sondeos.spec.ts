@@ -23,6 +23,7 @@ import {
     esperarLlamada,
     esperarSinLlamada,
     estadoDeLlamada,
+    letraDe,
     posicion,
     recorteDelMapa,
     recorteDelMuneco,
@@ -205,6 +206,12 @@ test("9 · sondeos de la API de los mapas (un jugador)", async ({ browser }) => 
             const caja = await aviso.boundingBox();
             const ventana = pagina.viewportSize();
             const texto = ((await aviso.textContent()) ?? "").replace(/\s+/g, " ").trim();
+            const letraDelTexto = await letraDe(pagina, "#banco-aviso > div");
+            const letraDelBoton = await letraDe(pagina, "#banco-aviso button");
+            const esquinasDelBoton = await pagina.evaluate(() => {
+                const b = document.querySelector("#banco-aviso button");
+                return b ? getComputedStyle(b).borderRadius : null;
+            });
             const capturas = [await capturaEntera(pagina, "9d-banner-pantalla"), await capturaDeElemento(pagina, "#banco-aviso", "9d-banner", 10)];
             let seCierraSolo = false;
             let segundos = 0;
@@ -223,7 +230,7 @@ test("9 · sondeos de la API de los mapas (un jugador)", async ({ browser }) => 
             }
             return {
                 estado: "dato",
-                dato: { caja, ventana, texto, seCierraSolo, alosSegundos: seCierraSolo ? segundos : "no se ha cerrado en 9 s (se ha cerrado con closeBanner)", pedido_timeToClose_ms: 4000 },
+                dato: { caja, ventana, texto, letraDelTexto, letraDelBoton, esquinasDelBoton, seCierraSolo, alosSegundos: seCierraSolo ? segundos : "no se ha cerrado en 9 s (se ha cerrado con closeBanner)", pedido_timeToClose_ms: 4000 },
                 capturas,
             };
         });
@@ -288,10 +295,12 @@ test("9 · sondeos de la API de los mapas (un jugador)", async ({ browser }) => 
                 dato[capa] = {
                     seVeElVelo: dTodo.distintos > 0,
                     pixelesQueCambian: `${dTodo.distintos} de ${dTodo.total}`,
-                    tiñeAlMuñeco: dCuerpo.distintos > 0,
-                    pixelesDelCuerpoQueCambian: `${dCuerpo.distintos} de ${dCuerpo.total}`,
-                    tiñeElNombre: dNombre.distintos > 0,
-                    pixelesDelNombreQueCambian: `${dNombre.distintos} de ${dNombre.total}`,
+                    tiñeAlMuñeco: dCuerpo.distintos === dCuerpo.total,
+                    cuerpo: `cambian ${dCuerpo.distintos} de ${dCuerpo.total} píxeles, ${dCuerpo.cambioMedio} de media (de 255)`,
+                    // El nombre es un elemento de la página puesto ENCIMA del juego: el velo no lo tiñe. Lo poco que cambia es
+                    // su fondo, que es algo transparente y deja ver el suelo (teñido) de debajo.
+                    etiquetaDelNombre: `cambian ${dNombre.distintos} de ${dNombre.total} píxeles, ${dNombre.cambioMedio} de media (de 255)`,
+                    tiñeLasLetrasDelNombre: dNombre.distintos === dNombre.total,
                 };
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 await enScript(pagina, (n) => (window as any).WA.room.hideLayer(n), capa);
@@ -400,11 +409,15 @@ test("9 · sondeos de la API de los mapas (un jugador)", async ({ browser }) => 
         // ---------- i) zona con panel ----------
         await comprobar("9i", "zona-panel", "Zona con openWebsite + onaction + texto: sale el aviso y ESPACIO abre el panel", [pagina], async () => {
             await teletransportar(pagina, { x: 10 * 32, y: 3 * 32 });
-            const aviso = pagina.locator(".characterTriggerAction").first();
+            // En esta versión de WorkAdventure el aviso de una zona no sale junto al muñeco: es un «popup» abajo, con un botón
+            const aviso = pagina.locator(".popup-container").first();
             await expect(aviso).toBeVisible();
             await espera(800);
-            const texto = ((await aviso.textContent()) ?? "").replace(/\s+/g, " ").trim();
-            const capturas = [await captura(pagina, "9i-aviso", await recorteDelMuneco(pagina, await posicion(pagina), { lados: 130, arriba: 130, abajo: 32 }))];
+            const texto = ((await aviso.locator(".responsive-message").textContent()) ?? "").replace(/\s+/g, " ").trim();
+            const boton = ((await aviso.locator(".buttons-wrapper button").first().textContent().catch(() => "")) ?? "").trim();
+            const cajaDelAviso = await aviso.boundingBox();
+            const juntoAlMuneco = await pagina.locator(".characterTriggerAction").count();
+            const capturas = [await capturaEntera(pagina, "9i-aviso-pantalla"), await capturaDeElemento(pagina, ".popup-container", "9i-aviso", 12)];
             const marcosAntes = await pagina.evaluate(() => Array.from(document.querySelectorAll("iframe")).filter((f) => f.src.includes("panel.html")).length);
             await pagina.keyboard.press("Space");
             const panel = pagina.locator('iframe[src*="panel.html"]').first();
@@ -422,7 +435,16 @@ test("9 · sondeos de la API de los mapas (un jugador)", async ({ browser }) => 
             const alSalir = await pagina.evaluate(() => Array.from(document.querySelectorAll("iframe")).filter((f) => f.src.includes("panel.html")).length);
             return {
                 estado: texto.includes("abrir el panel de prueba") ? "bien" : "mal",
-                dato: { textoDelAviso: texto, marcosAntesDeEspacio: marcosAntes, panel: datosDelPanel, elAvisoSigueConElPanelAbierto: avisoSigue, marcosDelPanelAlSalirDeLaZona: alSalir },
+                dato: {
+                    textoDelAviso: texto,
+                    textoDelBoton: boton,
+                    dondeSaleElAviso: cajaDelAviso,
+                    avisosJuntoAlMuneco_characterTriggerAction: juntoAlMuneco,
+                    marcosAntesDeEspacio: marcosAntes,
+                    panel: datosDelPanel,
+                    elAvisoSigueConElPanelAbierto: avisoSigue,
+                    marcosDelPanelAlSalirDeLaZona: alSalir,
+                },
                 capturas,
             };
         });

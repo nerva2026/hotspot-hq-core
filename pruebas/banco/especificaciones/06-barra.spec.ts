@@ -113,7 +113,7 @@ async function menu(pagina: Page): Promise<string[]> {
     return textos.map((t) => t.replace(/\s+/g, " ").trim()).filter((t) => t !== "");
 }
 
-async function medirEnCadaTamano(pagina: Page, cuando: "sin-llamada" | "en-llamada", otra?: Page): Promise<void> {
+async function medirEnCadaTamano(pagina: Page, cuando: "sin-llamada" | "en-llamada"): Promise<void> {
     for (const tamano of TAMANOS) {
         const clave = `${cuando}-${tamano.width}x${tamano.height}`;
         const titulo = `${cuando === "en-llamada" ? "EN llamada" : "SIN llamada"}, ${tamano.width}×${tamano.height}: botones del mapa a la vista`;
@@ -144,9 +144,29 @@ async function medirEnCadaTamano(pagina: Page, cuando: "sin-llamada" | "en-llama
             };
         });
     }
+    // Y hasta qué ancho caben los cinco: se va estrechando la ventana y se cuenta cuántos quedan a la vista
+    await comprobar(P, `${cuando}-anchos`, `${cuando === "en-llamada" ? "EN llamada" : "SIN llamada"}: cuántos botones del mapa quedan a la vista según el ancho de la ventana`, [pagina], async () => {
+        const porAncho: Record<string, string> = {};
+        let minimoConLosCinco: number | null = null;
+        for (const ancho of [1100, 1024, 960, 900, 860, 820, 780, 740, 700, 640]) {
+            await pagina.setViewportSize({ width: ancho, height: 768 });
+            await espera(1800);
+            const m = await medir(pagina);
+            porAncho[String(ancho)] = `${m.delMapaALaVista.length} a la vista` + (m.delMapaEscondidos.length > 0 ? ` (escondidos: ${m.delMapaEscondidos.map((n) => n.slice(0, 7)).join(", ")})` : "");
+            if (m.delMapaALaVista.length === 5) minimoConLosCinco = ancho;
+            if (m.delMapaALaVista.length < 5 && !porAncho.captura) {
+                porAncho.captura = String(ancho);
+                await captura(pagina, `6-barra-${cuando}-${ancho}-ya-no-caben`, { x: 0, y: 0, width: ancho, height: 110 });
+            }
+        }
+        return {
+            estado: "dato",
+            dato: { anchoMasEstrechoConLosCincoALaVista: minimoConLosCinco, porAncho },
+            capturas: porAncho.captura ? [`capturas/6-barra-${cuando}-${porAncho.captura}-ya-no-caben.png`] : [],
+        };
+    });
     await pagina.setViewportSize(TAMANOS[0]);
     await espera(1500);
-    void otra;
 }
 
 test("6 · la barra de botones, sin llamada y en llamada", async ({ browser }) => {
