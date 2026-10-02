@@ -70,7 +70,7 @@
     font-weight: 400 549;
     font-style: normal;
     font-display: swap;
-    unicode-range: U+30-39, U+42-43, U+47, U+61, U+E0-E1, U+20AC;
+    unicode-range: U+28-29, U+30-39, U+42-43, U+47, U+5A, U+61, U+63, U+6A, U+E0-E1, U+20AC;
 }
 @font-face {
     font-family: "Pixelify Sans";
@@ -78,7 +78,7 @@
     font-weight: 550 700;
     font-style: normal;
     font-display: swap;
-    unicode-range: U+30-39, U+42-43, U+47, U+61, U+E0-E1, U+20AC;
+    unicode-range: U+28-29, U+30-39, U+42-43, U+47, U+5A, U+61, U+63, U+6A, U+E0-E1, U+20AC;
 }
 
 /* ---------- colores ---------- */
@@ -359,8 +359,8 @@ textarea {
 /* El texto que se lee de corrido va un punto más grande y con más aire entre líneas; la hora del chat usaba otra
    letra (Roboto Condensed) y ahora va con la de la casa. */
 .message-bubble {
-    font-size: 15px;
-    line-height: 1.4;
+    font-size: 16px;
+    line-height: 22px;
     letter-spacing: 0.01em;
 }
 .message-bubble.text-xs {
@@ -370,10 +370,16 @@ textarea {
 .message-input,
 .message-input::placeholder {
     font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace;
-    font-size: 15px;
+    font-size: 16px;
     letter-spacing: 0.01em;
 }
 .font-condensed {
+    font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+    letter-spacing: 0.02em;
+}
+/* Los botones del sistema de diseño de WorkAdventure (.btn: «Abrir» en el aviso de una zona, «Cerrar», los de los
+   ajustes…) traen su propia letra (Roboto Condensed): con la de la casa, como todo lo demás. */
+.btn {
     font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace !important;
     letter-spacing: 0.02em;
 }

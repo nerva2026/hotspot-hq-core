@@ -47,14 +47,14 @@
     src: url("/tareas/fuentes/hs-retoques-texto.woff") format("woff");
     font-weight: 400 549;
     font-display: swap;
-    unicode-range: U+30-39, U+42-43, U+47, U+61, U+E0-E1, U+20AC;
+    unicode-range: U+28-29, U+30-39, U+42-43, U+47, U+5A, U+61, U+63, U+6A, U+E0-E1, U+20AC;
 }
 @font-face {
     font-family: "Pixelify Sans";
     src: url("/tareas/fuentes/hs-retoques-texto-negra.woff") format("woff");
     font-weight: 550 700;
     font-display: swap;
-    unicode-range: U+30-39, U+42-43, U+47, U+61, U+E0-E1, U+20AC;
+    unicode-range: U+28-29, U+30-39, U+42-43, U+47, U+5A, U+61, U+63, U+6A, U+E0-E1, U+20AC;
 }
 
 :root {

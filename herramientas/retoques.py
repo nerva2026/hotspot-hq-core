@@ -5,6 +5,8 @@ Qué arregla (todo se veía en pantalla y costaba leerlo):
 - Los números de Pixelify Sans: el 5 era igual que la S, y el 2, el 3 y el 4 se confundían entre sí.
 - En Pixelify Sans, la B, la C y la G eran casi el mismo dibujo («Café con Bea» se leía «Gafé con Gea»), la «a»
   parecía una «o» con rabo y el € era una mancha.
+- También en Pixelify Sans: la «c» se cerraba hasta parecer una «o» en cuanto la letra engordaba un poco («discusión»
+  se leía «disousión»), la Z era el dibujo de un 2, la «j» no tenía punto y los paréntesis parecían llaves.
 - En Silkscreen (los títulos), el 4 parecía otra letra y el 2 una Z.
 
 Este guion dibuja esos caracteres píxel a píxel, con las mismas medidas que cada letra, y los guarda en cuatro
@@ -49,11 +51,18 @@ TEXTO = {
     'B': ['####.', '#...#', '#...#', '####.', '#...#', '#...#', '####.'],
     'C': ['.####', '#....', '#....', '#....', '#....', '#....', '.####'],
     'G': ['.####', '#....', '#....', '#..##', '#...#', '#...#', '.###.'],
+    'Z': ['#####', '....#', '...#.', '..#..', '.#...', '#....', '#####'],
     'a': ['.###.', '....#', '.####', '#...#', '.####'],
+    'c': ['.####', '#....', '#....', '#....', '.####'],
+    'j': ['.#', '..', '##', '.#', '.#', '.#', '.#', '.#', '#.'],
+    '(': ['..#', '.#.', '#..', '#..', '#..', '.#.', '..#'],
+    ')': ['#..', '.#.', '..#', '..#', '..#', '.#.', '#..'],
     'á': ['...#.', '..#..', '.....', '.###.', '....#', '.####', '#...#', '.####'],
     'à': ['.#...', '..#..', '.....', '.###.', '....#', '.####', '#...#', '.####'],
     '€': ['..###', '.#...', '####.', '.#...', '####.', '.#...', '..###'],
 }
+# Cuántas filas de cada dibujo quedan por debajo de la línea de base (la «j» baja dos, como la «g» o la «y»).
+BAJAN = {'j': 2}
 # Para los títulos (Silkscreen): cifras de 4 × 5 píxeles, como sus mayúsculas.
 TITULO = {
     '0': ['.##.', '#..#', '#..#', '#..#', '.##.'],
@@ -80,10 +89,11 @@ ESTILOS = {
 }
 
 
-def glifo(filas, e):
-    """Un rectángulo por cada tira de píxeles seguidos de cada fila (dentro de un glifo se rellenan todos juntos)."""
+def glifo(filas, e, bajan=0):
+    """Un rectángulo por cada tira de píxeles seguidos de cada fila (dentro de un glifo se rellenan todos juntos).
+    `bajan` es cuántas filas del final quedan por debajo de la línea de base."""
     pen = TTGlyphPen(None)
-    alto = len(filas)
+    alto = len(filas) - bajan
     for j, fila in enumerate(filas):
         y1 = (alto - j) * e['py']; y0 = y1 - e['py']
         i = 0
@@ -105,7 +115,7 @@ def construir(nombre, e):
     fb.setupGlyphOrder(orden)
     fb.setupCharacterMap({ord(c): nombres[c] for c in caracteres})
     glifos = {'.notdef': TTGlyphPen(None).glyph()}
-    for c in caracteres: glifos[nombres[c]] = glifo(e['dibujos'][c], e)
+    for c in caracteres: glifos[nombres[c]] = glifo(e['dibujos'][c], e, BAJAN.get(c, 0) if e['dibujos'] is TEXTO else 0)
     fb.setupGlyf(glifos)
     avances = {'.notdef': (2 * e['x0'] + 5 * e['px'], 0)}
     for c in caracteres: avances[nombres[c]] = (2 * e['x0'] + len(e['dibujos'][c][0]) * e['px'] + e['grueso'], e['x0'])

@@ -1,0 +1,44 @@
+diff --git a/play/src/front/Phaser/Entity/Character.ts b/play/src/front/Phaser/Entity/Character.ts
+index 399f37b..43b30d3 100644
+--- a/play/src/front/Phaser/Entity/Character.ts
++++ b/play/src/front/Phaser/Entity/Character.ts
+@@ -21,6 +21,7 @@ import { WOKA_SPEED } from "../../Enum/EnvironmentVariable";
+ import { UsernameDisplay } from "../Components/UsernameDisplay";
+ import { lazyLoadPlayerCharacterTextures } from "./PlayerTexturesLoadingManager";
+ import { Acciones } from "./Acciones";
++import { PLAYER_NAME_HEIGHT } from "../Components/UsernameDisplaySizes";
+ import { SpeechBubble } from "./SpeechBubble";
+ import { SpeechDomElement } from "./SpeechDomElement";
+ import { ThinkingCloud } from "./ThinkingCloud";
+@@ -602,12 +603,14 @@ export abstract class Character extends Container implements OutlineableInterfac
+             case SayMessageType.SpeechBubble:
+             case SayMessageType.UNRECOGNIZED: {
+                 const speechBubble = new SpeechBubble(text);
++                // HOT SPOT S.L.: la burbuja se apoya por abajo justo encima del nombre (su pico mide 5 px). Antes iba
++                // centrada en un punto fijo y, con dos líneas o más, crecía hacia abajo y tapaba el nombre.
+                 this.bubble = new DOMElement(
+                     this.scene,
+                     0,
+-                    0 - CHARACTER_BODY_HEIGHT / 2 - 50,
++                    this.playerNameOffsetY - PLAYER_NAME_HEIGHT - 7,
+                     speechBubble.getElement(),
+-                );
++                ).setOrigin(0.5, 1);
+                 this.add(this.bubble);
+                 break;
+             }
+@@ -621,7 +624,13 @@ export abstract class Character extends Container implements OutlineableInterfac
+                     fillColor: 0xffffff,
+                     fillAlpha: 0.8,
+                 }).getElement();
+-                this.bubble = new DOMElement(this.scene, 0, 0 - CHARACTER_BODY_HEIGHT / 2 - 70, thinkElement);
++                // HOT SPOT S.L.: igual que la de decir, apoyada por abajo (sus tres cuadraditos bajan 17 px).
++                this.bubble = new DOMElement(
++                    this.scene,
++                    0,
++                    this.playerNameOffsetY - PLAYER_NAME_HEIGHT - 19,
++                    thinkElement,
++                ).setOrigin(0.5, 1);
+                 this.add(this.bubble);
+                 break;
+             }

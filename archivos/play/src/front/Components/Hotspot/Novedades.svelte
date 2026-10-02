@@ -4,7 +4,8 @@
      *
      * - El aviso sale solo una vez por versión (se apunta en localStorage), cuando ya se ha entrado en el mapa:
      *   no encima de las pantallas de nombre, muñeco, compañero o cámara, ni del tutorial de WorkAdventure.
-     * - Se cierra con el botón, con Esc o pulsando fuera. Se vuelve a abrir pulsando la etiqueta de la versión.
+     * - Se cierra con el botón, con Esc o pulsando fuera. Se vuelve a abrir pulsando la etiqueta de la versión
+     *   (que se esconde mientras el chat está abierto, para no tapar su campo de escribir).
      * - Qué versión es y qué novedades salen: novedades.ts (no hay que tocar este archivo).
      * - Las novedades con `requiere: "musica"` solo salen si el servidor tiene Spotify conectado: se le pregunta (con la
      *   cookie de la sesión del tablón, esperando como mucho 2 s) antes de abrir el aviso. Si no contesta, o la música no
@@ -21,6 +22,7 @@
     import { pwaInstallSceneVisibleStore } from "../../Stores/PwaInstallStore";
     import { onboardingStore } from "../../Stores/OnboardingStore";
     import { inputFormFocusStore } from "../../Stores/UserInputStore";
+    import { chatVisibilityStore } from "../../Stores/ChatStore";
     import { NOVEDADES, TITULO, VERSION, type Novedad } from "./novedades";
 
     /** En localStorage: la última versión cuyo aviso ya salió. */
@@ -156,16 +158,19 @@
 
 <svelte:window onkeydowncapture={alPulsarTecla} />
 
-<button
-    id="hotspot-version"
-    class="hs-version"
-    type="button"
-    title="Novedades de esta versión"
-    aria-haspopup="dialog"
-    onclick={abrirAMano}
->
-    {VERSION}
-</button>
+<!-- Con el chat abierto la etiqueta caería encima del campo de escribir: se quita mientras tanto. -->
+{#if !$chatVisibilityStore}
+    <button
+        id="hotspot-version"
+        class="hs-version"
+        type="button"
+        title="Novedades de esta versión"
+        aria-haspopup="dialog"
+        onclick={abrirAMano}
+    >
+        {VERSION}
+    </button>
+{/if}
 
 {#if abierto}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
