@@ -7,6 +7,7 @@
 //   /tareas/pizarra/ pizarras compartidas (reuniones…)              → publico/pizarra/, servidor/pizarra.js
 //   /tareas/oficina/ puente invisible de la oficina (para el mapa)  → publico/oficina/, publico/app/oficina.js
 //                    tareas y cumpleaños de quien juega               (y /api/oficina: servidor/perfil.js)
+//   /tareas/cumples/ el cartel de cumpleaños (lo abre el mapa)       → publico/cumples/, publico/app/cumples.js
 //   /tareas/musica/  música con Spotify (la cabina del estudio)     → publico/musica/, servidor/musica.js
 //   /tareas/archivo/ archivo de documentos (la sala ARCHIVO)         → publico/archivo/, servidor/archivo.js
 //
@@ -907,8 +908,9 @@ async function api(req, res, ruta) {
         return json(res, 200, { yo: cuentas.usuarioPublico(usuario) });
     }
 
-    // --- la oficina: cumpleaños de hoy y de los próximos 30 días (para el mapa, los paneles y el tablón) ---
-    if (ruta === "/api/oficina" && metodo === "GET") return json(res, 200, perfil.resumenOficina(datos().usuarios, hoyOficina()));
+    // --- la oficina: cumpleaños de hoy, de los próximos 30 días y todos los del crew, y el de quien pregunta
+    //     (para el mapa, los paneles, el tablón y el cartel de cumpleaños, /tareas/cumples/) ---
+    if (ruta === "/api/oficina" && metodo === "GET") return json(res, 200, perfil.oficinaPara(datos().usuarios, hoyOficina(), usuario));
 
     // --- el personaje de cada uno en la oficina (WorkAdventure lo guarda aquí para tenerlo en todos sus aparatos) ---
     if (ruta === "/api/yo/personaje" && metodo === "GET") return json(res, 200, perfil.personajeDe(usuario));

@@ -13,6 +13,7 @@ Aplicación propia (Node, sin dependencias) con estas partes:
 | `https://oficina.hot-spot.es/tareas/musica/` | La cabina de música: escuchar a la vez lo que pincha alguien del crew (Spotify). |
 | `https://oficina.hot-spot.es/tareas/musica/mini/` | El reproductor pequeño (360 × 128 px) para abrirlo en la oficina mientras se anda. |
 | `https://oficina.hot-spot.es/tareas/oficina/` | Puente invisible: lo abre el mapa de la oficina, sin enseñarlo, para leer el tablón de quien juega. |
+| `https://oficina.hot-spot.es/tareas/cumples/` | El cartel de cumpleaños: lo abre el mapa (el calendario de la pared del hall) en un panel. |
 
 ## Crew e invitados
 
@@ -70,11 +71,11 @@ Node 22 sin dependencias:
 | `servidor/docx.js` | Word (`.docx`) a HTML limpio, sin librerías (solo `zlib` de Node). |
 | `servidor/perfil.js` | Cumpleaños («MM-DD»), qué día es hoy en la oficina y el personaje de cada uno. |
 | `servidor/musica.js` | Música: la cabina, conectar Spotify (OAuth) y mirar qué suena (en su propio `musica.json`). |
-| `publico/` | Las pantallas (tablón, `libro/`, `pizarra/`, `archivo/`, `musica/`, `musica/mini/` y `oficina/`): HTML, CSS y módulos de JavaScript sin compilar. |
+| `publico/` | Las pantallas (tablón, `libro/`, `pizarra/`, `archivo/`, `musica/`, `musica/mini/`, `oficina/` y `cumples/`): HTML, CSS y módulos de JavaScript sin compilar. |
 | `publico/app/markdown.js` | Markdown a HTML seguro (todo escapado), para el visor del archivo. |
 | `publico/app/archivo*.js` | El archivo en pantalla: la lista (`archivo.js`), el visor con índice y buscador (`archivo-visor.js`) y piezas comunes (`archivo-comun.js`). |
 | `publico/app/musica*.js` | La música en pantalla: la cabina (`musica.js`), el reproductor pequeño (`musica-mini.js`) y piezas comunes (`musica-comun.js`). |
-| `publico/app/cumple.js`, `confeti.js`, `oficina.js` | Los cumpleaños (cuentas y textos), el confeti y el puente invisible de la oficina (`/tareas/oficina/`). |
+| `publico/app/cumple.js`, `confeti.js`, `oficina.js`, `cumples.js` | Los cumpleaños (cuentas y textos), el confeti, el puente invisible de la oficina (`/tareas/oficina/`) y el cartel de cumpleaños (`/tareas/cumples/`). |
 | `publico/app/solo.js` | El modo «solo lo suyo» (`?solo=1`): cuándo se pone y cómo se conserva en las direcciones (ver «Solo lo suyo»). |
 | `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar, una por pantalla y cada una con su servidor y su puerto (tabla en «Las pruebas»). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
@@ -86,6 +87,7 @@ de arriba llevan a las demás con los mismos nombres: «Tablón de tareas», «L
 «Cuentas»; solo a quien tiene parte en el reparto), «Pizarra», «Archivo» y «Música». Al añadir una pantalla nueva hay
 que añadirla en todas (en `principal.js`, `libro.js`, `pizarra.js`, `archivo.js` y `musica.js`, de `publico/app/`),
 y cada enlace a otra pantalla lleva la clase `otra-pantalla` (en los menús hechos con `opcionesMenu`, `otra: true`).
+El cartel de cumpleaños (`cumples/`) es la excepción: se abre desde el mapa, como el puente, y ni enlaza ni se enlaza.
 
 ### Solo lo suyo (`?solo=1`)
 
@@ -113,7 +115,7 @@ queda). Sin el parámetro todo sigue igual.
   compartir y la pestaña que se abre para entrar con Google desde un marco. Allí las pestañas y el menú son la única
   manera de moverse.
 - En el libro, a quien no tiene parte («Solo para los socios») tampoco le sale el botón «Ir al tablón de tareas».
-- `musica/mini/` y `oficina/` no tienen pestañas ni menú: no usan el parámetro.
+- `musica/mini/`, `oficina/` y `cumples/` no tienen pestañas ni menú: no usan el parámetro.
 
 ## Libro de cuentas
 
@@ -177,6 +179,7 @@ Se llega desde las estanterías de la sala, desde las pestañas de la barra y de
 - **Cumpleaños:** cada persona pone el suyo en «Mi cuenta…»: solo día y mes (el año ni se pide ni se guarda; quien
   nació un 29 de febrero lo celebra el 28 los años que no son bisiestos). El día de cada cumple el tablón saca un
   aviso con confeti (se cierra y no vuelve hasta el día siguiente), y hay una tarta en el calendario y en el crew.
+  En la oficina se ven todos en el cartel de cumpleaños (abajo), donde cada uno puede poner también el suyo.
 - **«Hoy»** es el día en la oficina (`TAREAS_ZONA`, por defecto `Europe/Madrid`), no el del servidor, que va en UTC.
 - **Personaje:** WorkAdventure guarda el muñeco y el compañero en el navegador; aquí se guardan también, para que
   cada uno salga igual desde cualquier aparato.
@@ -184,9 +187,31 @@ Se llega desde las estanterías de la sala, desde las pestañas de la barra y de
 | Llamada (todas con sesión; sin ella, 401) | Qué hace |
 | --- | --- |
 | `PATCH /tareas/api/yo` con `{ "cumple": "05-17" }` | Pone el cumpleaños (`null` o `""` lo quita; con año se rechaza). Va junto a `color`, `nombre` y `clave`. |
-| `GET /tareas/api/oficina` | `{ hoy, cumples: [{ id, nombre }], proximos: [{ id, nombre, dia, fecha, enDias }] }`: de quién es el cumple hoy y los de los próximos 30 días. Quien ha salido del crew no cuenta. |
+| `GET /tareas/api/oficina` | `{ hoy, cumples: [{ id, nombre }], proximos: [{ id, nombre, dia, fecha, enDias }], todos: [{ id, nombre, dia, fecha, enDias, color }], yo: { id, cumple } }`: de quién es el cumple hoy, los de los próximos 30 días, todos los del crew (los que antes llegan, primero; `dia` es «MM-DD» y `fecha`, la próxima vez que se celebra) y el de quien pregunta (`null` si no lo ha puesto). Quien ha salido del crew no cuenta. |
 | `GET /tareas/api/yo/personaje` | `{ texturas, companero, actualizado }` (con `null` en lo que no hay). |
 | `PUT /tareas/api/yo/personaje` | Guarda `{ texturas: [de 1 a 10 piezas], companero: pieza o null }` (piezas de hasta 64 letras, números, `_`, `.` o `-`). |
+
+### El cartel de cumpleaños (`/tareas/cumples/`)
+
+El sitio de la oficina donde se ven los cumpleaños. Lo abre el mapa desde el calendario de la pared del hall, en un
+panel como el del tablón (el 70 % de la pantalla; en un móvil, el 90 %), sin `?solo=1` y sin permisos especiales:
+
+```js
+WA.nav.openCoWebSite("/tareas/cumples/", false, "", 70);
+```
+
+- **Qué enseña:** arriba, si hoy cumple alguien, el aviso de siempre (el mismo texto que el tablón y la oficina) con
+  confeti; el siguiente cumpleaños con los días que faltan; los doce meses, empezando por el de ahora, con el día y el
+  color de cada persona; y «Mi cumpleaños», para poner, cambiar o quitar el propio ahí mismo (`PATCH /api/yo`, como
+  en «Mi cuenta…»).
+- **Es un cartel:** no tiene pestañas ni menú, no enlaza las otras pantallas y las otras no lo enlazan. Sin sesión
+  enseña la pantalla de entrada de siempre y, al entrar, se vuelve a él.
+- **Al día:** con los avisos en directo (los cambios de `usuarios`), al volver a la pestaña y preguntando cada minuto,
+  que es como se entera de la medianoche de la oficina. Solo se repinta si cambia algo.
+- **Tamaños:** con 720 px de ancho o más, «el siguiente» y «mi cumpleaños» van a un lado y los meses al otro (2, 3 o 4
+  por fila); más estrecho, todo en una columna y solo los meses con cumpleaños. En el panel de 900 × 700 cabe entero.
+- **Textos:** reutiliza los del tablón (`publico/app/cumple.js`); los nuevos están marcados con `PROVISIONAL-v0.3.1`
+  hasta que los decida el equipo.
 
 ### El puente de la oficina (`/tareas/oficina/`)
 
@@ -330,7 +355,7 @@ sus variables, están en el workflow.
 | Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. |
 | Probar la pizarra | `pruebas/pizarra.mjs` | 3997 | Trazos, notas y fotos con dos personas a la vez, vaciar y recuperar, el lápiz en directo y quién la tiene abierta. |
 | Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). |
-| Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje y puente `/tareas/oficina/`. |
+| Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje, puente `/tareas/oficina/` y cartel `/tareas/cumples/` (la API y lo que sirve; en pantalla se mira con un navegador). |
 | Probar el archivo | `pruebas/archivo.mjs` | 3992 | Subir un documento de cada tipo, enlaces, papelera, búsqueda, lo que no debe entrar, Markdown y Word escapados y el límite total (`ARCHIVO_MAXIMO_MB=40`). |
 | Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify y lo que suena en directo; y la música «sin configurar». |
 | Probar el modo solo | `pruebas/solo.mjs` | 3990 | `?solo=1` sin navegador: lo que sirve el servidor (las cinco pantallas, `app/solo.js`, la regla de `estilo.css`, la vuelta de entrar), la lógica del módulo y que las pantallas marcan sus enlaces a las demás y no pierden el modo al cambiar de dirección. |

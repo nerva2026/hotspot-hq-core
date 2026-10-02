@@ -62,7 +62,7 @@ export const api = {
     anadirCrew: (datos) => llamar("POST", "crew", datos),
     cambiarCrew: (id, datos) => llamar("PATCH", `crew/${id}`, datos),
     cambiarYo: (datos) => llamar("PATCH", "yo", datos),
-    // la oficina: qué día es hoy allí y de quién es el cumple (hoy y los próximos 30 días)
+    // la oficina: qué día es hoy allí y de quién es el cumple (hoy, los próximos 30 días y todos los del crew), y el mío
     oficina: () => llamar("GET", "oficina"),
     // la música: el estado de la cabina (el puente de la oficina solo mira «configurado»)
     musica: () => llamar("GET", "musica"),

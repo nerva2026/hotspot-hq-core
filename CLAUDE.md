@@ -24,7 +24,7 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
 | `parches/01…10-*.patch` | Cambios sobre WorkAdventure, en orden (tabla en `README.md`). |
 | `archivos/` | Archivos propios que se copian encima (estilo retro, letras, marca, muñecos `hs-…`). |
 | `.github/workflows/hotspot-imagen.yml` | Construye la imagen `ghcr.io/nerva2026/hotspot-hq-play` (~7 min). |
-| `tareas/` | Servicio propio (Node sin dependencias): portada `/`, cuentas del crew `/cuentas`, tablón `/tareas` (con el cumpleaños y el personaje de cada uno: `/tareas/api/oficina`, `/tareas/api/yo/personaje`), libro de cuentas `/tareas/libro/`, pizarra `/tareas/pizarra/`, archivo de documentos `/tareas/archivo/`, música `/tareas/musica/` (cabina del DJ con Spotify, «escuchar a la vez» con el reproductor oficial; `musica/mini/` es la barra pequeña de 360×128 para la oficina; hace falta crear la aplicación de Spotify, ver «Música (Spotify)») y el puente invisible de la oficina `/tareas/oficina/` (la abre el mapa y deja las tareas y los cumpleaños de quien juega en las variables privadas `hsSesion`, `hsTareas`, `hsCumples` y `hsMusica`; esta última dice si Spotify está conectado y de ella depende el botón «Música» y la línea de la música en las novedades). Detalles en `tareas/README.md`. |
+| `tareas/` | Servicio propio (Node sin dependencias): portada `/`, cuentas del crew `/cuentas`, tablón `/tareas` (con el cumpleaños y el personaje de cada uno: `/tareas/api/oficina`, `/tareas/api/yo/personaje`), libro de cuentas `/tareas/libro/`, pizarra `/tareas/pizarra/`, archivo de documentos `/tareas/archivo/`, música `/tareas/musica/` (cabina del DJ con Spotify, «escuchar a la vez» con el reproductor oficial; `musica/mini/` es la barra pequeña de 360×128 para la oficina; hace falta crear la aplicación de Spotify, ver «Música (Spotify)»), el puente invisible de la oficina `/tareas/oficina/` (la abre el mapa y deja las tareas y los cumpleaños de quien juega en las variables privadas `hsSesion`, `hsTareas`, `hsCumples` y `hsMusica`; esta última dice si Spotify está conectado y de ella depende el botón «Música» y la línea de la música en las novedades) y el cartel de cumpleaños `/tareas/cumples/` (lo abre el mapa desde el calendario del hall, en un panel: todos los cumpleaños del crew y el propio). Detalles en `tareas/README.md`. |
 | `.github/workflows/hotspot-tareas.yml` | Prueba y construye `ghcr.io/nerva2026/hotspot-hq-tareas` (~1 min): una prueba por pantalla (cada paso con su servidor y su puerto, ver «Las pruebas de `tareas/`») e incluye una con `openid-client` 5 (la librería de WorkAdventure). |
 
 ### Hacer o cambiar un parche
@@ -70,6 +70,7 @@ Una prueba nueva lleva su puerto, su carpeta de datos y su registro propios. Y u
 demás (pestañas de arriba y menú de la cuenta, con los nombres de siempre: «Tablón de tareas», «Libro de cuentas»,
 «Pizarra», «Archivo» y «Música»), marcando cada enlace con la clase `otra-pantalla`: con `?solo=1` (como las abre el
 mapa desde un personaje o un objeto) esos enlaces no salen. Detalles en `tareas/README.md` («Solo lo suyo»).
+El cartel de cumpleaños (`/tareas/cumples/`) y el puente (`/tareas/oficina/`) no se enlazan: solo los abre el mapa.
 
 ## El servidor (VPS en Hostinger)
 
