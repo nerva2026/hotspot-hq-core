@@ -399,11 +399,21 @@ export function menuEtiquetas(ancla, actuales, todas, alCambiar) {
 // ---------- avisos abajo («Tarea borrada · Deshacer») ----------
 
 let zonaAvisos = null;
+
+// Dónde van los avisos. Sin nada abierto flotan abajo, en el centro. Con una ventana abierta (un formulario) o con la
+// ficha de una tarea, van DENTRO de ella y en su sitio (debajo de la ventana, al pie de la ficha): así ocupan su hueco
+// en vez de pintarse encima, y no tapan nunca el pie de un formulario (su mensaje de error y sus botones).
+export function colocarAvisos() {
+    if (!zonaAvisos) return;
+    const ventanas = document.querySelectorAll(".fondo-ventana");
+    const casa = ventanas[ventanas.length - 1] || document.querySelector(".ficha") || document.body;
+    if (zonaAvisos.parentNode !== casa) casa.appendChild(zonaAvisos);
+    zonaAvisos.classList.toggle("en-su-sitio", casa !== document.body);
+}
+
 export function aviso(texto, { accion, alAccion, duracion = 5000, tipo = "" } = {}) {
-    if (!zonaAvisos) {
-        zonaAvisos = h("div", { class: "avisos", "aria-live": "polite" });
-        document.body.appendChild(zonaAvisos);
-    }
+    if (!zonaAvisos) zonaAvisos = h("div", { class: "avisos", "aria-live": "polite" });
+    colocarAvisos();
     const el = h(
         "div",
         { class: ["aviso", tipo] },
@@ -448,6 +458,7 @@ export function ventana(titulo, contenido, { ancho = 420, alCerrar } = {}) {
     function cerrar() {
         fondo.remove();
         document.removeEventListener("keydown", tecla, true);
+        colocarAvisos();
         alCerrar?.();
     }
     fondo.addEventListener("pointerdown", (e) => {
@@ -455,6 +466,7 @@ export function ventana(titulo, contenido, { ancho = 420, alCerrar } = {}) {
     });
     document.addEventListener("keydown", tecla, true);
     document.body.appendChild(fondo);
+    colocarAvisos(); // los avisos que hubiera a la vista pasan a su hueco, debajo de la ventana
     caja.querySelector("input, textarea, button:not(.cerrar)")?.focus();
     return { cerrar, caja };
 }

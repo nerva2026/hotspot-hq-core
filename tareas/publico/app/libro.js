@@ -7,7 +7,7 @@ import { h, $, vaciar, normalizar, hoy, sumarDias, fechaCorta, fechaLarga, MESES
 import { api, escuchar, cuandoSePierdaLaSesion, direccionApi } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
 import { sinSolo } from "./solo.js";
-import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar } from "./menus.js";
+import { abrirMenu, cerrarMenu, hayMenu, aviso, colocarAvisos, ventana, avatar } from "./menus.js";
 
 aplicacion("CUENTAS", "El libro de cuentas es de los socios de HOT SPOT S.L. Entra con tu cuenta de Google.");
 
@@ -1288,6 +1288,7 @@ function sinSesion() {
     E.yo = null;
     cerrarMenu();
     document.querySelector(".fondo-ventana")?.remove();
+    colocarAvisos();
     pantallaEntrar(raiz, entrarYEmpezar);
 }
 cuandoSePierdaLaSesion(() => {

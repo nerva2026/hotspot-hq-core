@@ -1709,23 +1709,30 @@ table.lista {
 }
 
 /* ---------- ventanas y avisos ---------- */
+/* La ventana nunca es más alta que la pantalla: si su contenido no cabe, se desplaza por dentro (la cabecera se queda
+   arriba). Debajo le queda siempre el hueco de los avisos (.avisos.en-su-sitio), que así no se pintan encima. */
 .fondo-ventana {
     position: fixed;
     inset: 0;
     z-index: 100;
     background: rgba(28, 23, 21, 0.45);
-    display: grid;
-    place-items: start center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: 10vh 12px 12px;
-    overflow-y: auto;
 }
 .ventana {
+    flex: 0 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     background: var(--papel);
     border: 3px solid var(--tinta);
     box-shadow: 6px 6px 0 var(--tinta);
 }
 .ventana header {
+    flex: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1738,6 +1745,10 @@ table.lista {
     text-transform: uppercase;
 }
 .cuerpo-ventana {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 16px;
 }
 .cuerpo-ventana h3 {
@@ -1810,6 +1821,28 @@ table.lista {
     align-items: center;
     width: max-content;
     max-width: calc(100vw - 24px);
+}
+/* Con una ventana o la ficha de una tarea abierta, los avisos van dentro de ella y en su sitio (menus.js,
+   colocarAvisos): debajo de la ventana o al pie de la ficha, sin taparlas. */
+.avisos.en-su-sitio {
+    position: static;
+    transform: none;
+    flex: none;
+    width: auto;
+    max-width: 100%;
+}
+.avisos.en-su-sitio:empty {
+    display: none;
+}
+.fondo-ventana > .avisos.en-su-sitio {
+    margin-top: auto; /* abajo del todo, como siempre */
+    padding-top: 14px;
+}
+.ficha > .avisos.en-su-sitio {
+    align-items: stretch;
+    padding: 8px 10px;
+    background: var(--crema-osc);
+    border-top: 2px solid var(--tinta);
 }
 .aviso {
     display: flex;
