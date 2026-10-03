@@ -143,6 +143,14 @@ const ctx = {
                 return "conflicto";
             }
             aviso(`No se ha guardado: ${err.message}`, { tipo: "malo" });
+            // Lo que se había puesto en pantalla sin esperar al servidor vuelve a como estaba: si no, sin conexión la
+            // tarea se quedaba a la vista como «hecha» (o movida) sin estarlo, hasta que al volver se deshacía sola.
+            // (Si mientras tanto ha llegado otra versión del servidor, esa es la buena y no se toca.)
+            if (E.tareas.get(id) === t) {
+                Object.assign(t, antes);
+                pintar();
+                actualizarFicha(ctx);
+            }
             await recargar();
             return "error";
         }

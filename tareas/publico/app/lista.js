@@ -1,6 +1,6 @@
 // Vista «Lista»: una tabla como la de Notion. Cada celda se edita en el sitio.
 
-import { h, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, estadoDe, prioridadDe, plazo, fechaCorta, pesoPrioridad, normalizar } from "./util.js";
+import { h, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, estadoDe, prioridadDe, plazo, fechaCorta, pesoPrioridad, normalizar, devolverLoEscrito } from "./util.js";
 import { avatar, chipEtiqueta, menuEstado, menuPrioridad, menuPersonas, menuPersona, menuFecha, menuEtiquetas, abrirMenu, cerrarMenu } from "./menus.js";
 import { interpretar } from "./rapida.js";
 
@@ -305,13 +305,15 @@ function filaNueva(base, ctx, clave) {
                 return;
             }
             if (e.key !== "Enter") return;
-            const r = interpretar(e.target.value, ctx.activos());
+            const escrito = e.target.value;
+            const r = interpretar(escrito, ctx.activos());
             if (!r.titulo) return;
             e.target.value = "";
             const datos = { ...base, titulo: r.titulo, responsables: [...new Set([...(base.responsables || []), ...r.responsables])], etiquetas: r.etiquetas };
             if (r.prioridad) datos.prioridad = r.prioridad;
             if (r.fin) datos.fin = r.fin;
-            await ctx.crear(datos);
+            // Si no se ha podido crear (sin conexión), lo escrito vuelve a su campo en vez de perderse.
+            if (!(await ctx.crear(datos))) devolverLoEscrito(clave, escrito);
         },
     });
     return h("tr", { class: "fila-nueva" }, h("td"), h("td", { colspan: COLUMNAS.length }, entrada));

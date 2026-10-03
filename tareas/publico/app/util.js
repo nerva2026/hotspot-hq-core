@@ -100,6 +100,14 @@ export function quitarErrorAlCorregir(zona, error) {
     return error;
 }
 
+// El campo de «nueva tarea» se vacía al pulsar Intro, antes de que conteste el servidor (para seguir con la siguiente);
+// si la tarea no se crea, lo escrito vuelve al campo (el de ahora: la vista puede haberse repintado), salvo que ya
+// tenga otra cosa.
+export function devolverLoEscrito(clave, escrito) {
+    const campo = document.querySelector(`[data-foco="${CSS.escape(clave)}"]`);
+    if (campo && !campo.value) campo.value = escrito;
+}
+
 export function retrasar(fn, ms) {
     let t = null;
     const envuelta = (...args) => {

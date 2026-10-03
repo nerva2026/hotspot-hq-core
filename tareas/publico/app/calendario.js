@@ -293,11 +293,15 @@ function altaEnDia(ancla, dia, ctx) {
         if (e.key !== "Enter") return;
         e.preventDefault();
         const r = interpretar(entrada.value, ctx.activos());
-        if (!r.titulo) return;
-        cerrarMenu();
+        if (!r.titulo || entrada.disabled) return;
         const datos = { titulo: r.titulo, fin: r.fin || dia, responsables: r.responsables, etiquetas: r.etiquetas };
         if (r.prioridad) datos.prioridad = r.prioridad;
-        await ctx.crear(datos);
+        // El menú se cierra cuando la tarea está creada: si no se puede (sin conexión), se queda con lo escrito.
+        entrada.disabled = true;
+        const creada = await ctx.crear(datos);
+        entrada.disabled = false;
+        if (creada) cerrarMenu();
+        else entrada.focus();
     });
     abrirMenu(ancla.querySelector(".cal-numero") || ancla, h("div", { class: "menu-fecha" }, h("div", { class: "menu-titulo" }, `Para el ${fechaMedia(dia)}`), entrada, h("p", { class: "nota" }, "Intro para crear.")), { ancho: 260 });
 }
