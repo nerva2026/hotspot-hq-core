@@ -92,6 +92,13 @@ historial. Una ventana nueva se hace con `ventana()` (`menus.js`), nunca a mano 
 La pestaña «Cuentas» sale solo a quien puede ver el libro, y en directo en las cinco pantallas (`libro-pestana.js`).
 La lista del tablón cabe siempre a lo ancho: de 721 a 1114 px esconde por orden las columnas menos importantes
 (`@container lista` en `estilo.css`); quien añada o ensanche una columna tiene que rehacer esos cortes y volver a medir.
+Nada de lo que escribe la gente (un título, un nombre, una etiqueta, un concepto, un nombre de archivo, con o sin
+espacios) puede ensanchar la página ni empujar a lo de al lado: una caja de ancho fijo dentro de un `flex` lleva
+`min-width: 0` y su texto se corta con «…» (entero en el `title`).
+Un texto que se guarda con retraso (las notas de una tarea, una nota de la pizarra) pasa por `publico/app/guardado.js`:
+se guarda también al cerrar o recargar la página. Un formulario con mensaje de error lo engancha con
+`quitarErrorAlCorregir()` (`util.js`; lo vigila `pruebas/tablon.mjs`). Importar una descarga del propio libro no puede
+cambiar nada (columna escondida «Id»; prueba de ida y vuelta en `pruebas/libro.mjs`).
 El cartel de cumpleaños (`/tareas/cumples/`) y el puente (`/tareas/oficina/`) no se enlazan: solo los abre el mapa.
 
 ## El servidor (VPS en Hostinger)

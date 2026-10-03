@@ -102,6 +102,22 @@ cualquier navegador.
   («en marcha», «hecho»). Todas las palabras, en cualquier orden. La lógica está aparte, en
   `publico/app/tablon-buscar.js`, y se prueba en `pruebas/tablon.mjs`.
 - **En directo:** lo que cambia uno lo ve el otro al momento (Server-Sent Events).
+- **Lo que se escribe no se pierde:** las notas y el título de la ficha se guardan un rato después de la última
+  letra, al salir del campo, al cerrar la ficha y también **al cerrar o recargar la página** (o al cambiar de
+  aplicación en el móvil): `publico/app/guardado.js` manda lo pendiente con un envío que sobrevive a la página
+  (`keepalive`), una sola vez. Sin conexión, lo escrito se queda en la ficha («Sin guardar») y se vuelve a intentar
+  solo cuando vuelve el servidor (sin un aviso rojo cada segundo); lo que se había cambiado en pantalla y no se pudo
+  guardar (una tarea marcada como hecha) vuelve a como estaba; y el texto de una tarea nueva que no se ha podido crear
+  vuelve a su campo. Un texto nuevo que se guarde con retraso tiene que pasar por ese módulo.
+- **Las fechas se pueden escribir con el teclado:** en el menú de fecha, elegir un día en el calendario del navegador
+  (o un atajo) lo pone y cierra; lo tecleado se pone con Intro o al pulsar fuera, no con la primera cifra del año (el
+  navegador avisa de un «cambio» con cada cifra, y antes el menú se cerraba guardando el año 0002).
+- **Dos personas en la misma tarea:** las notas no se pisan (ver «Las pruebas»); y cada cambio en las subtareas se hace
+  sobre la lista de ese momento y sobre esa subtarea (por su id), no sobre la que se pintó: quien termina de escribir
+  una no deshace lo que el otro haya marcado o añadido mientras tanto. Escape con una subtarea a medio escribir vacía
+  el campo (o lo deja como estaba); el segundo Escape cierra la ficha.
+- **Formularios:** un mensaje de error se quita solo en cuanto se corrige su campo (`quitarErrorAlCorregir()` y
+  `ponerError()` en `publico/app/util.js`), en las cinco pantallas.
 - **Excel:** descarga del tablón entero en `.xlsx`, e importación de la hoja «Pendiente» de Drive o de
   una descarga anterior. Las filas que empiezan por «EJEMPLO» y las tareas que ya existen se saltan.
 - **Cuentas:** con Google (crew). Las contraseñas antiguas siguen valiendo como plan B («Entrar con
@@ -135,6 +151,9 @@ Node 22 sin dependencias:
 | `publico/app/libro-espera.js` | La pantalla «Solo para los socios» del libro, en directo: sigue escuchando y abre el libro cuando a esa persona le dan acceso. Lógica sola, para probarla en Node. |
 | `publico/app/libro-pestana.js` | La pestaña «Cuentas» de las otras cuatro pantallas, en directo: con los avisos «libro» y «usuarios» del canal pregunta por lo suyo (`GET /api/yo`) y la pone o la quita. Lógica sola, para probarla en Node. |
 | `publico/app/libro-buscar.js` | El buscador del libro: qué se puede buscar de un movimiento (también el importe, la fecha y el tipo) y cuándo coincide. Lógica sola, para probarla en Node. |
+| `publico/app/tablon-buscar.js` | El buscador del tablón: qué se puede buscar de una tarea (también la etiqueta con «#», la persona con «@», la prioridad y el estado). Lógica sola, para probarla en Node. |
+| `publico/app/guardado.js` | El guardado retrasado de lo que se escribe (las notas de una tarea, el texto de una nota de la pizarra): un rato después de la última letra y también al cerrar o recargar la página, sin repetir envíos. Lógica sola, para probarla en Node. |
+| `publico/app/personas.js` | Quién se puede elegir en una tarea: el crew de ahora y quien ha salido pero sigue puesto en ella. Lógica sola, para probarla en Node. |
 | `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar, una por pantalla y cada una con su servidor y su puerto (tabla en «Las pruebas»). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
 
@@ -548,7 +567,7 @@ sus variables, están en el workflow.
 | Probar el servidor | (con `curl`) | 3999 | Que arranca, sirve el tablón, imprime el enlace de alta y pide sesión (401) a quien no la tiene. |
 | Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. La ida y vuelta de la descarga (descargar → importar → nada cambia: ni movimientos, ni cuentas, ni reparto; también tras cambiar o borrar un movimiento y con una descarga antigua sin «Id») y hojas raras (vacías, sin columnas, con fechas e importes escritos de otras maneras, de 3000 filas). Y «Solo para los socios» en directo: la espera de la pantalla (`publico/app/libro-espera.js`) contra el canal de verdad, al pasar a administrar y al recibir parte en el reparto. La pestaña «Cuentas» de las otras pantallas en directo (`publico/app/libro-pestana.js` y `GET /api/yo`), también contra el canal de verdad. Y el buscador (`publico/app/libro-buscar.js`): por importe, por fecha, por tipo y por persona. |
 | Probar la pizarra | `pruebas/pizarra.mjs` | 3997 | Trazos, notas y fotos con dos personas a la vez, vaciar y recuperar, el lápiz en directo y quién la tiene abierta. |
-| Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). Y las capas (`publico/app/capas.js`) con un historial de mentira: el tabulador da la vuelta dentro, «atrás» cierra la de arriba, cerrar con el botón no deja entradas, y toda ventana pasa por `ventana()`. |
+| Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). El buscador (`tablon-buscar.js`), quien sale del crew y sigue en una tarea (`personas.js`, con el servidor), el guardado al cerrar o recargar la página (`guardado.js` con un reloj de mentira, `keepalive` en `api.js` y contra el servidor), las subtareas por su id y los errores de formulario que se quitan al corregir. Y las capas (`publico/app/capas.js`) con un historial de mentira: el tabulador da la vuelta dentro, «atrás» cierra la de arriba, cerrar con el botón no deja entradas, y toda ventana pasa por `ventana()`. |
 | Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje, puente `/tareas/oficina/` y cartel `/tareas/cumples/` (la API y lo que sirve; en pantalla se mira con un navegador). |
 | Probar el archivo | `pruebas/archivo.mjs` | 3992 | Subir un documento de cada tipo, enlaces, papelera, búsqueda, lo que no debe entrar, Markdown y Word escapados y el límite total (`ARCHIVO_MAXIMO_MB=40`). |
 | Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify (y entrar en la cabina al conectar, libre u ocupada), lo que suena en directo, cómo le va a cada oyente, el aviso a la oficina y el puente con `hsMusica` (el módulo de verdad con una oficina de mentira); la música «sin configurar»; y las horas con su artículo («desde la 1:08», `laHora()`), sin ninguna escrita a mano en las pantallas. |
