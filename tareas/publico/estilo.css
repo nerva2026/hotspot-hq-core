@@ -2920,6 +2920,14 @@ table.lista {
         place-items: start center;
         padding-top: 8px;
     }
+    /* …y como va ENCIMA del punto, el nombre y el número, con el ratón encima no puede llevar fondo (los tapaba y la
+       etiqueta se quedaba en blanco): el fondo de «encima» lo pone la cabecera, que está debajo, y el botón, solo su marco. */
+    .columna.plegable:not(.abierta) .plegar-hecho:hover {
+        background: transparent;
+    }
+    .columna.plegable:not(.abierta) .columna-cabecera:hover {
+        background: #fff;
+    }
 }
 
 /* ---------- móvil (≤ 600 px): en la lista, «Agrupar por» y la cuenta de tareas comparten línea ---------- */
