@@ -52,10 +52,16 @@ cualquier navegador.
   en el sitio; donde no hay ratón (`hover: none`) «Abrir» tampoco se esconde.
 - **Calendario y cronograma:** el calendario se abre desplazado hasta hoy (en un móvil solo caben tres o cuatro días) y
   marca con una sombra el lado por el que sigue; en los dos, el título de una barra que empieza antes del borde visible
-  se corre hasta lo que se ve.
+  se corre hasta lo que se ve. Con 720 px o menos, el mes se encoge (se desplaza por dentro) para que la lista «Sin
+  fecha» quepa debajo, dentro de la pantalla. En el cronograma, el rótulo del mes va pegado al borde de la columna de
+  nombres mientras ese mes esté a la vista y solo sale si cabe entero (donde no cabe se acorta: «sep 2026», «sep»; en un
+  móvil, sin el año si es el de ahora); el selector «Nada · Estado · Persona» lleva siempre su etiqueta «Agrupar»; y el
+  título que va al lado de una barra corta se coloca detrás de lo que la barra mide de verdad.
 - **Avisos y ventanas:** los avisos salen abajo, en el centro; con una ventana abierta (o la ficha de una tarea) van
   dentro de ella, debajo de la ventana o al pie de la ficha, para no tapar el pie de un formulario
   (`colocarAvisos()` en `publico/app/menus.js`). Una ventana nunca es más alta que la pantalla: se desplaza por dentro.
+  Un menú mide como mucho 420 px (y se desplaza); en un móvil, lo que necesite hasta el alto de la pantalla, para que
+  el menú de la cuenta salga entero.
 - **Cada tarea tiene:** título, estado, prioridad (urgente, alta, media, baja; cada una con su color),
   para quién, pedido por, fecha de inicio y fecha límite, etiquetas, subtareas y notas.
 - **En directo:** lo que cambia uno lo ve el otro al momento (Server-Sent Events).
@@ -88,6 +94,7 @@ Node 22 sin dependencias:
 | `publico/app/musica*.js` | La música en pantalla: la cabina (`musica.js`), el reproductor pequeño (`musica-mini.js`), piezas comunes (`musica-comun.js`) y los estados del reproductor, sin página, para poder probarlos en Node (`musica-seguidor.js`). |
 | `publico/app/cumple.js`, `confeti.js`, `oficina.js`, `cumples.js` | Los cumpleaños (cuentas y textos), el confeti, el puente invisible de la oficina (`/tareas/oficina/`) y el cartel de cumpleaños (`/tareas/cumples/`). |
 | `publico/app/solo.js` | El modo «solo lo suyo» (`?solo=1`): cuándo se pone y cómo se conserva en las direcciones (ver «Solo lo suyo»). |
+| `publico/app/libro-espera.js` | La pantalla «Solo para los socios» del libro, en directo: sigue escuchando y abre el libro cuando a esa persona le dan acceso. Lógica sola, para probarla en Node. |
 | `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar, una por pantalla y cada una con su servidor y su puerto (tabla en «Las pruebas»). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
 
@@ -101,6 +108,10 @@ fechas de las tareas a 16 px; y lo menudo («hace 3 min», «3,4 KB», la escala
 principio de «piezas pequeñas» en `publico/estilo.css`; lo que escribe la gente (títulos, conceptos, notas) y las frases
 con un número dentro no cuentan. Al añadir una cifra nueva, ponerla a uno de esos tamaños.
 
+**Las horas, con su artículo.** Una hora dentro de una frase («a», «desde», «hasta») sale siempre de `laHora()`, en
+`publico/app/util.js`: «desde la 1:08» (entre la 1:00 y la 1:59 es «la») y «desde las 13:05». Nunca «las» escrito a
+mano delante de una hora (lo vigila `pruebas/musica.mjs`). Hoy la única es la de la cabina de la música.
+
 **Cómo se llega de una pantalla a otra:** el menú de la cuenta (arriba a la derecha) de cada pantalla y las pestañas
 de arriba llevan a las demás con los mismos nombres: «Tablón de tareas», «Libro de cuentas» (en las pestañas,
 «Tareas» y «Cuentas»; esta, solo a quien tiene parte en el reparto), «Pizarra», «Archivo» y «Música». Las cinco
@@ -113,12 +124,29 @@ en la pizarra, el nombre de esa pizarra): con 600 px o menos no hay pestañas (q
 nombre sigue ahí. El cartel de cumpleaños (`cumples/`) es la excepción: se abre desde el mapa, como el puente, y ni
 enlaza ni se enlaza.
 
+**La cabecera con pestañas, por anchos** (sin `?solo=1`; reglas al principio de «barra superior» en `publico/estilo.css`).
+La fila de pestañas está en el mismo sitio en las cinco pantallas, el nombre de la pantalla no se corta, ningún botón
+se queda solo en una fila y la cabecera no pasa de dos filas:
+
+| Ancho | Cómo va | Dónde empiezan las pestañas |
+| --- | --- | --- |
+| 860 px o más | Una fila: logo, nombre, pestañas y, a la derecha, el botón de la pantalla y la cuenta. El nombre ocupa lo mismo en las cinco (`--ancho-nombre-app`, 136 px); uno largo va en dos líneas («PIZARRA DE / REUNIONES»). El tablón añade debajo su línea de vistas. | x = 208 px |
+| de 601 a 859 px | Dos filas en las cinco. Arriba, lo de toda la oficina: logo, pestañas y la cuenta. Debajo, lo de esa pantalla: su nombre entero, las vistas del tablón y su botón («+ Nueva», «+ Apuntar») o quién más está (pizarra y música). | x = 52 px |
+| 600 px o menos | Una fila sin pestañas (el móvil). | — |
+
+El nombre de la cuenta, al lado del avatar, solo sale con 960 px o más (y nunca mide más de 120 px hasta los 1200), y
+los avatares de quién más está en la pizarra o escucha la música no pasan de 124 px, sin su rótulo, hasta los 1100:
+así ni un nombre largo ni mucha gente le quitan el sitio a las pestañas. Una pizarra con un nombre que no quepa en dos
+líneas de 136 px («Pizarra ideas-para-la-fiesta») lo lleva cortado con «…» a partir de 860 px (entero, al pasar el
+ratón y de 601 a 859 px). Al tocar la cabecera hay que volver a medirla con un navegador, de 600 a 1100 px de 20 en 20,
+en las cinco pantallas, con y sin `?solo=1`: `pruebas/solo.mjs` solo vigila que las reglas sigan ahí.
+
 ### Solo lo suyo (`?solo=1`)
 
 Cada personaje u objeto de la oficina enseña solo su pantalla: el mapa la abre con `?solo=1` y esa pantalla esconde
 la fila de pestañas entera (tampoco queda la suya: el nombre ya está en la cabecera) y los enlaces a otras pantallas
 del menú de la cuenta (lo demás del menú se queda). En el tablón, sin pestañas, las vistas se quedan en la primera
-línea, al lado del nombre. Sin el parámetro todo sigue igual.
+línea, al lado del nombre (con menos de 740 px no caben y bajan a la suya). Sin el parámetro todo sigue igual.
 
 | Pantalla | Dirección para el mapa |
 | --- | --- |
@@ -147,7 +175,10 @@ línea, al lado del nombre. Sin el parámetro todo sigue igual.
 Una pantalla propia para las cuentas, sin tener que manejar una hoja de cálculo. Usa las mismas cuentas y la
 misma sesión que el tablón.
 
-- **Quién lo ve:** los administradores y quien tiene parte en el reparto. A los demás, la API les contesta 403.
+- **Quién lo ve:** los administradores y quien tiene parte en el reparto. A los demás, la API les contesta 403 y la
+  pantalla dice «Solo para los socios». Va en directo en los dos sentidos: a quien le quitan la parte se le cierra el
+  libro al momento, y la pantalla «Solo para los socios» sigue escuchando el canal y abre el libro sola en cuanto a esa
+  persona le dan parte o pasa a administrar (`publico/app/libro-espera.js`), sin cerrar ni recargar.
 - **Apuntar:** gasto, ingreso o pago entre socios, con categoría, notas y la foto del tique (o un PDF).
 - **Quién debe a quién:** cada gasto e ingreso se reparte según las partes. Las partes se fijan con el primer
   movimiento, a partes iguales entre los administradores, y se cambian en «Reparto».
@@ -262,7 +293,7 @@ ve nadie más ni se guardan (`scope: "world"` sin `persist: true` lo rechaza Wor
 | `hsSesion` | `true` si quien juega ha entrado en el tablón; `false` si no (o si se le ha caducado la sesión). |
 | `hsTareas` | `{ abiertas, hoy, atrasadas }`: sus tareas sin terminar, las que vencen hoy y las atrasadas (como las cuenta la Jefa de Producción). `null` sin sesión. Es lo que necesita el número del botón «Tareas». |
 | `hsCumples` | `{ hoy: "AAAA-MM-DD", cumples: [{ id, nombre }] }`: de quién es el cumple hoy en la oficina. `null` sin sesión. |
-| `hsMusica` | `{ configurado, dj, suena }` (siempre las tres; `null` sin sesión). `configurado`: `true` si el servidor tiene conectado Spotify; el mapa solo pone el botón «Música» si lo es (mientras no llegue la respuesta, no hay botón). `dj`: el nombre de quien pincha, o `null` si la cabina está libre. `suena`: `true` si ahora mismo suena algo que se puede oír; `false` si no (pausa, anuncio, archivo local del DJ, cabina libre… o si no se sabe, ver abajo). |
+| `hsMusica` | `{ configurado, dj, suena, desde }` (siempre las cuatro; `null` sin sesión). `configurado`: `true` si el servidor tiene conectado Spotify; el mapa solo pone el botón «Música» si lo es (mientras no llegue la respuesta, no hay botón). `dj`: el nombre de quien pincha, o `null` si la cabina está libre. `suena`: `true` si ahora mismo suena algo que se puede oír; `false` si no (pausa, anuncio, archivo local del DJ, cabina libre… o si no se sabe, ver abajo). `desde`: desde cuándo pincha (fecha ISO, la de entrar en la cabina; `null` con la cabina libre): el mapa lo usa para avisar una sola vez de cada vez que alguien se pone a pinchar. |
 
 - **Al día:** se actualiza con los avisos en directo del tablón; cada minuto recuenta las tareas (a medianoche
   cambian «hoy» y «atrasadas») y cada 10 minutos vuelve a preguntar qué día es, quién cumple y cómo está la música (y lo vuelve a leer todo al
@@ -270,7 +301,7 @@ ve nadie más ni se guardan (`scope: "world"` sin `persist: true` lo rechaza Wor
   probar cada vez más espaciado (1, 2, 4… hasta 15 minutos) y al momento si se vuelve a la pestaña o se entra en el
   tablón en ese navegador.
 - **`hsMusica` en directo:** el puente la lee de `GET /api/musica` (`configurado`, `cabina.dj.nombre` y `suena`) y
-  la cambia al momento cuando el servidor avisa por el canal general con `{ tipo: "musica-cabina", dj, suena }`: al
+  la cambia al momento cuando el servidor avisa por el canal general con `{ tipo: "musica-cabina", dj, suena, desde }`: al
   entrar o salir alguien de la cabina y cuando empieza o deja de sonar (un cambio de canción no avisa). Si quien pincha
   cambia de nombre, se vuelve a leer. El puente **no** abre el canal de la música: el servidor solo mira el Spotify del
   DJ mientras alguien tiene la música abierta (la cabina o el reproductor pequeño), y por eso `suena` solo se sabe
@@ -442,14 +473,14 @@ sus variables, están en el workflow.
 | Paso | Prueba | Puerto | Qué comprueba |
 | --- | --- | --- | --- |
 | Probar el servidor | (con `curl`) | 3999 | Que arranca, sirve el tablón, imprime el enlace de alta y pide sesión (401) a quien no la tiene. |
-| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. |
+| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. Y «Solo para los socios» en directo: la espera de la pantalla (`publico/app/libro-espera.js`) contra el canal de verdad, al pasar a administrar y al recibir parte en el reparto. |
 | Probar la pizarra | `pruebas/pizarra.mjs` | 3997 | Trazos, notas y fotos con dos personas a la vez, vaciar y recuperar, el lápiz en directo y quién la tiene abierta. |
 | Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). |
 | Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje, puente `/tareas/oficina/` y cartel `/tareas/cumples/` (la API y lo que sirve; en pantalla se mira con un navegador). |
 | Probar el archivo | `pruebas/archivo.mjs` | 3992 | Subir un documento de cada tipo, enlaces, papelera, búsqueda, lo que no debe entrar, Markdown y Word escapados y el límite total (`ARCHIVO_MAXIMO_MB=40`). |
-| Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify (y entrar en la cabina al conectar, libre u ocupada), lo que suena en directo, cómo le va a cada oyente, el aviso a la oficina y el puente con `hsMusica` (el módulo de verdad con una oficina de mentira); y la música «sin configurar». |
+| Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify (y entrar en la cabina al conectar, libre u ocupada), lo que suena en directo, cómo le va a cada oyente, el aviso a la oficina y el puente con `hsMusica` (el módulo de verdad con una oficina de mentira); la música «sin configurar»; y las horas con su artículo («desde la 1:08», `laHora()`), sin ninguna escrita a mano en las pantallas. |
 | Probar el reproductor de la música | `pruebas/reproductor.mjs` | ninguno (sin servidor ni navegador) | Los estados del reproductor (`publico/app/musica-seguidor.js`) con un Embed y un reloj de mentira: suena entera, la muestra de 30 s y su final, no arranca solo, no carga, y el cambio de canción. |
-| Probar el modo solo | `pruebas/solo.mjs` | 3990 | `?solo=1` sin navegador: lo que sirve el servidor (las cinco pantallas, `app/solo.js`, la regla de `estilo.css`, la vuelta de entrar), la lógica del módulo y que las pantallas marcan sus enlaces a las demás y no pierden el modo al cambiar de dirección. También las pestañas: las mismas cinco en las cinco pantallas, la fila entera marcada y el nombre de la pantalla en la cabecera. |
+| Probar el modo solo | `pruebas/solo.mjs` | 3990 | `?solo=1` sin navegador: lo que sirve el servidor (las cinco pantallas, `app/solo.js`, la regla de `estilo.css`, la vuelta de entrar), la lógica del módulo y que las pantallas marcan sus enlaces a las demás y no pierden el modo al cambiar de dirección. También las pestañas: las mismas cinco en las cinco pantallas, la fila entera marcada, el nombre de la pantalla en la cabecera y las reglas que dejan las pestañas en el mismo sitio en las cinco (lo que miden se mira con un navegador). |
 | Probar el acceso de la oficina | `pruebas/oficina-oidc.mjs` y `pruebas/google-falso.mjs` | 3998 y 8412 (el Google de mentira) | Entrar por `/cuentas` con `openid-client` 5 (la librería de WorkAdventure): PKCE, `userinfo` y revocar. Es el único paso que instala un paquete (`npm install`). |
 
 El paso «Comprobar el código» pasa antes `node --check` a todo el JavaScript (`servidor/`, `publico/app/`, `portada/`

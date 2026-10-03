@@ -15,11 +15,13 @@
 //   hsTareas   { abiertas, hoy, atrasadas } | null               sus tareas sin terminar, las que vencen hoy y las
 //                                                                atrasadas (como las cuenta la Jefa de Producción)
 //   hsCumples  { hoy: "AAAA-MM-DD", cumples: [{ id, nombre }] } | null    cumpleaños de hoy en la oficina
-//   hsMusica   { configurado, dj, suena } | null                 configurado: si el servidor tiene conectado Spotify
+//   hsMusica   { configurado, dj, suena, desde } | null          configurado: si el servidor tiene conectado Spotify
 //                                                                (SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET); el mapa solo pone el
 //                                                                botón «Música» si es true. dj: el nombre de quien pincha (null si
 //                                                                la cabina está libre). suena: true si ahora mismo suena algo que
 //                                                                se puede oír (solo se sabe mientras alguien tiene la música abierta)
+//                                                                desde: desde cuándo pincha (fecha ISO; null con la cabina libre): el
+//                                                                mapa avisa una sola vez de cada vez que alguien se pone a pinchar
 //
 // Sin sesión: hsSesion false y las otras tres a null. También saca el aviso de los cumpleaños de hoy (una vez al día
 // en cada navegador; el día visto se recuerda aquí, porque el mapa no puede recordar nada).
@@ -139,6 +141,8 @@ async function leerOficina() {
 }
 const releerOficina = retrasar(leerOficina, 1000);
 
+const desdeCuando = (valor) => (typeof valor === "string" && valor ? valor : null);
+
 // La música: ¿está conectada (Spotify) en el servidor?, ¿quién pincha? y ¿suena algo? Si no contesta, no se escribe
 // nada (y mientras tanto el mapa no pone el botón «Música») y se vuelve a probar luego.
 async function leerMusica() {
@@ -155,7 +159,8 @@ async function leerMusica() {
     if (avisosAntes !== avisosDeCabina) return leerMusica(); // la cabina ha cambiado mientras se preguntaba: otra vez
     ultimaMusica = Date.now();
     const dj = estado?.cabina?.dj?.nombre;
-    musica = { configurado: estado?.configurado === true, dj: typeof dj === "string" && dj ? dj : null, suena: estado?.suena === true };
+    const quien = typeof dj === "string" && dj ? dj : null;
+    musica = { configurado: estado?.configurado === true, dj: quien, suena: estado?.suena === true, desde: quien ? desdeCuando(estado?.cabina?.desde) : null };
     escribir("hsMusica", musica);
 }
 const releerMusica = retrasar(leerMusica, 1000);
@@ -164,7 +169,8 @@ const releerMusica = retrasar(leerMusica, 1000);
 function alCambiarLaCabina(ev) {
     avisosDeCabina += 1;
     if (!musica) return; // todavía no se ha leído la música: lo que se lea ya vendrá al día
-    musica = { ...musica, dj: typeof ev.dj === "string" && ev.dj ? ev.dj : null, suena: ev.suena === true };
+    const quien = typeof ev.dj === "string" && ev.dj ? ev.dj : null;
+    musica = { ...musica, dj: quien, suena: ev.suena === true, desde: quien ? desdeCuando(ev.desde) : null };
     escribir("hsMusica", musica);
 }
 

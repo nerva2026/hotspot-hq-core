@@ -94,11 +94,6 @@ export function tiempo(ms) {
 
 // (conLlegada y posicionAhora —lo que suena con su hora de llegada, y por dónde va ahora— están en musica-seguidor.js)
 
-export function horaCorta(iso) {
-    const d = new Date(iso);
-    return `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
 // ---------- dibujos ----------
 
 function deTexto(svg) {

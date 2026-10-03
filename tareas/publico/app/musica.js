@@ -4,7 +4,7 @@
 // Quien pincha pone música en su Spotify de siempre; el servidor mira qué le suena y lo cuenta a todos; cada uno lo oye
 // con el reproductor de Spotify (ver musica-comun.js y servidor/musica.js).
 
-import { h, $, vaciar, haceCuanto } from "./util.js";
+import { h, $, vaciar, haceCuanto, laHora } from "./util.js";
 import { api, cuandoSePierdaLaSesion } from "./api.js";
 import { vigilante } from "./conexion.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
@@ -18,7 +18,6 @@ import {
     coordinar,
     dentroDeLaOficina,
     direccionConectar,
-    horaCorta,
     iconoPixel,
     iconoSpotify,
     portada,
@@ -403,13 +402,13 @@ function pintarCabina() {
         }
     } else if (soyDj()) {
         partes.push(
-            h("p", { class: "cabina-estado mia" }, avatar(E.yo), h("span", null, h("strong", null, "Estás pinchando tú"), h("small", null, `desde las ${horaCorta(E.cabina.desde)}`))),
+            h("p", { class: "cabina-estado mia" }, avatar(E.yo), h("span", null, h("strong", null, "Estás pinchando tú"), h("small", null, `desde ${laHora(E.cabina.desde)}`))),
             // PROVISIONAL-v0.3.1
             h("p", { class: "nota" }, "Pon música en tu Spotify (en el móvil o en el ordenador) como siempre: en unos segundos sale aquí. Cada persona la oye cuando abre «Música»: abajo ves a quién le suena. Si no aparece, mira que no tengas puesta la sesión privada."),
             h("button", { type: "button", class: "btn", id: "boton-dejar", onclick: () => dejarCabina() }, "Dejar la cabina"),
         );
     } else {
-        partes.push(h("p", { class: "cabina-estado otro" }, avatar(usuario(dj.id) || dj), h("span", null, h("strong", null, `Pincha ${dj.nombre}`), h("small", null, `desde las ${horaCorta(E.cabina.desde)}`))));
+        partes.push(h("p", { class: "cabina-estado otro" }, avatar(usuario(dj.id) || dj), h("span", null, h("strong", null, `Pincha ${dj.nombre}`), h("small", null, `desde ${laHora(E.cabina.desde)}`))));
         partes.push(h("p", { class: "nota" }, "Cuando deje la cabina, podrás pinchar tú."));
         if (E.yo.admin) partes.push(h("button", { type: "button", class: "btn peligro", id: "boton-sacar", onclick: () => dejarCabina(dj) }, "Dejar la cabina libre"));
     }

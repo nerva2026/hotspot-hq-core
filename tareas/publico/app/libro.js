@@ -7,6 +7,7 @@ import { h, $, vaciar, normalizar, hoy, sumarDias, fechaCorta, fechaLarga, MESES
 import { api, escuchar, cuandoSePierdaLaSesion, direccionApi } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
 import { sinSolo } from "./solo.js";
+import { esperarAcceso } from "./libro-espera.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, colocarAvisos, ventana, avatar } from "./menus.js";
 
 aplicacion("CUENTAS", "El libro de cuentas es de los socios de HOT SPOT S.L. Entra con tu cuenta de Google.");
@@ -55,6 +56,7 @@ const E = {
 
 const raiz = document.getElementById("app");
 let dejarDeEscuchar = null;
+let espera = null; // quien ve «Solo para los socios» sigue escuchando por si le dan parte (libro-espera.js)
 
 // ---------- dinero ----------
 
@@ -1252,6 +1254,7 @@ function cargar(datos) {
 }
 
 async function recargar() {
+    if (espera) return espera.probar(); // en «Solo para los socios» no hay libro que repintar: se prueba a entrar
     try {
         cargar(await api.libro());
     } catch (err) {
@@ -1265,6 +1268,7 @@ function alRecibir(ev) {
 }
 
 function empezar(datos) {
+    espera = null;
     cargar(datos);
     montar();
     dejarDeEscuchar?.();
@@ -1285,6 +1289,7 @@ async function entrarYEmpezar() {
 function sinSesion() {
     dejarDeEscuchar?.();
     dejarDeEscuchar = null;
+    espera = null;
     E.yo = null;
     cerrarMenu();
     document.querySelector(".fondo-ventana")?.remove();
@@ -1312,8 +1317,16 @@ function caja(...contenido) {
 
 function sinAcceso(mensaje) {
     dejarDeEscuchar?.();
-    dejarDeEscuchar = null;
+    // Ya no hay libro que enseñar: fuera también lo que hubiera abierto encima (un menú, el formulario de apuntar) y
+    // los atajos del teclado (sin E.yo no hacen nada).
+    E.yo = null;
+    cerrarMenu();
+    document.querySelector(".fondo-ventana")?.remove();
+    colocarAvisos();
     caja(h("h1", null, "Solo para los socios"), h("p", null, mensaje), h("a", { class: "btn primario ancho otra-pantalla", href: "../" }, "Ir al tablón de tareas"));
+    // La pantalla sigue escuchando: si le dan parte en el reparto (o pasa a administrar), el libro se abre solo.
+    espera = esperarAcceso({ escuchar, pedir: api.libro, alEntrar: empezar, alPerderSesion: sinSesion });
+    dejarDeEscuchar = espera.parar;
 }
 
 function sinConexion(mensaje) {
@@ -1339,6 +1352,7 @@ let oculta = 0;
 document.addEventListener("visibilitychange", () => {
     if (document.hidden) oculta = Date.now();
     else if (E.yo && oculta && Date.now() - oculta > 60000) recargar();
+    else if (espera && oculta && Date.now() - oculta > 60000) espera.probar();
 });
 
 // ---------- inicio ----------

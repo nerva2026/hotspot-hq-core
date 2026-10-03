@@ -2,10 +2,13 @@
 // cuentas», con su propia carpeta de datos, en el puerto 3991):
 //   node pruebas/libro.mjs http://127.0.0.1:3991/tareas <código de alta del registro>
 // Crea dos cuentas (Diego y Víctor), apunta gastos, ingresos y pagos, y comprueba el balance, el CSV, el Excel,
-// la importación de la hoja de Drive y los tiques.
+// la importación de la hoja de Drive y los tiques. Y que la pantalla «Solo para los socios» se entera en directo cuando
+// a esa persona le dan acceso (publico/app/libro-espera.js, contra el canal de verdad del servidor).
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { crearExcel, leerExcel } from "../servidor/excel.js";
+import { esperarAcceso, AVISOS_QUE_ABREN } from "../publico/app/libro-espera.js";
 
 const [base, codigoAlta] = process.argv.slice(2);
 if (!base || !codigoAlta) {
@@ -15,7 +18,7 @@ if (!base || !codigoAlta) {
 
 function cliente() {
     let galleta = "";
-    return async function llamar(metodo, ruta, cuerpo, { tipo, crudo = false } = {}) {
+    return async function llamar(metodo, ruta, cuerpo, { tipo, crudo = false, senal } = {}) {
         const cabeceras = { "x-tablon": "1" };
         if (galleta) cabeceras.cookie = galleta;
         let body;
@@ -26,7 +29,7 @@ function cliente() {
             body = JSON.stringify(cuerpo);
             cabeceras["content-type"] = "application/json";
         }
-        const r = await fetch(`${base}/api/${ruta}`, { method: metodo, headers: cabeceras, body });
+        const r = await fetch(`${base}/api/${ruta}`, { method: metodo, headers: cabeceras, body, signal: senal });
         const puesta = r.headers.get("set-cookie");
         if (puesta) galleta = puesta.split(";")[0];
         if (crudo) return r;
@@ -108,7 +111,177 @@ r = await victor("GET", "libro/csv");
 assert.equal(r.estado, 403);
 r = await victor("GET", "datos");
 assert.equal(r.datos.yo.libro, false, "el tablón no le ofrece el libro");
+
+// «Solo para los socios», en directo: quien no tiene acceso sigue en el canal y, cuando se lo dan, la espera de esa
+// pantalla (publico/app/libro-espera.js, la que usa libro.js) recibe el aviso, pide el libro y lo abre sin recargar.
+const pausa = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
+async function hasta(condicion, queEs, plazo = 3000) {
+    for (const fin = Date.now() + plazo; Date.now() < fin; ) {
+        if (condicion()) return;
+        await pausa(20);
+    }
+    assert.fail(`No ha pasado a tiempo: ${queEs}`);
+}
+// Como el «escuchar» de api.js, pero con fetch (aquí no hay EventSource): el canal en directo de esa persona.
+function canalDe(persona) {
+    const canal = { abierto: false, cerrado: false, avisos: [] };
+    canal.escuchar = (alRecibir) => {
+        const corte = new AbortController();
+        (async () => {
+            const respuesta = await persona("GET", "eventos", undefined, { crudo: true, senal: corte.signal });
+            assert.equal(respuesta.status, 200, "quien no tiene parte en el reparto también está en el canal");
+            let resto = "";
+            for await (const trozo of respuesta.body) {
+                canal.abierto = true; // lo primero que manda el servidor es «retry: …», ya con el oyente apuntado
+                resto += Buffer.from(trozo).toString("utf8");
+                for (let fin = resto.indexOf("\n\n"); fin >= 0; fin = resto.indexOf("\n\n")) {
+                    const bloque = resto.slice(0, fin);
+                    resto = resto.slice(fin + 2);
+                    for (const linea of bloque.split("\n")) {
+                        if (!linea.startsWith("data: ")) continue;
+                        const aviso = JSON.parse(linea.slice(6));
+                        canal.avisos.push(aviso.tipo);
+                        alRecibir(aviso);
+                    }
+                }
+            }
+        })().catch((error) => {
+            if (!corte.signal.aborted) throw error;
+        });
+        return () => {
+            canal.cerrado = true;
+            corte.abort();
+        };
+    };
+    return canal;
+}
+// Una «pantalla» de Víctor esperando: cuenta las veces que pide el libro y guarda el libro con el que entra.
+function pantallaDeVictor() {
+    const pantalla = { canal: canalDe(victor), pedidos: 0, libro: null, sinSesion: 0 };
+    pantalla.espera = esperarAcceso({
+        escuchar: pantalla.canal.escuchar,
+        pedir: async () => {
+            pantalla.pedidos++;
+            const respuesta = await victor("GET", "libro");
+            if (respuesta.estado !== 200) throw Object.assign(new Error(respuesta.datos?.error || "sin acceso"), { estado: respuesta.estado });
+            return respuesta.datos;
+        },
+        alEntrar: (libro) => (pantalla.libro = libro),
+        alPerderSesion: () => pantalla.sinSesion++,
+        calma: 20,
+    });
+    return pantalla;
+}
+
+// 1) Le hacen administrador (un cambio del crew: aviso «usuarios»)
+let pantalla = pantallaDeVictor();
+await hasta(() => pantalla.canal.abierto, "abrir el canal de Víctor");
+r = await diego("PATCH", "libro/ajustes", { partes: { [idDiego]: 100 } }); // un cambio del libro que no le da nada
+assert.equal(r.estado, 200);
+await hasta(() => pantalla.pedidos === 1, "pedir el libro al llegar un aviso «libro»");
+await pausa(150);
+assert.equal(pantalla.libro, null, "sin parte sigue esperando (el servidor le contesta 403)");
+assert.equal(pantalla.canal.cerrado, false, "y sigue escuchando");
+r = await diego("PATCH", `crew/${idVictor}`, { admin: true });
+assert.equal(r.estado, 200);
+await hasta(() => pantalla.libro, "abrir el libro al pasar a administrar, sin recargar");
+assert.ok(pantalla.canal.avisos.includes("usuarios"), "el cambio del crew llega por el canal");
+assert.equal(pantalla.libro.yo.id, idVictor);
+assert.equal(pantalla.canal.cerrado, true, "al entrar deja de escuchar (el libro abre su propio canal)");
+
+// 2) Le dan parte en el reparto (un cambio del libro: aviso «libro»), que es lo que hacía falta cerrar y volver a abrir
+r = await diego("PATCH", `crew/${idVictor}`, { admin: false });
+assert.equal(r.estado, 200);
+assert.equal((await victor("GET", "libro")).estado, 403, "otra vez sin acceso");
+pantalla = pantallaDeVictor();
+await hasta(() => pantalla.canal.abierto, "abrir otra vez el canal de Víctor");
 r = await diego("PATCH", "libro/ajustes", { partes: { [idDiego]: 50, [idVictor]: 50 } });
+assert.equal(r.estado, 200);
+await hasta(() => pantalla.libro, "abrir el libro al recibir parte en el reparto, sin recargar");
+assert.deepEqual(pantalla.canal.avisos, ["libro"]);
+assert.deepEqual(pantalla.libro.partes, { [idDiego]: 50, [idVictor]: 50 });
+assert.equal(pantalla.libro.yo.id, idVictor);
+assert.equal(pantalla.pedidos, 1, "un aviso, una petición");
+assert.equal(pantalla.canal.cerrado, true);
+assert.equal(pantalla.sinSesion, 0);
+
+// 3) Lo demás de la espera, con un canal de mentira: varios avisos seguidos, avisos que no tocan, reconectar, la sesión
+// que se acaba y parar.
+function canalFalso() {
+    const canal = { dejado: 0 };
+    canal.escuchar = (alRecibir, alReconectar) => {
+        canal.avisar = (tipo) => alRecibir({ tipo });
+        canal.reconectar = alReconectar;
+        return () => canal.dejado++;
+    };
+    return canal;
+}
+function esperaFalsa(respuestas) {
+    const e = { canal: canalFalso(), pedidos: 0, entradas: [], sinSesion: 0 };
+    e.espera = esperarAcceso({
+        escuchar: e.canal.escuchar,
+        pedir: async () => {
+            const estado = respuestas[Math.min(e.pedidos++, respuestas.length - 1)];
+            await pausa(15);
+            if (estado !== 200) throw Object.assign(new Error("no"), { estado });
+            return { libro: e.pedidos };
+        },
+        alEntrar: (libro) => e.entradas.push(libro),
+        alPerderSesion: () => e.sinSesion++,
+        calma: 20,
+    });
+    return e;
+}
+assert.deepEqual(AVISOS_QUE_ABREN, ["libro", "usuarios"]);
+let e = esperaFalsa([403, 403, 200]);
+for (const tipo of ["tarea", "borrada", "musica-cabina", "pizarra"]) e.canal.avisar(tipo);
+await pausa(80);
+assert.equal(e.pedidos, 0, "los avisos de otras cosas no piden el libro");
+for (let i = 0; i < 5; i++) e.canal.avisar("libro");
+await pausa(120);
+assert.equal(e.pedidos, 1, "cinco avisos seguidos, una sola petición");
+assert.deepEqual(e.entradas, [], "con un 403 sigue esperando");
+e.canal.avisar("usuarios");
+await pausa(25); // la petición ya ha salido…
+e.canal.avisar("libro"); // …y llega otro aviso mientras tanto: se vuelve a pedir al acabar
+await pausa(150);
+assert.equal(e.pedidos, 3, "un aviso que llega a media petición no se pierde");
+assert.deepEqual(e.entradas, [{ libro: 3 }], "entra una sola vez, con el libro que le han dado");
+assert.equal(e.canal.dejado, 1, "y deja de escuchar");
+e.canal.avisar("libro");
+await e.canal.reconectar();
+await pausa(80);
+assert.equal(e.pedidos, 3, "después de entrar ya no pide nada");
+
+e = esperaFalsa([0, 200]); // sin conexión (el servidor se está actualizando) y, al reconectar, ya con acceso
+e.canal.avisar("libro");
+await pausa(80);
+assert.deepEqual([e.pedidos, e.entradas.length, e.canal.dejado], [1, 0, 0], "sin conexión sigue esperando");
+await e.canal.reconectar();
+assert.deepEqual([e.pedidos, e.entradas.length, e.canal.dejado], [2, 1, 1], "al reconectar prueba en el momento, sin esperar un aviso");
+
+e = esperaFalsa([401]);
+e.canal.avisar("libro");
+await pausa(80);
+assert.deepEqual([e.sinSesion, e.entradas.length, e.canal.dejado], [1, 0, 1], "con la sesión acabada, a la pantalla de entrar y sin escuchar más");
+e.canal.avisar("libro");
+await pausa(80);
+assert.equal(e.pedidos, 1);
+
+e = esperaFalsa([200]);
+e.espera.parar();
+e.canal.avisar("libro");
+await e.espera.probar();
+await pausa(80);
+assert.deepEqual([e.pedidos, e.entradas.length, e.canal.dejado], [0, 0, 1], "parada, no hace nada");
+
+// Y la pantalla la usa: «Solo para los socios» se queda escuchando con el canal y el libro de verdad.
+const codigoLibro = readFileSync(new URL("../publico/app/libro.js", import.meta.url), "utf8");
+assert.match(codigoLibro, /import \{ esperarAcceso \} from "\.\/libro-espera\.js"/);
+const sinAcceso = /function sinAcceso\(mensaje\) \{[\s\S]*?\n\}/.exec(codigoLibro)?.[0] || "";
+assert.match(sinAcceso, /Solo para los socios/);
+assert.match(sinAcceso, /esperarAcceso\(\{ escuchar, pedir: api\.libro, alEntrar: empezar, alPerderSesion: sinSesion \}\)/, "la pantalla «Solo para los socios» tiene que seguir escuchando");
+
 r = await victor("GET", "libro");
 assert.equal(r.estado, 200, "con parte sí");
 r = await diego("PATCH", `crew/${idVictor}`, { admin: true });
@@ -177,6 +350,11 @@ const pagina = await fetch(`${base}/libro/`);
 assert.equal(pagina.status, 200);
 assert.match(await pagina.text(), /Cuentas · HOT SPOT S\.L\./);
 assert.match(pagina.headers.get("content-security-policy") || "", /frame-ancestors 'self'/);
+for (const modulo of ["app/libro.js", "app/libro-espera.js"]) {
+    const servido = await fetch(`${base}/${modulo}`);
+    assert.equal(servido.status, 200, modulo);
+    assert.match(servido.headers.get("content-type") || "", /^text\/javascript/, modulo);
+}
 const sinBarra = await fetch(`${base}/libro`, { redirect: "manual" });
 assert.equal(sinBarra.status, 301);
 assert.equal(new URL(sinBarra.headers.get("location"), base).pathname, new URL(`${base}/libro/`).pathname);
