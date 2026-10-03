@@ -308,12 +308,32 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
     }
 
     // --- subtareas ---
+    // Cada cambio se hace sobre la lista de AHORA (la que hay en el tablón en ese momento, no la que se pintó) y sobre
+    // ESA subtarea (por su id): si otra persona ha marcado, añadido o quitado otra mientras tanto, no se le pisa. Antes
+    // se mandaba la lista tal como estaba al pintarla, y quien terminaba de escribir una subtarea se llevaba por delante
+    // lo que hubiera hecho el otro.
+    const subtareasDeAhora = () => ctx.E.tareas.get(id)?.subtareas || [];
+    const guardarLista = (lista) => cambiar({ subtareas: lista });
+    // (una subtarea sin id —no debería haberlas— se busca por su sitio en la lista)
+    const esLa = (s, i) => (x, j) => (s.id ? x.id === s.id : j === i);
+    const nuevoIdSubtarea = () => `${Math.random().toString(36)}00000000`.slice(2, 10); // el servidor lo conserva (letras y cifras, de 4 a 24)
+    // ¿Hay una subtarea a medio escribir? Entonces no se repintan (se perdería lo escrito). Con el cursor en un campo
+    // sin tocar sí: se repintan y el cursor vuelve a su campo.
+    const campoDeSubtarea = () => {
+        const activo = document.activeElement;
+        return activo?.matches?.(".subtarea-texto, .subtarea-nueva") && subtareas.contains(activo) ? activo : null;
+    };
+    const subtareaAMedias = () => {
+        const campo = campoDeSubtarea();
+        return Boolean(campo) && campo.value !== (campo.dataset.original ?? "");
+    };
     function pintarSubtareas() {
         const t = ctx.E.tareas.get(id);
         if (!t) return;
+        const conFoco = campoDeSubtarea();
+        const focoEn = conFoco ? (conFoco.matches(".subtarea-nueva") ? "nueva" : conFoco.dataset.id || "") : null;
         const hechas = t.subtareas.filter((s) => s.hecha).length;
         const total = t.subtareas.length;
-        const guardarLista = (lista) => cambiar({ subtareas: lista });
         const lista = h(
             "ul",
             { class: "subtareas" },
@@ -329,13 +349,13 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
                             class: "casilla",
                             checked: s.hecha,
                             "aria-label": "Hecha",
-                            onchange: (e) => guardarLista(t.subtareas.map((x, j) => (j === i ? { ...x, hecha: e.target.checked } : x))),
+                            onchange: (e) => guardarLista(subtareasDeAhora().map((x, j) => (esLa(s, i)(x, j) ? { ...x, hecha: e.target.checked } : x))),
                         }),
                     ),
                     h("input", {
                         class: "subtarea-texto",
                         value: s.texto,
-                        dataset: { original: s.texto }, // «original»: a lo que vuelve con Escape
+                        dataset: { original: s.texto, id: s.id || "" }, // «original»: a lo que vuelve con Escape
                         maxlength: 300,
                         "aria-label": "Subtarea",
                         onkeydown: (e) => {
@@ -343,10 +363,11 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
                         },
                         onchange: (e) => {
                             const v = e.target.value.trim();
-                            guardarLista(v ? t.subtareas.map((x, j) => (j === i ? { ...x, texto: v } : x)) : t.subtareas.filter((_, j) => j !== i));
+                            const es = esLa(s, i);
+                            guardarLista(v ? subtareasDeAhora().map((x, j) => (es(x, j) ? { ...x, texto: v } : x)) : subtareasDeAhora().filter((x, j) => !es(x, j)));
                         },
                     }),
-                    h("button", { type: "button", class: "quitar", title: "Quitar", onclick: () => guardarLista(t.subtareas.filter((_, j) => j !== i)) }, "×"),
+                    h("button", { type: "button", class: "quitar", title: "Quitar", onclick: () => guardarLista(subtareasDeAhora().filter((x, j) => !esLa(s, i)(x, j))) }, "×"),
                 ),
             ),
         );
@@ -360,7 +381,7 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
                 const v = e.target.value.trim();
                 if (!v) return;
                 e.target.value = "";
-                await guardarLista([...ctx.E.tareas.get(id).subtareas, { texto: v, hecha: false }]);
+                await guardarLista([...subtareasDeAhora(), { id: nuevoIdSubtarea(), texto: v, hecha: false }]);
                 pintarSubtareas();
                 subtareas.querySelector(".subtarea-nueva")?.focus();
             },
@@ -372,6 +393,11 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
             lista,
             nueva,
         );
+        // el cursor, de vuelta a su campo (si esa subtarea sigue ahí)
+        if (focoEn !== null) {
+            const campo = focoEn === "nueva" ? nueva : focoEn ? [...lista.querySelectorAll(".subtarea-texto")].find((x) => x.dataset.id === focoEn) : null;
+            campo?.focus({ preventScroll: true });
+        }
     }
 
     function pintarPie() {
@@ -413,8 +439,8 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
             guardado.reintentar();
         }
         pintarPropiedades();
-        // No se repintan las subtareas mientras se está escribiendo en una (se perdería lo escrito).
-        if (!document.activeElement?.matches?.(".subtarea-texto, .subtarea-nueva")) pintarSubtareas();
+        // No se repintan las subtareas mientras hay una a medio escribir (se perdería lo escrito).
+        if (!subtareaAMedias()) pintarSubtareas();
         pintarPie();
         if (deFuera && !conflicto) {
             const editor = ctx.usuario(t.actualizadaPor);

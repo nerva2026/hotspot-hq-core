@@ -4,7 +4,10 @@
 // que ya no es la que hay recibe un 409 con lo que hay ahora, y con la versión buena se guarda. Sin «antes» pasa lo
 // mismo si la tarea ya tiene notas, y el cliente de ahora (publico/app/) siempre lo manda. Y la lógica de las pantallas
 // que no necesita navegador: la franja «Sin conexión…» (app/conexion.js) y las capas (app/capas.js): el tabulador que da
-// la vuelta dentro de una ventana y el «atrás» que la cierra sin ensuciar el historial.
+// la vuelta dentro de una ventana y el «atrás» que la cierra sin ensuciar el historial. Y, de la ronda 4 del examen: el
+// buscador (app/tablon-buscar.js: etiquetas con «#», personas con «@», prioridad y estado), quien ha salido del crew y
+// sigue en una tarea (app/personas.js), el guardado al cerrar o recargar la página (app/guardado.js y «keepalive» en
+// app/api.js), las subtareas con dos personas a la vez y los errores de formulario que se quitan al corregir.
 
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
@@ -817,6 +820,24 @@ try {
     assert.match(fuente("principal.js"), /api\.cambiar\(id, c, opciones\.antes, \{ alSalir: opciones\.alSalir \}\)/);
     assert.match(fuente("guardado.js"), /addEventListener\("visibilitychange"/);
     assert.match(fuente("guardado.js"), /addEventListener\("pagehide"/);
+}
+
+// ---------- dos personas con las subtareas de la misma tarea ----------
+// Cada cambio se hace sobre la lista de ahora y sobre ESA subtarea, por su id (el de una nueva lo pone el navegador y
+// el servidor lo conserva). Antes se mandaba la lista tal como se pintó, y quien terminaba de escribir una subtarea
+// deshacía lo que el otro hubiera marcado o añadido mientras tanto.
+{
+    r = await diego("PATCH", vacia, { subtareas: [{ id: "abcd1234", texto: "Con el id del navegador", hecha: false }, { texto: "Sin id", hecha: true }, { id: "no vale", texto: "Con un id raro", hecha: false }] });
+    assert.equal(r.estado, 200, JSON.stringify(r.datos));
+    assert.equal(r.datos.subtareas[0].id, "abcd1234", "el id de una subtarea nueva se conserva");
+    assert.match(r.datos.subtareas[1].id, /^[\w-]{4,24}$/, "y a la que no lo trae se le pone");
+    assert.match(r.datos.subtareas[2].id, /^[\w-]{4,24}$/);
+    assert.notEqual(r.datos.subtareas[2].id, "no vale");
+    const ficha = readFileSync(new URL("ficha.js", carpetaApp), "utf8");
+    assert.match(ficha, /const subtareasDeAhora = \(\) => ctx\.E\.tareas\.get\(id\)\?\.subtareas \|\| \[\];/);
+    assert.match(ficha, /const esLa = \(s, i\) => \(x, j\) => \(s\.id \? x\.id === s\.id : j === i\);/);
+    assert.ok(!/guardarLista\(\s*t\.subtareas/.test(ficha) && !/\.\.\.t\.subtareas/.test(ficha), "ningún cambio de subtareas sale de la lista que se pintó");
+    assert.match(ficha, /guardarLista\(\[\.\.\.subtareasDeAhora\(\), \{ id: nuevoIdSubtarea\(\), texto: v, hecha: false \}\]\)/);
 }
 
 // ---------- los errores de los formularios se quitan al corregir (app/util.js) ----------
