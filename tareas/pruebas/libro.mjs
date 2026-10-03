@@ -3,12 +3,14 @@
 //   node pruebas/libro.mjs http://127.0.0.1:3991/tareas <código de alta del registro>
 // Crea dos cuentas (Diego y Víctor), apunta gastos, ingresos y pagos, y comprueba el balance, el CSV, el Excel,
 // la importación de la hoja de Drive y los tiques. Y que la pantalla «Solo para los socios» se entera en directo cuando
-// a esa persona le dan acceso (publico/app/libro-espera.js, contra el canal de verdad del servidor).
+// a esa persona le dan acceso (publico/app/libro-espera.js, contra el canal de verdad del servidor), y el buscador de
+// la pantalla (publico/app/libro-buscar.js): por importe, por fecha, por tipo y por persona.
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { crearExcel, leerExcel } from "../servidor/excel.js";
 import { esperarAcceso, AVISOS_QUE_ABREN } from "../publico/app/libro-espera.js";
+import { coincide, prepararConsulta, formasDeImporte, formasDeFecha } from "../publico/app/libro-buscar.js";
 
 const [base, codigoAlta] = process.argv.slice(2);
 if (!base || !codigoAlta) {
@@ -345,12 +347,84 @@ assert.equal(altavoces.importe, 123450);
 assert.equal(altavoces.persona, idVictor);
 assert.ok(r.datos.categorias.includes("Material"), "la categoría importada se añade a la lista");
 
+// ---------- el buscador (publico/app/libro-buscar.js): también por importe, por fecha y por tipo ----------
+// Con unos movimientos hechos a mano para los casos difíciles y, al final, con los que sirve el servidor.
+{
+    const nombres = new Map(r.datos.usuarios.map((u) => [u.id, u.nombre]));
+    const ayudas = { nombre: (id) => nombres.get(id) || "Alguien" };
+    const mov = (tipo, fecha, concepto, importe, mas = {}) => ({ tipo, fecha, concepto, importe, persona: idDiego, para: null, categoria: "", notas: "", tique: null, ...mas });
+    const lista = [
+        mov("gasto", "2026-10-01", "Cartelería: 250 carteles A3", 34590),
+        mov("ingreso", "2026-10-01", "Entradas anticipadas (48)", 57600, { persona: idVictor }),
+        mov("gasto", "2026-10-21", "Señal de la sala", 1284550, { notas: "Transferencia del día 21.\nFalta la factura." }),
+        mov("gasto", "2026-10-02", "Cable XLR (3 m)", 4000, { categoria: "Material", tique: { nombre: "tique-cable.png" } }),
+        mov("gasto", "2026-11-11", "Hielo", 24000),
+        mov("gasto", "2027-01-10", "Taxi", 184000),
+        mov("pago", "2026-09-30", "", 100000, { persona: idVictor, para: idDiego }),
+    ];
+    const buscar = (texto) => lista.filter((m) => coincide(m, texto, ayudas)).map((m) => m.concepto || `pago de ${m.importe}`);
+    const solo = (texto, ...conceptos) => assert.deepEqual(buscar(texto).sort(), conceptos.sort(), `buscar «${texto}»`);
+
+    // por importe: como se ve y como se escribe
+    for (const texto of ["345,90", "345.90", "345,9", "345", "345,90 €", "345,90€", "−345,90 €", "-345,90", "-345"]) solo(texto, "Cartelería: 250 carteles A3");
+    for (const texto of ["576", "576,00", "576.00", "+576", "576 €"]) solo(texto, "Entradas anticipadas (48)");
+    for (const texto of ["12.845,50", "12845,50", "12845.5", "12,845.50", "12845"]) solo(texto, "Señal de la sala");
+    solo("40", "Cable XLR (3 m)"); // 40,00 €; ni 240,00 € ni 1840,00 €
+    solo("-576"); // un ingreso no es un gasto
+    solo("+345,90");
+    solo("1000", "pago de 100000");
+    solo("1.000,00", "pago de 100000");
+    // por fecha
+    solo("1/10", "Cartelería: 250 carteles A3", "Entradas anticipadas (48)"); // el 1, no el 21 ni el 11 de noviembre
+    solo("01/10/2026", "Cartelería: 250 carteles A3", "Entradas anticipadas (48)");
+    solo("2026-10-21", "Señal de la sala");
+    solo("21/10", "Señal de la sala");
+    solo("1 oct", "Cartelería: 250 carteles A3", "Entradas anticipadas (48)");
+    solo("1 de octubre", "Cartelería: 250 carteles A3", "Entradas anticipadas (48)");
+    solo("21 OCTUBRE", "Señal de la sala");
+    solo("noviembre", "Hielo");
+    solo("enero 2027", "Taxi");
+    assert.ok(!buscar("10").includes("Señal de la sala"), "«10» no saca todo octubre");
+    assert.ok(buscar("10").includes("Taxi"), "«10» sí encuentra el día 10");
+    // por tipo, por persona y por lo que lleva
+    solo("pago", "pago de 100000");
+    solo("gasto", "Cartelería: 250 carteles A3", "Señal de la sala", "Cable XLR (3 m)", "Hielo", "Taxi");
+    assert.ok(buscar("victor").includes("Entradas anticipadas (48)") && buscar("VÍCTOR").includes("pago de 100000"));
+    solo("victor 576", "Entradas anticipadas (48)"); // todas las palabras, en cualquier orden
+    solo("576 víctor", "Entradas anticipadas (48)");
+    solo("tique", "Cable XLR (3 m)");
+    // lo de siempre sigue: concepto, notas y categoría, sin tildes ni mayúsculas
+    solo("carteleria", "Cartelería: 250 carteles A3");
+    solo("250 carteles", "Cartelería: 250 carteles A3");
+    solo("falta la factura", "Señal de la sala");
+    solo("material", "Cable XLR (3 m)");
+    assert.equal(buscar("").length, lista.length, "con el buscador vacío salen todos");
+    assert.equal(buscar("  € ").length, lista.length);
+    solo("no-hay-nada-asi");
+    // los movimientos del servidor, tal como los sirve: por su importe como se ve, por su fecha y por quién
+    assert.ok(r.datos.movimientos.length >= 4);
+    for (const m of r.datos.movimientos) {
+        assert.ok(coincide(m, m.fecha, ayudas) && coincide(m, ayudas.nombre(m.persona), ayudas) && coincide(m, m.tipo, ayudas), m.concepto);
+        const visto = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(m.importe / 100);
+        assert.ok(coincide(m, visto, ayudas), `«${visto}» encuentra «${m.concepto}»`);
+        assert.ok(coincide(m, `${visto} €`, ayudas));
+    }
+    assert.deepEqual(formasDeImporte(1284550), ["12845.50", "12845,50", "12.845,50", "12,845.50"]);
+    assert.deepEqual(formasDeImporte(4000), ["40.00", "40,00"]);
+    assert.ok(formasDeFecha("2026-10-01").includes("1/10/2026") && formasDeFecha("2026-10-01").includes("1·oct"));
+    assert.deepEqual(prepararConsulta("  1 de Octubre  345,90 € "), ["1·oct", "345,90"]);
+    assert.deepEqual(prepararConsulta("2 marcos"), ["2", "marcos"], "«2 marcos» no es el 2 de marzo");
+    // y la pantalla lo usa
+    assert.match(codigoLibro, /import \{ coincide, prepararConsulta \} from "\.\/libro-buscar\.js"/);
+    assert.match(codigoLibro, /coincide\(m, palabras, \{ nombre \}\)/, "el buscador del libro tiene que buscar también por importe");
+}
+
 // La página del libro
 const pagina = await fetch(`${base}/libro/`);
 assert.equal(pagina.status, 200);
 assert.match(await pagina.text(), /Cuentas · HOT SPOT S\.L\./);
 assert.match(pagina.headers.get("content-security-policy") || "", /frame-ancestors 'self'/);
-for (const modulo of ["app/libro.js", "app/libro-espera.js"]) {
+for (const modulo of ["app/libro.js", "app/libro-espera.js", "app/libro-buscar.js"]) {
     const servido = await fetch(`${base}/${modulo}`);
     assert.equal(servido.status, 200, modulo);
     assert.match(servido.headers.get("content-type") || "", /^text\/javascript/, modulo);

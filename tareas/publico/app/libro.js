@@ -3,11 +3,12 @@
 // Pensado para quien no usa Excel: se apunta con un formulario, el reparto y quién debe a quién salen solos, y
 // si hace falta se descarga en Excel o en CSV. Los importes van en céntimos, como en el servidor (servidor/libro.js).
 
-import { h, $, vaciar, normalizar, hoy, sumarDias, fechaCorta, fechaLarga, MESES, MESES_CORTOS, haceCuanto, retrasar } from "./util.js";
+import { h, $, vaciar, hoy, sumarDias, fechaCorta, fechaLarga, MESES, MESES_CORTOS, haceCuanto, retrasar } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion, direccionApi } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
 import { sinSolo } from "./solo.js";
 import { esperarAcceso } from "./libro-espera.js";
+import { coincide, prepararConsulta } from "./libro-buscar.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, colocarAvisos, ventana, avatar } from "./menus.js";
 
 aplicacion("CUENTAS", "El libro de cuentas es de los socios de HOT SPOT S.L. Entra con tu cuenta de Google.");
@@ -379,13 +380,14 @@ function tarjetaPersona(p) {
 
 function filtrados() {
     const f = E.filtros;
-    const texto = normalizar(f.texto);
+    // El buscador encuentra también por importe, por fecha y por tipo (libro-buscar.js).
+    const palabras = prepararConsulta(f.texto);
     return E.movimientos.filter((m) => {
         if (f.tipo !== "todos" && m.tipo !== f.tipo) return false;
         if (f.persona !== "todas" && m.persona !== f.persona && m.para !== f.persona) return false;
         if (f.categoria !== null && (m.categoria || "") !== f.categoria) return false;
         if (f.mes && m.fecha.slice(0, 7) !== f.mes) return false;
-        if (texto && !normalizar(`${m.concepto} ${m.categoria} ${m.notas} ${nombre(m.persona)} ${m.para ? nombre(m.para) : ""}`).includes(texto)) return false;
+        if (palabras.length && !coincide(m, palabras, { nombre })) return false;
         return true;
     });
 }

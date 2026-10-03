@@ -105,6 +105,7 @@ Node 22 sin dependencias:
 | `publico/app/cumple.js`, `confeti.js`, `oficina.js`, `cumples.js` | Los cumpleaños (cuentas y textos), el confeti, el puente invisible de la oficina (`/tareas/oficina/`) y el cartel de cumpleaños (`/tareas/cumples/`). |
 | `publico/app/solo.js` | El modo «solo lo suyo» (`?solo=1`): cuándo se pone y cómo se conserva en las direcciones (ver «Solo lo suyo»). |
 | `publico/app/libro-espera.js` | La pantalla «Solo para los socios» del libro, en directo: sigue escuchando y abre el libro cuando a esa persona le dan acceso. Lógica sola, para probarla en Node. |
+| `publico/app/libro-buscar.js` | El buscador del libro: qué se puede buscar de un movimiento (también el importe, la fecha y el tipo) y cuándo coincide. Lógica sola, para probarla en Node. |
 | `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar, una por pantalla y cada una con su servidor y su puerto (tabla en «Las pruebas»). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
 
@@ -192,6 +193,13 @@ misma sesión que el tablón.
 - **Apuntar:** gasto, ingreso o pago entre socios, con categoría, notas y la foto del tique (o un PDF).
 - **Quién debe a quién:** cada gasto e ingreso se reparte según las partes. Las partes se fijan con el primer
   movimiento, a partes iguales entre los administradores, y se cambian en «Reparto».
+- **Buscar:** el buscador de los movimientos encuentra por concepto, notas, categoría y persona y, además, por
+  **importe** (como se ve y como se escribe: «345,90», «345.90», «345», «12.845,50», «-345,90 €»), por **fecha**
+  («1/10», «01/10/2026», «1 oct», «octubre») y por **tipo** («gasto», «ingreso», «pago», «tique»). Todas las palabras,
+  en cualquier orden; un número se busca desde su principio («40» no saca 240,00 €). La lógica está aparte, en
+  `publico/app/libro-buscar.js`, y se prueba en `pruebas/libro.mjs`.
+- **En el móvil** (480 px o menos) las marcas «Tique» y «Nota» de cada movimiento son dos dibujos pequeños debajo de
+  la fecha (con más ancho, la palabra).
 - **Excel y CSV:** descarga del libro entero, e importación de la hoja de cuentas de Drive.
 - Los importes se guardan en céntimos. Lo borrado pasa 30 días en la papelera.
 
@@ -485,7 +493,7 @@ sus variables, están en el workflow.
 | Paso | Prueba | Puerto | Qué comprueba |
 | --- | --- | --- | --- |
 | Probar el servidor | (con `curl`) | 3999 | Que arranca, sirve el tablón, imprime el enlace de alta y pide sesión (401) a quien no la tiene. |
-| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. Y «Solo para los socios» en directo: la espera de la pantalla (`publico/app/libro-espera.js`) contra el canal de verdad, al pasar a administrar y al recibir parte en el reparto. |
+| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. Y «Solo para los socios» en directo: la espera de la pantalla (`publico/app/libro-espera.js`) contra el canal de verdad, al pasar a administrar y al recibir parte en el reparto. Y el buscador (`publico/app/libro-buscar.js`): por importe, por fecha, por tipo y por persona. |
 | Probar la pizarra | `pruebas/pizarra.mjs` | 3997 | Trazos, notas y fotos con dos personas a la vez, vaciar y recuperar, el lápiz en directo y quién la tiene abierta. |
 | Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). |
 | Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje, puente `/tareas/oficina/` y cartel `/tareas/cumples/` (la API y lo que sirve; en pantalla se mira con un navegador). |
