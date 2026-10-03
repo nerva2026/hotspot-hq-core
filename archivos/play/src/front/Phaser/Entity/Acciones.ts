@@ -26,6 +26,12 @@ import type { Character } from "./Character";
  * de espaldas, solo la base), del color de su pantalón. Al dejar de estar sentado (andar, otra postura, nada) el
  * recorte se quita siempre.
  *
+ * Quien deja de estar sentado SIN andar (se levanta con la X, o pasa a otra postura) se queda de pie mirando hacia
+ * donde miraba el asiento, hasta que ande o gire: sin esto, quien había llegado al sofá andando hacia arriba se
+ * levantaba de espaldas. El script del mapa no puede girar al jugador; el cambio de la variable les llega a todos, así
+ * que todos lo dibujan igual. Es solo el dibujo: el muñeco es el de siempre, quieto, mirando hacia ese lado (el que se
+ * levanta de un asiento que mira hacia abajo queda exactamente igual que uno que no ha hecho nada y mira hacia abajo).
+ *
  * Qué significa cada cosa (y con qué palabras se ofrece) lo decide el mapa: aquí solo se dibuja. Las variables llegan
  * a todos (a quien entra después también, en la lista inicial de jugadores). Un valor que no se entiende se toma
  * por «nada»: así un mapa más nuevo que esta oficina, o al revés, no rompe nada.
@@ -249,6 +255,9 @@ export class Acciones {
     private bajado = 0; // lo que están bajados ahora (píxeles del dibujo; negativo, subidos): los gestos van con ellos
     private recortado = false; // si los dibujos tienen ahora las piernas recortadas (sentado)
     private cara = "down"; // hacia dónde mira ahora el dibujo ("up", "down", "left" o "right")
+    // Hacia dónde miraba el asiento del que se ha levantado sin andar ("up", "down", "left" o "right"): mientras no ande
+    // ni gire, de pie mira hacia ahí. Si no viene de estar sentado (o ya ha andado), nada.
+    private dePie: string | null = null;
     private animando = false; // si hay algo que se mueve solo (baile, saludo, efecto…) y por tanto se escucha cada fotograma
     private lado = ""; // hacia dónde mira ahora al bailar
     private inicio = 0; // cuándo empezó lo de ahora (ms): los dibujitos que habrían salido antes no se enseñan
@@ -273,6 +282,18 @@ export class Acciones {
         const postura = leerAccion(valor);
         const nuevo = postura ? (valor as string) : null;
         if (nuevo === this.valor) return false;
+        // Deja de estar sentado sin andar: de pie se queda mirando hacia donde miraba el asiento (ver dibujar())
+        const anterior = this.postura;
+        const sigueSentado = postura !== null && postura.nombre === "sentado";
+        if (
+            anterior !== null &&
+            anterior.nombre === "sentado" &&
+            anterior.mira !== undefined &&
+            !sigueSentado &&
+            !this.ultimoMoviendo
+        ) {
+            this.dePie = anterior.mira;
+        }
         this.valor = nuevo;
         this.postura = postura;
         // Se empieza de cero: fuera lo que se movía solo (dibujar() pone lo nuevo)
@@ -293,19 +314,23 @@ export class Acciones {
      * esta clase; si no, deja todo como estaba y devuelve false para que se dibuje lo de siempre (andar o estar quieto).
      */
     public dibujar(direccion: PositionMessage_Direction, moviendo: boolean): boolean {
+        // En cuanto anda o gira (cambia de dirección sin andar), deja de mirar «como el asiento»
+        if (moviendo || direccion !== this.ultimaDireccion) this.dePie = null;
         this.ultimaDireccion = direccion;
         this.ultimoMoviendo = moviendo;
         const postura = moviendo ? null : this.postura;
         const sentado = postura !== null && postura.nombre === "sentado" && postura.mira !== undefined;
         let propia = false; // si la postura la dibuja esta clase (y no Character)
 
-        // Hacia dónde mira el dibujo ahora: el asiento, de frente al saludar o aplaudir, o hacia donde iba
+        // Hacia dónde mira el dibujo ahora: el asiento, de frente al saludar o aplaudir, o hacia donde iba (recién
+        // levantado de un asiento sin haber andado, hacia donde miraba el asiento)
+        const miraDePie: string = this.dePie ?? CARAS.get(direccion) ?? "down";
         const cara =
             sentado && postura?.mira
                 ? postura.mira
                 : postura?.nombre === "saludar" || postura?.nombre === "aplaudir"
                   ? "down"
-                  : (CARAS.get(direccion) ?? "down");
+                  : miraDePie;
         this.cara = cara;
 
         // Lo primero, siempre: las piernas recortadas y las de sentado solo se quedan si AHORA está sentado. De pie,
@@ -316,6 +341,12 @@ export class Acciones {
         if (!postura) {
             this.parar();
             this.mover(0);
+            // Recién levantado de un asiento, sin haber andado: quieto, mirando hacia donde miraba el asiento (lo
+            // dibuja esta clase, porque Character lo pondría mirando hacia donde andaba al llegar)
+            if (!moviendo && this.dePie !== null) {
+                this.mirar(cara);
+                propia = true;
+            }
         } else {
             if (sentado) {
                 this.mirar(cara);
@@ -330,6 +361,10 @@ export class Acciones {
                     this.mirar("down");
                     propia = true;
                 } else if (postura.nombre === "bailar") {
+                    propia = true;
+                } else if (this.dePie !== null) {
+                    // Las demás posturas de pie (beber, quieto con un efecto), recién levantado de un asiento
+                    this.mirar(cara);
                     propia = true;
                 }
             }
