@@ -7,6 +7,8 @@
      * - Se cierra con el botón, con Esc o pulsando fuera. Se vuelve a abrir pulsando la etiqueta de la versión
      *   (que se esconde mientras el chat está abierto, para no tapar su campo de escribir).
      * - Qué versión es y qué novedades salen: novedades.ts (no hay que tocar este archivo).
+     * - Debajo de las novedades va el histórico: las versiones anteriores, cada una plegada (se abre pulsándola) con lo
+     *   que traía. También sale de novedades.ts.
      * - Las novedades con `requiere: "musica"` solo salen si el servidor tiene Spotify conectado: se le pregunta (con la
      *   cookie de la sesión del tablón, esperando como mucho 2 s) antes de abrir el aviso. Si no contesta, o la música no
      *   está conectada, esa línea no sale.
@@ -23,7 +25,7 @@
     import { onboardingStore } from "../../Stores/OnboardingStore";
     import { inputFormFocusStore } from "../../Stores/UserInputStore";
     import { chatVisibilityStore } from "../../Stores/ChatStore";
-    import { NOVEDADES, TITULO, VERSION, VERSION_DEL_AVISO, type Novedad } from "./novedades";
+    import { HISTORICO, NOVEDADES, TITULO, TITULO_DEL_HISTORICO, VERSION, VERSION_DEL_AVISO, type Novedad } from "./novedades";
 
     /** En localStorage: la última versión cuyo aviso ya salió. */
     const CLAVE_VISTA = "hotspot-novedades-vistas";
@@ -36,6 +38,7 @@
 
     let abierto = $state(false);
     let botonCerrar: HTMLButtonElement | undefined = $state();
+    let ventana: HTMLDivElement | undefined = $state();
     let origenDelFoco: HTMLElement | null = null;
     /** Aunque localStorage no funcione, el aviso no sale más de una vez por visita. */
     let yaSalio = false;
@@ -69,6 +72,14 @@
     const sale = (novedad: Novedad): boolean => typeof novedad === "string" || novedad.requiere !== "musica" || musicaConectada;
     const textoDe = (novedad: Novedad): string => (typeof novedad === "string" ? novedad : novedad.texto);
     const novedades = $derived(NOVEDADES.filter(sale).map(textoDe));
+    /** El histórico, con las mismas reglas: de cada versión anterior, las líneas que salen. */
+    const historico = $derived(
+        HISTORICO.map((anterior) => ({
+            version: anterior.version,
+            fecha: anterior.fecha,
+            lineas: anterior.novedades.filter(sale).map(textoDe),
+        })),
+    );
 
     function versionVista(): string | null {
         try {
@@ -145,9 +156,17 @@
             evento.stopPropagation();
             cerrar();
         } else if (evento.key === "Tab") {
-            // Solo hay un botón: el foco no se escapa al mapa de detrás.
+            // El foco da la vuelta dentro del aviso (las versiones del histórico y el botón): no se escapa al mapa de detrás.
             evento.preventDefault();
-            botonCerrar?.focus();
+            const paradas = ventana ? Array.from(ventana.querySelectorAll<HTMLElement>("summary, button")) : [];
+            if (paradas.length === 0) {
+                botonCerrar?.focus();
+                return;
+            }
+            const ahora = document.activeElement instanceof HTMLElement ? paradas.indexOf(document.activeElement) : -1;
+            const paso = evento.shiftKey ? -1 : 1;
+            const siguiente = ahora === -1 ? (evento.shiftKey ? paradas.length - 1 : 0) : (ahora + paso + paradas.length) % paradas.length;
+            paradas[siguiente]?.focus();
         }
     }
 
@@ -175,7 +194,7 @@
 {#if abierto}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="hs-velo" onclick={alPulsarFondo}>
-        <div class="hs-ventana" role="dialog" aria-modal="true" aria-labelledby="hs-novedades-titulo">
+        <div class="hs-ventana" role="dialog" aria-modal="true" aria-labelledby="hs-novedades-titulo" bind:this={ventana}>
             <div class="hs-barra"><span>Novedades</span><span>{VERSION_DEL_AVISO}</span></div>
             <div class="hs-cuerpo">
                 <h2 id="hs-novedades-titulo" class="hs-titulo">{TITULO}</h2>
@@ -184,6 +203,22 @@
                         <li>{novedad}</li>
                     {/each}
                 </ul>
+                {#if historico.length > 0}
+                    <h3 class="hs-subtitulo">{TITULO_DEL_HISTORICO}</h3>
+                    {#each historico as anterior (anterior.version)}
+                        <details class="hs-anterior" data-testid="hotspot-version-anterior">
+                            <summary class="hs-anterior-resumen">
+                                <span class="hs-anterior-numero">{anterior.version}</span>
+                                <span class="hs-anterior-fecha">{anterior.fecha}</span>
+                            </summary>
+                            <ul class="hs-lista hs-lista-anterior">
+                                {#each anterior.lineas as linea}
+                                    <li>{linea}</li>
+                                {/each}
+                            </ul>
+                        </details>
+                    {/each}
+                {/if}
             </div>
             <div class="hs-pie">
                 <p>Para volver a verlo, pulsa el número de versión de abajo a la izquierda.</p>
@@ -306,6 +341,82 @@
         height: 8px;
         background: #ffd84a;
         box-shadow: 2px 2px 0 #c4461f;
+    }
+    /* ---------- histórico de versiones: cada una plegada, debajo de las novedades ---------- */
+    .hs-subtitulo {
+        margin: 18px 0 8px;
+        padding-top: 12px;
+        border-top: 2px solid rgba(243, 230, 216, 0.18);
+        font-family: "Silkscreen", "Pixelify Sans", monospace;
+        font-size: 16px;
+        font-weight: 400;
+        line-height: 20px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+        color: rgba(243, 230, 216, 0.7);
+    }
+    .hs-anterior {
+        margin: 0 0 6px;
+        background: rgba(243, 230, 216, 0.06);
+        box-shadow:
+            inset 2px 2px 0 rgba(255, 255, 255, 0.06),
+            inset -2px -2px 0 #0b0706;
+    }
+    .hs-anterior-resumen {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 10px 5px;
+        cursor: pointer;
+        list-style: none;
+        user-select: none;
+    }
+    .hs-anterior-resumen::-webkit-details-marker {
+        display: none;
+    }
+    /* la flecha: un triángulo de píxeles que gira al abrir */
+    .hs-anterior-resumen::before {
+        content: "";
+        flex: none;
+        width: 0;
+        height: 0;
+        border-style: solid;
+        border-width: 5px 0 5px 7px;
+        border-color: transparent transparent transparent #ffd84a;
+    }
+    /* (`open` lo pone el navegador al desplegar, no la plantilla: por eso va con :global) */
+    :global(details[open]) > .hs-anterior-resumen::before {
+        border-width: 7px 5px 0 5px;
+        border-color: #ffd84a transparent transparent transparent;
+    }
+    .hs-anterior-resumen:hover,
+    .hs-anterior-resumen:focus-visible {
+        background: rgba(255, 216, 74, 0.12);
+        outline: none;
+    }
+    .hs-anterior-resumen:focus-visible {
+        box-shadow: inset 0 0 0 2px #ffd84a;
+    }
+    .hs-anterior-numero {
+        font-family: "Silkscreen", "Pixelify Sans", monospace;
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 20px;
+        color: #ffd84a;
+    }
+    .hs-anterior-fecha {
+        margin-left: auto;
+        font-size: 11px;
+        line-height: 14px;
+        color: rgba(243, 230, 216, 0.6);
+    }
+    .hs-lista-anterior {
+        padding: 6px 10px 2px;
+        color: rgba(243, 230, 216, 0.85);
+    }
+    .hs-lista-anterior li::before {
+        background: rgba(243, 230, 216, 0.55);
+        box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
     }
     .hs-pie {
         display: flex;
