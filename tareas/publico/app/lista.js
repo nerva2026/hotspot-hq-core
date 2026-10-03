@@ -49,7 +49,8 @@ function grupos(tareas, agrupar, ctx) {
         return [...PRIORIDADES, SIN_PRIORIDAD].map((p) => ({ clave: p.id || "ninguna", nombre: p.nombre, color: p.color, base: { prioridad: p.id }, tareas: tareas.filter((t) => (t.prioridad || null) === p.id) }));
     if (agrupar === "persona")
         return [
-            ...ctx.activos().map((u) => ({ clave: u.id, nombre: u.nombre, color: u.color, base: { responsables: [u.id] }, tareas: tareas.filter((t) => t.responsables.includes(u.id)) })),
+            // también quien ha salido del crew y sigue en alguna tarea: sin su grupo, esa tarea no salía en ninguno
+            ...ctx.conTareas(tareas).map((u) => ({ clave: u.id, nombre: u.nombre, fuera: Boolean(u.baja), color: u.color, base: u.baja ? {} : { responsables: [u.id] }, tareas: tareas.filter((t) => t.responsables.includes(u.id)) })),
             { clave: "nadie", nombre: "Sin asignar", color: "#d8cabb", base: {}, tareas: tareas.filter((t) => !t.responsables.length) },
         ];
     return [{ clave: "todo", nombre: null, base: {}, tareas }];
@@ -140,7 +141,8 @@ export function pintarLista(cont, ctx, ev) {
                             },
                             h("span", { class: "plegar" }, plegado ? "▸" : "▾"),
                             h("span", { class: "punto-estado", style: { background: g.color } }),
-                            g.nombre,
+                            h("span", { class: "grupo-nombre" }, g.nombre),
+                            g.fuera ? h("span", { class: "fuera-del-crew" }, "fuera del crew") : null,
                             h("span", { class: "cuenta" }, g.tareas.length),
                         ),
                     ),
@@ -149,7 +151,7 @@ export function pintarLista(cont, ctx, ev) {
         }
         if (plegado) continue;
         for (const t of [...g.tareas].sort(orden)) cuerpo.appendChild(fila(t, ctx));
-        cuerpo.appendChild(filaNueva(g.base, ctx, `nueva-${ev.agrupar}-${g.clave}`));
+        if (!g.fuera) cuerpo.appendChild(filaNueva(g.base, ctx, `nueva-${ev.agrupar}-${g.clave}`)); // a quien ha salido del crew no se le ponen tareas nuevas
     }
 
     // La tabla va en un marco que marca con una sombra el lado por el que sigue si no cabe a lo ancho (como el mes del
@@ -280,12 +282,12 @@ function fila(t, ctx) {
         celda(
             "col-responsables",
             responsables.length ? (responsables.length === 1 ? persona(responsables[0]) : h("span", { class: "avatares" }, responsables.map((u) => avatar(u)))) : h("span", { class: "tenue" }, "—"),
-            (a) => menuPersonas(a, ctx.activos(), t.responsables, (v) => ctx.cambiar(t.id, { responsables: v })),
+            (a) => menuPersonas(a, ctx.paraElegir(t.responsables), t.responsables, (v) => ctx.cambiar(t.id, { responsables: v })),
         ),
         celda("col-fin", p ? h("span", { class: ["chip", "plazo", p.clase] }, p.texto) : h("span", { class: "tenue" }, "—"), (a) => menuFecha(a, t.fin, (v) => ctx.cambiar(t.id, { fin: v })), t.fin || ""),
         celda("col-inicio", t.inicio ? fechaCorta(t.inicio) : h("span", { class: "tenue" }, "—"), (a) => menuFecha(a, t.inicio, (v) => ctx.cambiar(t.id, { inicio: v }), { titulo: "Empieza el" })),
         celda("col-etiquetas", t.etiquetas.length ? t.etiquetas.map((e) => chipEtiqueta(e)) : h("span", { class: "tenue" }, "—"), (a) => menuEtiquetas(a, t.etiquetas, ctx.todasEtiquetas(), (v) => ctx.cambiar(t.id, { etiquetas: v }))),
-        celda("col-pedidoPor", pedido ? persona(pedido) : h("span", { class: "tenue" }, "—"), (a) => menuPersona(a, ctx.activos(), t.pedidoPor, (v) => ctx.cambiar(t.id, { pedidoPor: v }))),
+        celda("col-pedidoPor", pedido ? persona(pedido) : h("span", { class: "tenue" }, "—"), (a) => menuPersona(a, ctx.paraElegir(t.pedidoPor), t.pedidoPor, (v) => ctx.cambiar(t.id, { pedidoPor: v }))),
     );
 }
 

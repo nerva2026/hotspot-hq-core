@@ -2142,6 +2142,20 @@ table.lista {
     flex: none;
     font-weight: 700;
 }
+/* Quien ya ha salido del crew y sigue puesto en una tarea: sale en sus menús (para poder quitarlo) y en los grupos «por
+   persona», con esta marca detrás del nombre. */
+.fuera-del-crew {
+    flex: none;
+    font: 13px/1 var(--texto);
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--tinta-suave);
+    white-space: nowrap;
+}
+.opcion .nombre-en-menu {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
 .pie-menu {
     border-top: 2px dashed var(--crema-osc);
     margin-top: 4px;

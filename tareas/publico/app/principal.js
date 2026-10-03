@@ -7,7 +7,8 @@ import { sinSolo, conSolo } from "./solo.js";
 import { BUSQUEDA_AL_CARGAR } from "./capas.js";
 import { pestanaEnDirecto } from "./libro-pestana.js";
 import { coincide, prepararBusqueda } from "./tablon-buscar.js";
-import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar, chipEtiqueta } from "./menus.js";
+import { paraElegir, conTareas } from "./personas.js";
+import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar, chipEtiqueta, personaEnMenu } from "./menus.js";
 import { hayArrastre } from "./arrastre.js";
 import { interpretar } from "./rapida.js";
 import { pintarTablero } from "./tablero.js";
@@ -60,6 +61,12 @@ const ctx = {
     usuario: (id) => E.usuarios.find((u) => u.id === id) || null,
     // Las personas que siguen en el crew (las que se fueron siguen saliendo en sus tareas antiguas).
     activos: () => E.usuarios.filter((u) => !u.baja),
+    // Para los menús «Para quién» y «Pedido por» de una tarea: el crew de ahora y, además, quien ya está puesto en ella
+    // aunque haya salido del crew (el menú lo marca «fuera del crew»): si no saliera, no habría manera de quitarlo.
+    paraElegir: (...ids) => paraElegir(E.usuarios, ...ids),
+    // El crew de ahora y quien ha salido pero sigue siendo responsable de alguna de esas tareas: para agrupar o filtrar
+    // por persona sin que esas tareas se queden sin sitio.
+    conTareas: (tareas) => conTareas(E.usuarios, tareas),
     todasEtiquetas() {
         const cuenta = new Map();
         for (const t of E.tareas.values()) for (const e of t.etiquetas) cuenta.set(e, (cuenta.get(e) || 0) + 1);
@@ -549,7 +556,7 @@ function menuFiltroPersona(ancla) {
             { contenido: "Todos", marcado: E.filtros.persona === "todos", accion: elegir("todos") },
             { contenido: "Mis tareas", marcado: E.filtros.persona === "yo", accion: elegir("yo") },
             "-",
-            ...ctx.activos().filter((u) => u.id !== E.yo.id).map((u) => ({ contenido: [avatar(u), u.nombre], marcado: E.filtros.persona === u.id, accion: elegir(u.id) })),
+            ...ctx.conTareas([...E.tareas.values()]).filter((u) => u.id !== E.yo.id).map((u) => ({ contenido: personaEnMenu(u), marcado: E.filtros.persona === u.id, accion: elegir(u.id) })),
             { contenido: [avatar(null), "Sin asignar"], marcado: E.filtros.persona === "nadie", accion: elegir("nadie") },
         ]),
     );

@@ -2,6 +2,7 @@
 
 import { h, rellenar, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, hoy, sumarDias, lunesDe, fechaMedia, colorEtiqueta, normalizar, inicial } from "./util.js";
 import { abrirCapa } from "./capas.js";
+import { botonTodos } from "./personas.js";
 
 let abierto = null;
 
@@ -155,16 +156,24 @@ export function avatar(u, { tam = "" } = {}) {
     return h("span", { class: ["avatar", tam], style: estilo, title: u.nombre }, inicial(u.nombre));
 }
 
-// Selección de varias personas (responsables).
+// Una persona en un menú: su avatar, su nombre y, si ya ha salido del crew, la marca «fuera del crew» (sale solo
+// en las tareas en las que sigue puesta, para poder quitarla).
+export function personaEnMenu(u) {
+    return [avatar(u), h("span", { class: "nombre-en-menu" }, u.nombre), u.baja ? h("span", { class: "fuera-del-crew" }, "fuera del crew") : null];
+}
+
+// Selección de varias personas (responsables). «usuarios» es el crew de ahora y, si acaso, quien ya está en la tarea
+// aunque haya salido (u.baja): «Todos» son todos los de ahora; a quien ha salido solo se le puede quitar.
 export function menuPersonas(ancla, usuarios, seleccion, alCambiar) {
     let elegidos = new Set(seleccion);
     const pintar = (lista) => {
+        const todos = botonTodos(usuarios, elegidos);
         rellenar(
             lista,
             ...usuarios.map((u) =>
                 opcion({
                     marcado: elegidos.has(u.id),
-                    contenido: [avatar(u), u.nombre],
+                    contenido: personaEnMenu(u),
                     alElegir: () => {
                         if (elegidos.has(u.id)) elegidos.delete(u.id);
                         else elegidos.add(u.id);
@@ -174,7 +183,7 @@ export function menuPersonas(ancla, usuarios, seleccion, alCambiar) {
                     },
                 }),
             ),
-            usuarios.length > 1
+            todos
                 ? h(
                       "div",
                       { class: "pie-menu" },
@@ -184,12 +193,12 @@ export function menuPersonas(ancla, usuarios, seleccion, alCambiar) {
                               type: "button",
                               class: "enlace",
                               onclick: () => {
-                                  elegidos = new Set(elegidos.size === usuarios.length ? [] : usuarios.map((u) => u.id));
+                                  elegidos = new Set(todos.alPulsar());
                                   alCambiar([...elegidos]);
                                   pintar(lista);
                               },
                           },
-                          elegidos.size === usuarios.length ? "Nadie" : usuarios.length === 2 ? "Los dos" : "Todos",
+                          todos.texto,
                       ),
                   )
                 : null,
@@ -212,7 +221,7 @@ export function menuPersona(ancla, usuarios, actual, alElegir) {
                 [...usuarios, null].map((u) =>
                     opcion({
                         marcado: (u?.id || null) === (actual || null),
-                        contenido: u ? [avatar(u), u.nombre] : [avatar(null), "Nadie"],
+                        contenido: u ? personaEnMenu(u) : [avatar(null), "Nadie"],
                         alElegir: () => {
                             cerrarMenu();
                             alElegir(u?.id || null);

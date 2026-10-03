@@ -20,7 +20,9 @@ Aplicación propia (Node, sin dependencias) con estas partes:
 - Solo entran con Google los correos del **crew**: las personas del tablón con correo. Se gestionan en el
   tablón, menú de la cuenta → «Crew» (solo administradores). Si no se pone nombre, se usa el de Google.
 - Quien sale del crew pierde al momento la oficina y el tablón (se le cierran sesiones y accesos); sus
-  tareas se quedan.
+  tareas se quedan. En esas tareas sigue saliendo en «Para quién» y «Pedido por» (marcado «fuera del crew»), para
+  poder quitarlo; en las demás no se le puede elegir. Y al agrupar por persona (lista y cronograma) o filtrar, tiene
+  su grupo mientras le quede alguna (`publico/app/personas.js`).
 - La oficina (WorkAdventure) inicia sesión en `/cuentas` como si fuera un proveedor OpenID Connect
   (`OPENID_CLIENT_ISSUER=http://tareas:3000/cuentas`). Nosotros hablamos con Google y comprobamos la lista.
 - Con el parche 07, la oficina y la terraza exigen haber entrado; los invitados se quedan en la calle

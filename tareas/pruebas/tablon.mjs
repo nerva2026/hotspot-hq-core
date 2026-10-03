@@ -507,4 +507,63 @@ try {
     assert.match(principal, /return coincide\(t, palabras, ayudas\);/, "el buscador del tablón busca también por etiqueta, persona, prioridad y estado");
 }
 
+// ---------- quien ha salido del crew se puede quitar de sus tareas (app/personas.js) ----------
+{
+    const { paraElegir, conTareas, botonTodos } = await import(new URL("personas.js", carpetaApp).href);
+    const crew = [{ id: "d", nombre: "Diego" }, { id: "x", nombre: "Xavi", baja: true }, { id: "v", nombre: "Víctor" }, { id: "z", nombre: "Zoe", baja: true }];
+    const ids = (lista) => lista.map((u) => u.id);
+    assert.deepEqual(ids(paraElegir(crew, ["d"])), ["d", "v"], "sin nadie de fuera en la tarea, solo el crew de ahora");
+    assert.deepEqual(ids(paraElegir(crew, ["d", "x"])), ["d", "v", "x"], "quien ha salido y está en la tarea sale en la lista, al final");
+    assert.deepEqual(ids(paraElegir(crew, "z")), ["d", "v", "z"], "también para «Pedido por» (una sola persona)");
+    assert.deepEqual(ids(paraElegir(crew, null)), ["d", "v"]);
+    assert.deepEqual(ids(paraElegir(crew, [])), ["d", "v"]);
+    assert.equal(paraElegir(crew, ["x"]).at(-1).baja, true, "y va marcada, para que el menú diga «fuera del crew»");
+    assert.deepEqual(ids(conTareas(crew, [{ responsables: ["z", "d"] }, { responsables: [] }])), ["d", "v", "z"], "al agrupar por persona, su tarea tiene grupo");
+    assert.deepEqual(ids(conTareas(crew, [])), ["d", "v"]);
+    // «Todos» son los de ahora; a quien ha salido no lo pone, pero tampoco lo quita. «Nadie» quita a todos.
+    let b = botonTodos(paraElegir(crew, ["x"]), new Set(["x"]));
+    assert.equal(b.texto, "Los dos");
+    assert.deepEqual(b.alPulsar().sort(), ["d", "v", "x"]);
+    b = botonTodos(paraElegir(crew, ["x"]), new Set(["x", "d", "v"]));
+    assert.equal(b.texto, "Nadie");
+    assert.deepEqual(b.alPulsar(), []);
+    b = botonTodos(paraElegir(crew, []), new Set(["d"]));
+    assert.deepEqual([b.texto, b.alPulsar().sort()], ["Los dos", ["d", "v"]]);
+    assert.equal(botonTodos([...crew, { id: "a", nombre: "Ana" }], new Set()).texto, "Todos");
+    assert.equal(botonTodos([{ id: "d", nombre: "Diego" }, { id: "x", nombre: "Xavi", baja: true }], new Set(["x"])), null, "con una sola persona en el crew no hay botón");
+    // las pantallas lo usan: los menús de la ficha y de la lista, y los grupos por persona
+    const fuente = (f) => readFileSync(new URL(f, carpetaApp), "utf8");
+    for (const f of ["ficha.js", "lista.js"]) {
+        assert.match(fuente(f), /menuPersonas\(a, ctx\.paraElegir\(t\.responsables\), t\.responsables,/, `${f}: «Para quién» lista también a quien ha salido y sigue en la tarea`);
+        assert.match(fuente(f), /menuPersona\(a, ctx\.paraElegir\(t\.pedidoPor\), t\.pedidoPor,/, `${f}: y «Pedido por»`);
+        assert.ok(!/menuPersonas?\(a, ctx\.activos\(\)/.test(fuente(f)), `${f}: ningún menú de personas de una tarea con solo los activos`);
+    }
+    assert.match(fuente("menus.js"), /u\.baja \? h\("span", \{ class: "fuera-del-crew" \}, "fuera del crew"\) : null/, "el menú marca a quien ha salido");
+    assert.match(fuente("lista.js"), /ctx\.conTareas\(tareas\)/);
+    assert.match(fuente("cronograma.js"), /ctx\.conTareas\(conFechas\)/);
+    // Con el servidor: Víctor sale del crew con una tarea puesta; sigue en ella y en la lista de personas (marcado
+    // «baja»), y se le puede quitar.
+    r = await diego("GET", "datos");
+    const victorId = r.datos.usuarios.find((u) => u.nombre === "Víctor").id;
+    r = await diego("POST", "tareas", { titulo: "Tarea de quien se va", responsables: [victorId, idDiego], pedidoPor: victorId });
+    assert.equal(r.estado, 201, JSON.stringify(r.datos));
+    const suya = r.datos.id;
+    r = await diego("PATCH", `crew/${victorId}`, { baja: true });
+    assert.equal(r.estado, 200, JSON.stringify(r.datos));
+    r = await diego("GET", "datos");
+    const tareaSuya = r.datos.tareas.find((x) => x.id === suya);
+    assert.deepEqual(tareaSuya.responsables, [victorId, idDiego], "sus tareas se quedan");
+    assert.equal(r.datos.usuarios.find((u) => u.id === victorId).baja, true);
+    assert.deepEqual(ids(paraElegir(r.datos.usuarios, tareaSuya.responsables)), [idDiego, victorId], "y sale en el menú de esa tarea");
+    assert.deepEqual(ids(paraElegir(r.datos.usuarios, tareaSuya.pedidoPor)), [idDiego, victorId]);
+    r = await diego("PATCH", `tareas/${suya}`, { responsables: tareaSuya.responsables.filter((id) => id !== victorId), pedidoPor: null });
+    assert.equal(r.estado, 200, JSON.stringify(r.datos));
+    assert.deepEqual(r.datos.responsables, [idDiego]);
+    assert.equal(r.datos.pedidoPor, null);
+    r = await diego("GET", "datos");
+    assert.deepEqual(ids(paraElegir(r.datos.usuarios, r.datos.tareas.find((x) => x.id === suya).responsables)), [idDiego], "una vez quitado, ya no sale");
+    r = await diego("PATCH", `crew/${victorId}`, { baja: false });
+    assert.equal(r.estado, 200);
+}
+
 console.log("Tablón (notas que no se pisan, y ventanas que no dejan salir el foco y se cierran con «atrás»): bien");

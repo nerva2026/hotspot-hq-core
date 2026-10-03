@@ -278,14 +278,14 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
             fila(
                 "Para quién",
                 responsables.length ? responsables.map((u) => h("span", { class: "persona" }, avatar(u), u.nombre)) : vacio("Sin asignar"),
-                (a) => menuPersonas(a, ctx.activos(), t.responsables, (v) => cambiar({ responsables: v })),
+                (a) => menuPersonas(a, ctx.paraElegir(t.responsables), t.responsables, (v) => cambiar({ responsables: v })),
             ),
             fila("Para cuándo", t.fin ? [h("span", { class: ["chip", "plazo", p.clase] }, p.texto), /\d/.test(p.texto) ? null : h("span", { class: "tenue" }, fechaCorta(t.fin))] : vacio("Sin fecha"), (a) =>
                 menuFecha(a, t.fin, (v) => cambiar({ fin: v }), { titulo: "Para cuándo" }),
             ),
             fila("Empieza", t.inicio ? fechaMedia(t.inicio) : vacio("—"), (a) => menuFecha(a, t.inicio, (v) => cambiar({ inicio: v }), { titulo: "Empieza el" })),
             fila("Etiquetas", t.etiquetas.length ? t.etiquetas.map((e) => chipEtiqueta(e)) : vacio("Ninguna"), (a) => menuEtiquetas(a, t.etiquetas, ctx.todasEtiquetas(), (v) => cambiar({ etiquetas: v }))),
-            fila("Pedido por", pedido ? h("span", { class: "persona" }, avatar(pedido), pedido.nombre) : vacio("—"), (a) => menuPersona(a, ctx.activos(), t.pedidoPor, (v) => cambiar({ pedidoPor: v }))),
+            fila("Pedido por", pedido ? h("span", { class: "persona" }, avatar(pedido), pedido.nombre) : vacio("—"), (a) => menuPersona(a, ctx.paraElegir(t.pedidoPor), t.pedidoPor, (v) => cambiar({ pedidoPor: v }))),
         );
     }
 
