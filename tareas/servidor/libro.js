@@ -295,12 +295,22 @@ export function csv(libro, usuarios) {
 
 // Lee un Excel con una hoja de gastos: la «Gastos» de la hoja de Drive (Fecha, Concepto, Categoría, Pagado por,
 // Importe (€), Notas / tique) o la «Movimientos» de una descarga del propio libro. Se saltan las filas que
-// empiezan por «EJEMPLO» y las que ya estaban (misma fecha, concepto, importe y persona).
+// empiezan por «EJEMPLO» y las que ya estaban.
+//
+// IMPORTAR UNA DESCARGA DEL PROPIO LIBRO NO CAMBIA NADA. Qué es «ya estaba»:
+//   · Una fila con «Id» (la columna escondida de la descarga) de un movimiento del libro: ya estaba, aunque después
+//     se haya cambiado aquí (manda el libro, no se duplica con los datos viejos). Si ese movimiento se borró después
+//     de la descarga, tampoco vuelve (se cuenta aparte, «borrados»). Si el mismo «Id» sale dos veces en el archivo
+//     (una fila copiada en Excel para apuntar otra cosa), solo la primera cuenta como ese movimiento.
+//   · Sin «Id» (la hoja de Drive, una descarga antigua): el mismo tipo, fecha, concepto, importe y persona (y, en un
+//     pago, a quién) que un movimiento sin borrar. Los pagos no tienen concepto y la descarga escribe «Pago» en su
+//     columna: ese «Pago» es lo mismo que nada (sin esto, importar la propia descarga duplicaba los pagos).
 export function importar(hojas, usuario, datos, normalizar, fechaDeCelda) {
     const libro = libroDe(datos);
     fijarPartes(datos);
-    const n = (v) => normalizar(typeof v === "string" ? v.replace(/\(.*?\)|[¿?:€]/g, "") : "");
+    const n = (v) => normalizar(typeof v === "string" ? v.replace(/\(.*?\)|[¿?:€]/g, "") : ""); // para los títulos de las columnas y los nombres
     const CAMPOS = {
+        id: "id",
         fecha: "fecha",
         tipo: "tipo",
         concepto: "concepto",
@@ -336,7 +346,8 @@ export function importar(hojas, usuario, datos, normalizar, fechaDeCelda) {
     const persona = (v) => {
         const t = n(v);
         if (!t) return null;
-        return (usuarios.find((u) => n(u.nombre) === t) || usuarios.find((u) => n(u.nombre).startsWith(t) || t.startsWith(n(u.nombre))))?.id || null;
+        const tal = normalizar(String(v)); // tal cual está escrito (un nombre con paréntesis, entero)
+        return (usuarios.find((u) => normalizar(u.nombre) === tal) || usuarios.find((u) => n(u.nombre) === t) || usuarios.find((u) => n(u.nombre).startsWith(t) || t.startsWith(n(u.nombre))))?.id || null;
     };
     const tipoDe = (v) => {
         const t = n(v);
@@ -346,38 +357,65 @@ export function importar(hojas, usuario, datos, normalizar, fechaDeCelda) {
     };
     const importeDe = (v) => {
         if (typeof v === "number") return Math.round(v * 100);
-        const s = String(v ?? "").replace(/[€\s]/g, "");
+        const s = String(v ?? "").replace(/[€\s]|eur(os)?$/gi, "");
         if (!s || s === "-") return 0;
-        // «1.234,56», «1234,56» o «1234.56»
-        const limpio = /,\d{1,2}$/.test(s) ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, "");
+        // «1.234,56», «1234,56» o «1234.56»; y «1.234» y «12.345.678», con puntos de miles (grupos de tres cifras), que
+        // escritos aquí son 1234 € y no 1,23 €
+        let limpio;
+        if (/,\d{1,2}$/.test(s)) limpio = s.replace(/\./g, "").replace(",", ".");
+        else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) limpio = s.replace(/\./g, "");
+        else limpio = s.replace(/,/g, "");
         const x = Number(limpio);
         return Number.isFinite(x) ? Math.round(x * 100) : 0;
     };
-    const clave = (m) => [m.fecha, n(m.concepto), m.importe, m.persona].join("|");
+    // El concepto para comparar: sin fijarse en mayúsculas, tildes ni espacios de más, pero entero («Taxi (ida)» y
+    // «Taxi (vuelta)» son dos gastos); el de un pago que solo dice «Pago» es ninguno.
+    const conceptoDe = (tipo, concepto) => {
+        const c = normalizar(unaLinea(String(concepto ?? ""), LIMITES.concepto)); // como lo guarda el libro (una línea, hasta su tope)
+        return tipo === "pago" && c === "pago" ? "" : c;
+    };
+    const clave = (m) => [m.tipo, m.fecha, conceptoDe(m.tipo, m.concepto), m.importe, m.persona, m.tipo === "pago" ? m.para || "" : ""].join("|");
+    const porId = new Map(libro.movimientos.map((m) => [m.id, m]));
     const existentes = new Set(libro.movimientos.filter((m) => !m.borrado).map(clave));
+    const idsVistos = new Set();
     const nuevos = [];
     let repetidos = 0;
+    let borrados = 0;
     let sinPersona = 0;
+    let sinLeer = 0; // filas con concepto que no se han podido apuntar: sin importe (o no se entiende, o negativo) o que el libro rechaza
     for (const fila of hoja.filas.slice(filaCabecera + 1)) {
         const campo = {};
         mapa.forEach((c, i) => {
             if (c && fila[i] !== null && fila[i] !== undefined && fila[i] !== "") campo[c] = fila[i];
         });
-        const concepto = String(campo.concepto ?? "").trim();
-        if (!concepto || /^ejemplo\b/i.test(concepto)) continue;
+        // Una fila de una descarga de este libro: su movimiento ya está (o se borró después), diga lo que diga la fila.
+        const id = typeof campo.id === "string" ? campo.id.trim() : "";
+        if (id && porId.has(id) && !idsVistos.has(id)) {
+            idsVistos.add(id);
+            if (porId.get(id).borrado) borrados += 1;
+            else repetidos += 1;
+            continue;
+        }
+        const tipo = tipoDe(campo.tipo);
+        let concepto = String(campo.concepto ?? "").trim();
+        if (tipo === "pago" && conceptoDe(tipo, concepto) === "") concepto = ""; // «Pago» es lo que escribe la descarga donde no hay concepto
+        if ((!concepto && tipo !== "pago") || /^ejemplo\b/i.test(concepto)) continue;
         const importe = importeDe(campo.importe);
-        if (importe <= 0) continue;
+        if (importe <= 0) {
+            sinLeer += 1;
+            continue;
+        }
         const entrada = {
-            tipo: tipoDe(campo.tipo),
+            tipo,
             fecha: fechaDeCelda(campo.fecha) || new Date().toISOString().slice(0, 10),
             concepto,
             categoria: String(campo.categoria ?? "").trim(),
             persona: persona(campo.persona),
-            para: persona(campo.para),
+            para: tipo === "pago" ? persona(campo.para) : null,
             importe,
             notas: String(campo.notas ?? "").trim(),
         };
-        if (!entrada.persona) {
+        if (!entrada.persona || (tipo === "pago" && !entrada.para)) {
             sinPersona += 1;
             continue;
         }
@@ -393,7 +431,8 @@ export function importar(hojas, usuario, datos, normalizar, fechaDeCelda) {
             if (m.categoria && !libro.categorias.some((c) => c.toLowerCase() === m.categoria.toLowerCase())) libro.categorias.push(m.categoria);
         } catch (error) {
             if (!(error instanceof ErrorDeDatos)) throw error;
+            sinLeer += 1;
         }
     }
-    return { importados: nuevos.length, repetidos, sinPersona, hoja: hoja.nombre, nuevos };
+    return { importados: nuevos.length, repetidos, borrados, sinPersona, sinLeer, hoja: hoja.nombre, nuevos };
 }

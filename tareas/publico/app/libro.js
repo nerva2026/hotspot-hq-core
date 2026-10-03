@@ -1167,7 +1167,16 @@ function importar() {
         try {
             const r = await api.importarLibro(archivo);
             await recargar();
-            const extra = [r.repetidos ? `${r.repetidos} ya estaban` : "", r.sinPersona ? `${r.sinPersona} sin una persona del crew en «Pagado por»` : ""].filter(Boolean).join("; ");
+            const extra = [
+                r.repetidos ? `${r.repetidos} ya estaban` : "",
+                // PROVISIONAL-v0.3.1: filas de una descarga de este libro cuyo movimiento se borró después; no se vuelven a apuntar
+                r.borrados ? `${r.borrados} borrado${r.borrados > 1 ? "s" : ""} después de la descarga` : "",
+                r.sinPersona ? `${r.sinPersona} sin una persona del crew en «Pagado por»` : "",
+                // PROVISIONAL-v0.3.1: filas con concepto que no se han apuntado (antes se saltaban sin decir nada)
+                r.sinLeer ? `${r.sinLeer} que no se han podido leer` : "",
+            ]
+                .filter(Boolean)
+                .join("; ");
             aviso(
                 r.importados
                     ? `Importados ${r.importados} movimiento${r.importados > 1 ? "s" : ""} de la hoja «${r.hoja}»${extra ? ` (${extra})` : ""}.`

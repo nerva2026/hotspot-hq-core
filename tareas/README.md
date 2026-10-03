@@ -235,6 +235,17 @@ misma sesión que el tablón.
 - **En el móvil** (480 px o menos) las marcas «Tique» y «Nota» de cada movimiento son dos dibujos pequeños debajo de
   la fecha (con más ancho, la palabra).
 - **Excel y CSV:** descarga del libro entero, e importación de la hoja de cuentas de Drive.
+- **Importar una descarga del propio libro no cambia nada.** La hoja «Movimientos» de la descarga lleva una columna
+  escondida, «Id», con la que cada fila se reconoce como su movimiento: ya estaba, aunque después se haya cambiado en
+  el libro (manda el libro), y si se borró después de descargar, no vuelve (el aviso los cuenta aparte). Una fila sin
+  «Id» (la hoja de Drive, una descarga antigua) ya estaba si coincide con un movimiento en tipo, fecha, concepto,
+  importe y persona (y, en un pago, a quién); el «Pago» que la descarga escribe como concepto de los pagos, que no
+  lo tienen, cuenta como ninguno. Lo vigila la prueba de ida y vuelta de `pruebas/libro.mjs`.
+- **Lo que entiende al importar:** fechas como número de Excel o escritas («1/10/2026», «01-10-26», «2026/10/01»,
+  «1/10», «1 oct 2026», «1 de octubre de 2026»; una que no existe o no se entiende se queda en la de hoy) e importes
+  con coma o con punto («12,5», «1.234,56», «1,234.56», «1.234» son 1234 €). Las filas que no se apuntan se cuentan
+  en el aviso: las que ya estaban, las borradas después de la descarga, las que no tienen una persona del crew y las
+  que no se han podido leer (sin importe, con un importe negativo o con letras).
 - Los importes se guardan en céntimos. Lo borrado pasa 30 días en la papelera.
 
 ## Pizarra
@@ -527,7 +538,7 @@ sus variables, están en el workflow.
 | Paso | Prueba | Puerto | Qué comprueba |
 | --- | --- | --- | --- |
 | Probar el servidor | (con `curl`) | 3999 | Que arranca, sirve el tablón, imprime el enlace de alta y pide sesión (401) a quien no la tiene. |
-| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. Y «Solo para los socios» en directo: la espera de la pantalla (`publico/app/libro-espera.js`) contra el canal de verdad, al pasar a administrar y al recibir parte en el reparto. La pestaña «Cuentas» de las otras pantallas en directo (`publico/app/libro-pestana.js` y `GET /api/yo`), también contra el canal de verdad. Y el buscador (`publico/app/libro-buscar.js`): por importe, por fecha, por tipo y por persona. |
+| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. La ida y vuelta de la descarga (descargar → importar → nada cambia: ni movimientos, ni cuentas, ni reparto; también tras cambiar o borrar un movimiento y con una descarga antigua sin «Id») y hojas raras (vacías, sin columnas, con fechas e importes escritos de otras maneras, de 3000 filas). Y «Solo para los socios» en directo: la espera de la pantalla (`publico/app/libro-espera.js`) contra el canal de verdad, al pasar a administrar y al recibir parte en el reparto. La pestaña «Cuentas» de las otras pantallas en directo (`publico/app/libro-pestana.js` y `GET /api/yo`), también contra el canal de verdad. Y el buscador (`publico/app/libro-buscar.js`): por importe, por fecha, por tipo y por persona. |
 | Probar la pizarra | `pruebas/pizarra.mjs` | 3997 | Trazos, notas y fotos con dos personas a la vez, vaciar y recuperar, el lápiz en directo y quién la tiene abierta. |
 | Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). Y las capas (`publico/app/capas.js`) con un historial de mentira: el tabulador da la vuelta dentro, «atrás» cierra la de arriba, cerrar con el botón no deja entradas, y toda ventana pasa por `ventana()`. |
 | Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje, puente `/tareas/oficina/` y cartel `/tareas/cumples/` (la API y lo que sirve; en pantalla se mira con un navegador). |
