@@ -1452,6 +1452,7 @@ table.lista {
 
 /* ---------- cronograma ---------- */
 .crono {
+    --barra-minima: 20px; /* lo mínimo que mide una barra: su relleno y su borde (en el móvil, los 44 px del dedo) */
     flex: 1;
     min-height: 0;
     overflow: auto;
@@ -1639,7 +1640,7 @@ table.lista {
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     z-index: 1;
-    min-width: 6px;
+    min-width: var(--barra-minima);
 }
 .crono-barra.solo-fin {
     border-right-width: 5px;
@@ -1662,6 +1663,8 @@ table.lista {
 .crono-fuera {
     position: absolute;
     top: 9px;
+    /* justo detrás de la barra, mida lo que mida (--izq y --ancho los pone cronograma.js) */
+    left: calc(var(--izq, 0px) + max(var(--ancho, 0px), var(--barra-minima)) + 5px);
     font-size: 12px;
     white-space: nowrap;
     pointer-events: none;
@@ -2913,13 +2916,14 @@ table.lista {
     .crono-nombre {
         min-height: 44px;
     }
+    .crono {
+        --barra-minima: 44px; /* la barra de un solo día, también de ancho; el título de al lado se coloca detrás */
+    }
     .crono-barra {
         top: 0;
         height: 44px;
-        min-width: 44px;
     }
     .crono-fuera {
         top: 14px;
-        margin-left: 12px; /* la barra de un día ya no mide 32 px sino 44: el título de al lado no se queda debajo */
     }
 }

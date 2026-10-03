@@ -52,7 +52,11 @@ cualquier navegador.
   en el sitio; donde no hay ratón (`hover: none`) «Abrir» tampoco se esconde.
 - **Calendario y cronograma:** el calendario se abre desplazado hasta hoy (en un móvil solo caben tres o cuatro días) y
   marca con una sombra el lado por el que sigue; en los dos, el título de una barra que empieza antes del borde visible
-  se corre hasta lo que se ve.
+  se corre hasta lo que se ve. Con 720 px o menos, el mes se encoge (se desplaza por dentro) para que la lista «Sin
+  fecha» quepa debajo, dentro de la pantalla. En el cronograma, el rótulo del mes va pegado al borde de la columna de
+  nombres mientras ese mes esté a la vista y solo sale si cabe entero (donde no cabe se acorta: «sep 2026», «sep»; en un
+  móvil, sin el año si es el de ahora); el selector «Nada · Estado · Persona» lleva siempre su etiqueta «Agrupar»; y el
+  título que va al lado de una barra corta se coloca detrás de lo que la barra mide de verdad.
 - **Avisos y ventanas:** los avisos salen abajo, en el centro; con una ventana abierta (o la ficha de una tarea) van
   dentro de ella, debajo de la ventana o al pie de la ficha, para no tapar el pie de un formulario
   (`colocarAvisos()` en `publico/app/menus.js`). Una ventana nunca es más alta que la pantalla: se desplaza por dentro.

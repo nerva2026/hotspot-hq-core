@@ -285,7 +285,9 @@ function fila(t, { px, desde, dias, ancho, x, ctx, sinFechas }) {
     let fuera = null;
     if (anchoBarra < 90) {
         barra.querySelector(".texto").textContent = "";
-        fuera = h("span", { class: ["crono-fuera", t.estado === "hecho" && "hecha"], style: { left: `${x(b) + px + 4}px` } }, t.titulo);
+        // Dónde empieza y cuánto mide la barra, para que el CSS lo ponga justo detrás de lo que mide de verdad (una barra
+        // nunca es más estrecha que --barra-minima: con el zoom de meses, la de pocos días tapaba el principio del título).
+        fuera = h("span", { class: ["crono-fuera", t.estado === "hecho" && "hecha"], style: { "--izq": `${x(a) + 1}px`, "--ancho": `${anchoBarra}px` } }, t.titulo);
         pista.appendChild(fuera);
     }
 
