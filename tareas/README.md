@@ -278,7 +278,9 @@ el crew (sin sesión, la API contesta 401 y la página enseña la misma pantalla
 Se llega desde las estanterías de la sala, desde las pestañas de la barra y desde el menú de la cuenta del tablón.
 
 - **Qué se sube:** Markdown (`.md`), PDF, fotos (PNG, JPG, WebP o GIF), textos (`.txt`) y Word (`.docx`), con el
-  botón o arrastrando, varios a la vez y con el progreso. Hasta 25 MB cada uno (5 MB los textos y Markdown) y,
+  botón o arrastrando, varios a la vez y con el progreso. En el panel de subidas, lo que no se ha podido subir va lo
+  primero; y con el panel a la vista los avisos de abajo no se pintan encima (van a su izquierda o, en un móvil,
+  encima de él). Hasta 25 MB cada uno (5 MB los textos y Markdown) y,
   entre todos, lo que diga `ARCHIVO_MAXIMO_MB` (1024 por defecto). También **enlaces** https con título: los de
   Google Docs, Hojas, Presentaciones y Drive se ven dentro con su vista previa (`/preview`); los demás se abren
   en una pestaña nueva.

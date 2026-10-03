@@ -309,7 +309,7 @@ async function subirUna(s, carpeta) {
 function fallo(s, mensaje) {
     s.estado = "error";
     s.mensaje = mensaje;
-    refrescarSubida(s);
+    pintarSubidas(); // entera, no solo esta: los fallos pasan a ir los primeros
 }
 
 function quitarSubida(s) {
@@ -334,7 +334,28 @@ function refrescarSubida(s) {
     const quitar = s.el.querySelector("button");
     quitar.setAttribute("aria-label", s.estado === "subiendo" || s.estado === "esperando" ? `Cancelar ${s.nombre}` : `Quitar ${s.nombre} de la lista`);
     $("#subidas-resumen")?.replaceChildren(resumenSubidas());
+    hacerSitioALosAvisos();
 }
+
+// Con el panel de subidas a la vista (abajo a la derecha), los avisos de abajo («… está en la papelera · Deshacer») no
+// se pintan encima: van a su izquierda o, donde el panel ocupa todo el ancho, encima de él (archivo.css). Aquí se dice
+// si está y cuánto mide.
+let subidasVigiladas = null; // el panel al que ya se le mira el tamaño (cambia al girar el móvil o al estrechar la ventana)
+function hacerSitioALosAvisos() {
+    const caja = $("#subidas");
+    const visible = Boolean(caja && !caja.hidden);
+    document.body.classList.toggle("con-subidas", visible);
+    if (visible) document.body.style.setProperty("--alto-subidas", `${caja.offsetHeight}px`);
+    if (caja && subidasVigiladas !== caja && typeof ResizeObserver === "function") {
+        subidasVigiladas = caja;
+        new ResizeObserver(hacerSitioALosAvisos).observe(caja);
+    }
+}
+
+// Lo que no se ha podido subir, lo primero (es lo que hay que mirar y, con varios archivos, quedaba al final, fuera de
+// lo que se ve); luego lo que está subiendo, lo que espera y lo ya subido.
+const ORDEN_SUBIDAS = ["error", "subiendo", "esperando", "listo"];
+const subidasEnOrden = () => [...E.subidas].sort((a, b) => ORDEN_SUBIDAS.indexOf(a.estado) - ORDEN_SUBIDAS.indexOf(b.estado));
 
 function resumenSubidas() {
     const activas = E.subidas.filter((s) => s.estado === "esperando" || s.estado === "subiendo").length;
@@ -348,9 +369,13 @@ function pintarSubidas() {
     const caja = $("#subidas");
     if (!caja) return;
     caja.hidden = E.subidas.length === 0;
-    if (!E.subidas.length) return caja.replaceChildren();
+    if (!E.subidas.length) {
+        caja.replaceChildren();
+        hacerSitioALosAvisos();
+        return;
+    }
     const lista = h("ul", { class: "subidas-lista" });
-    for (const s of E.subidas) {
+    for (const s of subidasEnOrden()) {
         s.el = h(
             "li",
             { class: `subida ${s.estado}` },

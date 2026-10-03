@@ -427,7 +427,24 @@ mark {
     border: 3px solid var(--tinta);
     box-shadow: var(--sombra);
 }
+/* Con el panel de subidas a la vista, los avisos de abajo no se pintan encima de él (a 820 px, «… está en la papelera ·
+   Deshacer» tapaba «No se han podido subir…»): se centran en el sitio que queda a su izquierda y, donde no lo hay (el
+   panel ocupa casi todo el ancho), van encima. La clase y lo que mide el panel los pone archivo.js. */
+body.con-subidas > .avisos {
+    left: calc((100vw - 352px) / 2);
+    max-width: calc(100vw - 352px - 24px);
+}
+@media (max-width: 760px) {
+    body.con-subidas > .avisos {
+        left: 50%;
+        max-width: calc(100vw - 24px);
+        bottom: calc(var(--alto-subidas, 0px) + 24px);
+    }
+}
 .subidas-cab {
+    position: sticky; /* el resumen («No se han podido subir 2 archivos») no se va al desplazar la lista */
+    top: 0;
+    z-index: 1;
     padding: 8px 12px;
     font: 400 12px/1 var(--titulo);
     letter-spacing: 0.04em;
