@@ -8,6 +8,7 @@ import { api, escuchar, cuandoSePierdaLaSesion, subirDocumento } from "./api.js"
 import { pantallaEntrar, aplicacion } from "./acceso.js";
 import { conSolo, sinSolo } from "./solo.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar } from "./menus.js";
+import { pestanaEnDirecto } from "./libro-pestana.js";
 import { tipoDe, tamano, insignia, terminosDe, resaltar } from "./archivo-comun.js";
 import { crearVisor, direccionArchivo, direccionAparte, direccionDescarga } from "./archivo-visor.js";
 
@@ -828,7 +829,11 @@ function montar() {
     pintarSubidas();
 }
 
+// La pestaña «Cuentas» aparece o desaparece sola cuando a esa persona le dan o le quitan el libro (libro-pestana.js).
+const pestanaCuentas = pestanaEnDirecto({ pedir: api.yo, estado: E, href: "../libro/" }); // la pone marcada, con «otra-pantalla»
+
 function alRecibir(ev) {
+    pestanaCuentas.alRecibir(ev);
     if (ev.tipo === "archivo") recargarLuego();
     else if (ev.tipo === "usuarios") {
         E.usuarios = ev.usuarios || E.usuarios;
@@ -842,6 +847,7 @@ async function recargar() {
     } catch {
         return; // sin conexión (o sin sesión: ya se ha avisado): se queda como está
     }
+    pestanaCuentas.repintar();
     pintar();
     if (buscando()) lanzarBusqueda();
     if (E.docId) {

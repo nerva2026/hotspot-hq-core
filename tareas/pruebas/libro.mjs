@@ -3,14 +3,16 @@
 //   node pruebas/libro.mjs http://127.0.0.1:3991/tareas <código de alta del registro>
 // Crea dos cuentas (Diego y Víctor), apunta gastos, ingresos y pagos, y comprueba el balance, el CSV, el Excel,
 // la importación de la hoja de Drive y los tiques. Y que la pantalla «Solo para los socios» se entera en directo cuando
-// a esa persona le dan acceso (publico/app/libro-espera.js, contra el canal de verdad del servidor), y el buscador de
-// la pantalla (publico/app/libro-buscar.js): por importe, por fecha, por tipo y por persona.
+// a esa persona le dan acceso (publico/app/libro-espera.js, contra el canal de verdad del servidor), que la pestaña
+// «Cuentas» de las otras pantallas aparece y desaparece en directo (publico/app/libro-pestana.js, también con el canal
+// de verdad), y el buscador de la pantalla (publico/app/libro-buscar.js): por importe, por fecha, por tipo y por persona.
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { crearExcel, leerExcel } from "../servidor/excel.js";
 import { esperarAcceso, AVISOS_QUE_ABREN } from "../publico/app/libro-espera.js";
 import { coincide, prepararConsulta, formasDeImporte, formasDeFecha } from "../publico/app/libro-buscar.js";
+import { seguirAccesoAlLibro, AVISOS_QUE_CAMBIAN } from "../publico/app/libro-pestana.js";
 
 const [base, codigoAlta] = process.argv.slice(2);
 if (!base || !codigoAlta) {
@@ -286,6 +288,111 @@ assert.match(sinAcceso, /esperarAcceso\(\{ escuchar, pedir: api\.libro, alEntrar
 
 r = await victor("GET", "libro");
 assert.equal(r.estado, 200, "con parte sí");
+
+// ---------- la pestaña «Cuentas» de las otras cuatro pantallas, en directo (publico/app/libro-pestana.js) ----------
+// A quien le dan o le quitan el libro con el tablón, la pizarra, el archivo o la música abiertos le aparece o le
+// desaparece la pestaña (y «Libro de cuentas» en el menú) sin recargar: con el aviso del canal, pregunta por lo suyo.
+{
+    // GET api/yo: lo propio de quien pregunta, con «libro»
+    assert.equal((await fetch(`${base}/api/yo`)).status, 401, "sin sesión no dice nada");
+    r = await victor("GET", "yo");
+    assert.equal(r.estado, 200);
+    assert.deepEqual([r.datos.yo.id, r.datos.yo.libro], [idVictor, true]);
+    assert.equal(r.datos.yo.clave, undefined, "sin nada que no deba salir");
+    r = await diego("GET", "yo");
+    assert.equal(r.datos.yo.libro, true);
+
+    // Una «pantalla» de Víctor (el tablón, por ejemplo) con el canal de verdad: lo que cree y lo que pinta
+    const otra = { canal: canalDe(victor), yo: { id: idVictor, libro: true }, pintadas: [], pedidos: 0 };
+    const seguidor = seguirAccesoAlLibro({
+        pedir: async () => {
+            otra.pedidos++;
+            return (await victor("GET", "yo")).datos.yo.libro;
+        },
+        tiene: () => otra.yo.libro,
+        alCambiar: (puede) => {
+            otra.yo.libro = puede;
+            otra.pintadas.push(puede);
+        },
+        calma: 20,
+    });
+    const dejar = otra.canal.escuchar(seguidor.alRecibir);
+    await hasta(() => otra.canal.abierto, "abrir el canal de Víctor en la otra pantalla");
+    // un movimiento del libro no le cambia nada: pregunta y no pinta
+    r = await diego("POST", "libro/movimientos", { tipo: "gasto", fecha: "2026-10-02", concepto: "Pegatinas", persona: idDiego, importe: 500 });
+    assert.equal(r.estado, 201);
+    const pegatinas = r.datos.id;
+    await hasta(() => otra.pedidos === 1, "preguntar al llegar un aviso «libro»");
+    await pausa(120);
+    assert.deepEqual(otra.pintadas, [], "si no cambia, no se pinta nada");
+    // le quitan la parte: la pestaña desaparece
+    r = await diego("PATCH", "libro/ajustes", { partes: { [idDiego]: 100 } });
+    assert.equal(r.estado, 200);
+    await hasta(() => otra.pintadas.length === 1, "quitar la pestaña al perder la parte, sin recargar");
+    assert.deepEqual(otra.pintadas, [false]);
+    // se la devuelven: aparece
+    r = await diego("PATCH", "libro/ajustes", { partes: { [idDiego]: 50, [idVictor]: 50 } });
+    assert.equal(r.estado, 200);
+    await hasta(() => otra.pintadas.length === 2, "poner la pestaña al recibir parte, sin recargar");
+    assert.deepEqual(otra.pintadas, [false, true]);
+    // y por administrar (aviso «usuarios»), con el reparto solo para Diego
+    r = await diego("PATCH", "libro/ajustes", { partes: { [idDiego]: 100 } });
+    await hasta(() => otra.pintadas.length === 3, "quitarla otra vez");
+    r = await diego("PATCH", `crew/${idVictor}`, { admin: true });
+    assert.equal(r.estado, 200);
+    await hasta(() => otra.pintadas.length === 4, "ponerla al pasar a administrar");
+    assert.deepEqual(otra.pintadas, [false, true, false, true]);
+    assert.ok(otra.canal.avisos.includes("usuarios") && otra.canal.avisos.includes("libro"));
+    assert.deepEqual(AVISOS_QUE_CAMBIAN, ["libro", "usuarios"]);
+    // parado, ya no pregunta
+    const pedidos = otra.pedidos;
+    seguidor.parar();
+    r = await diego("PATCH", "libro/ajustes", { partes: { [idDiego]: 50, [idVictor]: 50 } });
+    await pausa(150);
+    assert.equal(otra.pedidos, pedidos, "parado, no pregunta más");
+    dejar();
+    r = await diego("DELETE", `libro/movimientos/${pegatinas}`);
+    assert.equal(r.estado, 200);
+
+    // varios avisos seguidos preguntan una vez; un fallo (sin conexión) no pinta nada y se reintenta con el siguiente
+    let preguntas = 0;
+    let respuesta = true;
+    const pintadas = [];
+    const yo = { libro: false };
+    const s2 = seguirAccesoAlLibro({ pedir: async () => (preguntas++, respuesta instanceof Error ? Promise.reject(respuesta) : respuesta), tiene: () => yo.libro, alCambiar: (p) => ((yo.libro = p), pintadas.push(p)), calma: 20 });
+    for (const tipo of ["libro", "libro", "usuarios", "tarea", "archivo"]) s2.alRecibir({ tipo });
+    await pausa(80);
+    assert.deepEqual([preguntas, pintadas], [1, [true]], "varios avisos seguidos, una pregunta");
+    s2.alRecibir({ tipo: "tarea" });
+    await pausa(60);
+    assert.equal(preguntas, 1, "los avisos que no son del libro ni del crew no preguntan");
+    respuesta = Object.assign(new Error("No hay conexión"), { estado: 0 });
+    s2.alRecibir({ tipo: "libro" });
+    await pausa(60);
+    assert.deepEqual([preguntas, pintadas], [2, [true]], "si falla la pregunta, se queda como estaba");
+    respuesta = false;
+    await s2.comprobar();
+    assert.deepEqual([preguntas, pintadas], [3, [true, false]], "«comprobar» pregunta en el momento (al reconectar)");
+
+    // Y las cuatro pantallas lo usan (el libro no: su pestaña es la suya y se cierra sola con libro-espera.js).
+    const fuente = (f) => readFileSync(new URL(`../publico/app/${f}`, import.meta.url), "utf8");
+    for (const [f, href, recibe] of [
+        ["principal.js", "libro/", "function alRecibir(ev) {"],
+        ["pizarra.js", "../libro/", "function alRecibir(ev) {"],
+        ["archivo.js", "../libro/", "function alRecibir(ev) {"],
+        ["musica.js", "../libro/", "function alEvento(ev) {"],
+    ]) {
+        const codigo = fuente(f);
+        assert.ok(codigo.includes(`const pestanaCuentas = pestanaEnDirecto({ pedir: api.yo, estado: E, href: "${href}" });`), `${f} sigue el acceso al libro en directo`);
+        const cuerpo = codigo.slice(codigo.indexOf(recibe), codigo.indexOf(recibe) + 160);
+        assert.ok(cuerpo.includes("pestanaCuentas.alRecibir(ev);"), `${f} le pasa los avisos del canal`);
+        assert.ok(codigo.includes("pestanaCuentas.repintar();"), `${f} la repinta al volver a pedir los datos`);
+        assert.ok(codigo.includes(`E.yo.libro ? h("a", { class: "pestana otra-pantalla", href: "${href}" }, "Cuentas") : null`), `${f}: la pestaña «Cuentas», con la dirección que busca libro-pestana.js`);
+    }
+    assert.match(fuente("libro-pestana.js"), /pestana\.className = "pestana otra-pantalla";/, "la pestaña que se pone en directo es igual que las demás (con ?solo=1 no sale)");
+    assert.match(fuente("api.js"), /yo: \(\) => llamar\("GET", "yo"\)/);
+}
+
 r = await diego("PATCH", `crew/${idVictor}`, { admin: true });
 assert.equal(r.estado, 200);
 
@@ -424,7 +531,7 @@ const pagina = await fetch(`${base}/libro/`);
 assert.equal(pagina.status, 200);
 assert.match(await pagina.text(), /Cuentas · HOT SPOT S\.L\./);
 assert.match(pagina.headers.get("content-security-policy") || "", /frame-ancestors 'self'/);
-for (const modulo of ["app/libro.js", "app/libro-espera.js", "app/libro-buscar.js"]) {
+for (const modulo of ["app/libro.js", "app/libro-espera.js", "app/libro-buscar.js", "app/libro-pestana.js"]) {
     const servido = await fetch(`${base}/${modulo}`);
     assert.equal(servido.status, 200, modulo);
     assert.match(servido.headers.get("content-type") || "", /^text\/javascript/, modulo);

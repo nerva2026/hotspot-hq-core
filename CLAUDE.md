@@ -82,6 +82,12 @@ La fila de pestañas va en el mismo sitio en las cinco pantallas y el nombre no 
 el nombre a ancho fijo; de 601 a 859 px, dos filas (pestañas arriba, nombre debajo). Quien toque la cabecera la vuelve a
 medir con un navegador de 600 a 1100 px, con y sin `?solo=1` (`tareas/README.md`, «La cabecera con pestañas, por anchos»).
 Una hora dentro de una frase sale siempre de `laHora()` (`publico/app/util.js`): «desde la 1:08», «desde las 13:05».
+Lo que se abre encima de una pantalla (ventanas, la ficha de una tarea, menús) pasa por `publico/app/capas.js`: el foco no
+sale de ahí (el tabulador da la vuelta dentro), lo de detrás de una ventana queda inerte y «atrás» la cierra sin ensuciar el
+historial. Una ventana nueva se hace con `ventana()` (`menus.js`), nunca a mano (lo vigila `pruebas/tablon.mjs`).
+La pestaña «Cuentas» sale solo a quien puede ver el libro, y en directo en las cinco pantallas (`libro-pestana.js`).
+La lista del tablón cabe siempre a lo ancho: de 721 a 1097 px esconde por orden las columnas menos importantes
+(`@container lista` en `estilo.css`); quien añada o ensanche una columna tiene que rehacer esos cortes y volver a medir.
 El cartel de cumpleaños (`/tareas/cumples/`) y el puente (`/tareas/oficina/`) no se enlazan: solo los abre el mapa.
 
 ## El servidor (VPS en Hostinger)

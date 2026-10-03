@@ -897,6 +897,10 @@ async function api(req, res, ruta) {
         return;
     }
 
+    // Lo propio de quien pregunta, en ligero: lo piden las pantallas cuando un aviso del canal («libro», «usuarios») puede
+    // haberle dado o quitado el libro de cuentas, para poner o quitar su pestaña sin recargar (app/libro-pestana.js).
+    if (ruta === "/api/yo" && metodo === "GET") return json(res, 200, { yo: { ...cuentas.usuarioPublico(usuario), libro: puedeVerLibro(usuario) } });
+
     if (ruta === "/api/yo" && metodo === "PATCH") {
         const { color, clave, claveActual, nombre, cumple } = await leerJson(req);
         // El cumpleaños se comprueba antes de cambiar nada: «MM-DD», o null para quitarlo.

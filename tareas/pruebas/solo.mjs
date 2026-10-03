@@ -21,12 +21,14 @@ const ruta = new URL(base).pathname; // /tareas
 // Las cinco pantallas: su carpeta, su módulo y los enlaces que tiene a las demás.
 // «pestana» es el nombre de su pestaña (la que sale marcada) y «enlaces», cuántos lleva a las otras cuatro: las pestañas
 // y el menú de la cuenta (y, en el libro, el botón «Ir al tablón de tareas» de quien no tiene parte).
+// «enlaces»: las veces que el módulo nombra la dirección de otra pantalla (pestañas y menú de la cuenta). En las cuatro
+// que no son el libro hay una más: la pestaña «Cuentas» que se pone en directo (libro-pestana.js), también marcada.
 const PANTALLAS = [
-    { nombre: "tablón", carpeta: "", modulo: "principal.js", pestana: "Tareas", otras: ["libro/", "pizarra/", "archivo/", "musica/"], enlaces: 8 },
+    { nombre: "tablón", carpeta: "", modulo: "principal.js", pestana: "Tareas", otras: ["libro/", "pizarra/", "archivo/", "musica/"], enlaces: 9 },
     { nombre: "libro", carpeta: "libro/", modulo: "libro.js", pestana: "Cuentas", otras: ["../", "../pizarra/", "../archivo/", "../musica/"], enlaces: 9 },
-    { nombre: "pizarra", carpeta: "pizarra/", modulo: "pizarra.js", pestana: "Pizarra", otras: ["../", "../libro/", "../archivo/", "../musica/"], enlaces: 8 },
-    { nombre: "archivo", carpeta: "archivo/", modulo: "archivo.js", pestana: "Archivo", otras: ["../", "../libro/", "../pizarra/", "../musica/"], enlaces: 8 },
-    { nombre: "música", carpeta: "musica/", modulo: "musica.js", pestana: "Música", otras: ["../", "../libro/", "../pizarra/", "../archivo/"], enlaces: 8 },
+    { nombre: "pizarra", carpeta: "pizarra/", modulo: "pizarra.js", pestana: "Pizarra", otras: ["../", "../libro/", "../archivo/", "../musica/"], enlaces: 9 },
+    { nombre: "archivo", carpeta: "archivo/", modulo: "archivo.js", pestana: "Archivo", otras: ["../", "../libro/", "../pizarra/", "../musica/"], enlaces: 9 },
+    { nombre: "música", carpeta: "musica/", modulo: "musica.js", pestana: "Música", otras: ["../", "../libro/", "../pizarra/", "../archivo/"], enlaces: 9 },
 ];
 const PESTANAS = ["Tareas", "Cuentas", "Pizarra", "Archivo", "Música"]; // las mismas, y en este orden, en las cinco
 

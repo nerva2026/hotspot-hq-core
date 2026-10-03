@@ -5,6 +5,7 @@ import { api, escuchar, cuandoSePierdaLaSesion } from "./api.js";
 import { pantallaEntrar, pantallaAlta } from "./acceso.js";
 import { sinSolo, conSolo } from "./solo.js";
 import { BUSQUEDA_AL_CARGAR } from "./capas.js";
+import { pestanaEnDirecto } from "./libro-pestana.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar, chipEtiqueta } from "./menus.js";
 import { hayArrastre } from "./arrastre.js";
 import { interpretar } from "./rapida.js";
@@ -43,6 +44,8 @@ const E = {
 if (!VISTAS.some((v) => v.id === E.vista)) E.vista = enMovil() ? "lista" : "tablero";
 
 const raiz = document.getElementById("app");
+// La pestaña «Cuentas» aparece o desaparece sola cuando a esa persona le dan o le quitan el libro (libro-pestana.js).
+const pestanaCuentas = pestanaEnDirecto({ pedir: api.yo, estado: E, href: "libro/" }); // la pone marcada, con «otra-pantalla»
 // La tarea que pide la dirección al cargar («?tarea=…»), leída antes de que nadie toque el historial.
 let tareaPedida = new URLSearchParams(BUSQUEDA_AL_CARGAR).get("tarea");
 let dejarDeEscuchar = null;
@@ -1037,6 +1040,7 @@ function actualizarUsuario(u) {
 }
 
 function alRecibir(ev) {
+    pestanaCuentas.alRecibir(ev);
     if (ev.tipo === "tarea") {
         E.tareas.set(ev.tarea.id, ev.tarea);
         pintar();
@@ -1065,6 +1069,7 @@ async function recargar() {
         /* sin conexión: ya se avisará */
         return;
     }
+    pestanaCuentas.repintar();
     cargarOficina();
 }
 

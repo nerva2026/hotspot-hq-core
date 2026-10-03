@@ -120,6 +120,7 @@ Node 22 sin dependencias:
 | `publico/app/solo.js` | El modo «solo lo suyo» (`?solo=1`): cuándo se pone y cómo se conserva en las direcciones (ver «Solo lo suyo»). |
 | `publico/app/capas.js` | Las capas (ventanas, ficha y menús): el foco que no se sale, lo de detrás inerte y «atrás» que cierra la de arriba (ver «Las capas»). La lógica del historial y del tabulador, sin página, para probarla en Node. |
 | `publico/app/libro-espera.js` | La pantalla «Solo para los socios» del libro, en directo: sigue escuchando y abre el libro cuando a esa persona le dan acceso. Lógica sola, para probarla en Node. |
+| `publico/app/libro-pestana.js` | La pestaña «Cuentas» de las otras cuatro pantallas, en directo: con los avisos «libro» y «usuarios» del canal pregunta por lo suyo (`GET /api/yo`) y la pone o la quita. Lógica sola, para probarla en Node. |
 | `publico/app/libro-buscar.js` | El buscador del libro: qué se puede buscar de un movimiento (también el importe, la fecha y el tipo) y cuándo coincide. Lógica sola, para probarla en Node. |
 | `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar, una por pantalla y cada una con su servidor y su puerto (tabla en «Las pruebas»). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
@@ -140,7 +141,9 @@ mano delante de una hora (lo vigila `pruebas/musica.mjs`). Hoy la única es la d
 
 **Cómo se llega de una pantalla a otra:** el menú de la cuenta (arriba a la derecha) de cada pantalla y las pestañas
 de arriba llevan a las demás con los mismos nombres: «Tablón de tareas», «Libro de cuentas» (en las pestañas,
-«Tareas» y «Cuentas»; esta, solo a quien tiene parte en el reparto), «Pizarra», «Archivo» y «Música». Las cinco
+«Tareas» y «Cuentas»; esta, solo a quien tiene parte en el reparto o administra, y en directo: aparece o desaparece
+sin recargar cuando cambia el reparto o quién administra, igual que «Libro de cuentas» en el menú;
+`publico/app/libro-pestana.js`), «Pizarra», «Archivo» y «Música». Las cinco
 pantallas llevan las mismas cinco pestañas, en ese orden y con la suya marcada; en el tablón, que además tiene sus
 vistas (Tablero, Lista, Calendario y Cronograma), las vistas bajan a una segunda línea de la cabecera. Al añadir una
 pantalla nueva hay que añadirla en todas (en `principal.js`, `libro.js`, `pizarra.js`, `archivo.js` y `musica.js`, de
@@ -205,7 +208,9 @@ misma sesión que el tablón.
 - **Quién lo ve:** los administradores y quien tiene parte en el reparto. A los demás, la API les contesta 403 y la
   pantalla dice «Solo para los socios». Va en directo en los dos sentidos: a quien le quitan la parte se le cierra el
   libro al momento, y la pantalla «Solo para los socios» sigue escuchando el canal y abre el libro sola en cuanto a esa
-  persona le dan parte o pasa a administrar (`publico/app/libro-espera.js`), sin cerrar ni recargar.
+  persona le dan parte o pasa a administrar (`publico/app/libro-espera.js`), sin cerrar ni recargar. En las otras
+  cuatro pantallas, la pestaña «Cuentas» y «Libro de cuentas» del menú aparecen y desaparecen también en directo
+  (`publico/app/libro-pestana.js`, que pregunta `GET /api/yo`: `{ yo: { …, libro } }`).
 - **Apuntar:** gasto, ingreso o pago entre socios, con categoría, notas y la foto del tique (o un PDF).
 - **Quién debe a quién:** cada gasto e ingreso se reparte según las partes. Las partes se fijan con el primer
   movimiento, a partes iguales entre los administradores, y se cambian en «Reparto».
@@ -509,7 +514,7 @@ sus variables, están en el workflow.
 | Paso | Prueba | Puerto | Qué comprueba |
 | --- | --- | --- | --- |
 | Probar el servidor | (con `curl`) | 3999 | Que arranca, sirve el tablón, imprime el enlace de alta y pide sesión (401) a quien no la tiene. |
-| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. Y «Solo para los socios» en directo: la espera de la pantalla (`publico/app/libro-espera.js`) contra el canal de verdad, al pasar a administrar y al recibir parte en el reparto. Y el buscador (`publico/app/libro-buscar.js`): por importe, por fecha, por tipo y por persona. |
+| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. Y «Solo para los socios» en directo: la espera de la pantalla (`publico/app/libro-espera.js`) contra el canal de verdad, al pasar a administrar y al recibir parte en el reparto. La pestaña «Cuentas» de las otras pantallas en directo (`publico/app/libro-pestana.js` y `GET /api/yo`), también contra el canal de verdad. Y el buscador (`publico/app/libro-buscar.js`): por importe, por fecha, por tipo y por persona. |
 | Probar la pizarra | `pruebas/pizarra.mjs` | 3997 | Trazos, notas y fotos con dos personas a la vez, vaciar y recuperar, el lápiz en directo y quién la tiene abierta. |
 | Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). Y las capas (`publico/app/capas.js`) con un historial de mentira: el tabulador da la vuelta dentro, «atrás» cierra la de arriba, cerrar con el botón no deja entradas, y toda ventana pasa por `ventana()`. |
 | Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje, puente `/tareas/oficina/` y cartel `/tareas/cumples/` (la API y lo que sirve; en pantalla se mira con un navegador). |

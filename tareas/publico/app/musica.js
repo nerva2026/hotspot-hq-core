@@ -10,6 +10,7 @@ import { vigilante } from "./conexion.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
 import { conSolo } from "./solo.js";
 import { abrirMenu, cerrarMenu, aviso, ventana, avatar } from "./menus.js";
+import { pestanaEnDirecto } from "./libro-pestana.js";
 import {
     apiMusica,
     avisadorDeEscucha,
@@ -711,14 +712,19 @@ function cargar(datos) {
 async function recargar() {
     try {
         cargar(await apiMusica.estado());
+        pestanaCuentas.repintar();
         pintar();
     } catch {
         /* sin conexión: ya se avisará */
     }
 }
 
+// La pestaña «Cuentas» aparece o desaparece sola cuando a esa persona le dan o le quitan el libro (libro-pestana.js).
+const pestanaCuentas = pestanaEnDirecto({ pedir: api.yo, estado: E, href: "../libro/" }); // la pone marcada, con «otra-pantalla»
+
 function alEvento(ev) {
     if (!E.yo) return;
+    pestanaCuentas.alRecibir(ev);
     if (ev.tipo === "musica") {
         const antes = E.cabina?.dj.id || null;
         cargar(ev);
