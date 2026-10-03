@@ -588,4 +588,11 @@
         padding: 14px 0;
         margin: -14px 0;
     }
+    /* …menos el título de una canción de «Ha sonado»: como bloque se cortaba a media letra, sin «…» (para abrirla en
+       Spotify ya está su icono, al final de la fila) */
+    .musica .sonado-titulo a {
+        display: inline;
+        padding: 0;
+        margin: 0;
+    }
 }

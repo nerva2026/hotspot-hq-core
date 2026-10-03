@@ -60,6 +60,8 @@ cualquier navegador.
 - **Avisos y ventanas:** los avisos salen abajo, en el centro; con una ventana abierta (o la ficha de una tarea) van
   dentro de ella, debajo de la ventana o al pie de la ficha, para no tapar el pie de un formulario
   (`colocarAvisos()` en `publico/app/menus.js`). Una ventana nunca es más alta que la pantalla: se desplaza por dentro.
+  Un menú mide como mucho 420 px (y se desplaza); en un móvil, lo que necesite hasta el alto de la pantalla, para que
+  el menú de la cuenta salga entero.
 - **Cada tarea tiene:** título, estado, prioridad (urgente, alta, media, baja; cada una con su color),
   para quién, pedido por, fecha de inicio y fecha límite, etiquetas, subtareas y notas.
 - **En directo:** lo que cambia uno lo ve el otro al momento (Server-Sent Events).

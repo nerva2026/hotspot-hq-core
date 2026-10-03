@@ -1962,6 +1962,14 @@ table.lista {
     box-shadow: 4px 4px 0 var(--tinta);
     padding: 4px;
 }
+@media (max-width: 600px) {
+    /* en el móvil cada opción mide 44 px: el menú de la cuenta no cabía en 420 px y su última opción salía cortada por
+       la mitad, con media pantalla libre debajo. Aquí ocupa lo que necesite, hasta el alto de la pantalla. */
+    .menu {
+        max-height: calc(100vh - 16px);
+        max-height: calc(100dvh - 16px);
+    }
+}
 .menu-titulo {
     font: 400 12px/1 var(--titulo);
     text-transform: uppercase;
