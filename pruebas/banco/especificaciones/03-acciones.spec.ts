@@ -219,20 +219,49 @@ test("3 · acciones y cosas en la mano (parche 08)", async ({ browser }) => {
             };
         });
 
-        // Sentado se recortan las piernas del dibujo: al dejar de estar sentado tiene que quedar EXACTAMENTE como antes.
-        await comprobar(P, "de-pie-tras-sentarse", "Tras estar sentado (hacia los cuatro lados), el muñeco sin hacer nada vuelve a ser el de la referencia", [pagina], async () => {
-            const peores: Record<string, number> = {};
+        // Sentado se recortan las piernas del dibujo: al dejar de estar sentado no puede quedar ni recorte ni desplazamiento.
+        // Y quien se levanta sin andar queda de pie mirando hacia donde miraba el asiento (aunque viniera andando hacia
+        // otro lado): se compara con el muñeco de pie y quieto que mira hacia ese lado, punto por punto.
+        await comprobar(P, "de-pie-tras-sentarse", "Tras estar sentado (hacia los cuatro lados), el muñeco queda de pie, entero y mirando hacia donde miraba el asiento", [pagina], async () => {
+            const TECLAS: Record<string, string> = { abajo: "ArrowDown", izquierda: "ArrowLeft", derecha: "ArrowRight", arriba: "ArrowUp" };
+            const CONTRARIA: Record<string, string> = { abajo: "arriba", izquierda: "derecha", derecha: "izquierda", arriba: "abajo" };
+            const LADOS = ["abajo", "izquierda", "derecha", "arriba"];
+            /** Un paso corto hacia ese lado y vuelta a su sitio: queda quieto, en el mismo punto, mirando hacia ahí. */
+            const mirar = async (hacia: string): Promise<void> => {
+                await pagina.keyboard.down(TECLAS[hacia]);
+                await espera(150);
+                await pagina.keyboard.up(TECLAS[hacia]);
+                await espera(300);
+                await teletransportar(pagina, sitio);
+                await espera(700);
+            };
             const capturas: string[] = [];
-            for (const mira of ["abajo", "izquierda", "derecha", "arriba"]) {
+            const dePie: Record<string, string> = {};
+            for (const lado of LADOS) {
+                await mirar(lado);
+                dePie[lado] = await captura(pagina, `3-de-pie-mirando-${lado}`, recorte);
+                capturas.push(dePie[lado]);
+            }
+            // Las referencias valen si la de «abajo» es la de siempre y las demás son distintas de ella
+            const abajoComoSiempre = (await diferencia(pagina, referencia, dePie.abajo)).distintos;
+            const distintasDeAbajo: Record<string, number> = {};
+            for (const lado of ["izquierda", "derecha", "arriba"]) distintasDeAbajo[lado] = (await diferencia(pagina, dePie.abajo, dePie[lado])).distintos;
+            const peores: Record<string, number> = {};
+            for (const mira of LADOS) {
+                await mirar(CONTRARIA[mira]);
                 await guardarVariable(pagina, "accion", `sentado:${mira}`);
                 await espera(500);
                 await guardarVariable(pagina, "accion", null);
                 await espera(700);
                 const ahora = await captura(pagina, `3-de-pie-tras-sentado-${mira}`, recorte);
                 capturas.push(ahora);
-                peores[mira] = (await diferencia(pagina, referencia, ahora)).distintos;
+                peores[mira] = (await diferencia(pagina, dePie[mira], ahora)).distintos;
             }
-            return { estado: Object.values(peores).every((n) => n === 0) ? "bien" : "mal", dato: { pixelesDistintosDeLaReferencia: peores }, capturas };
+            await mirar("abajo");
+            const referenciasBien = abajoComoSiempre === 0 && Object.values(distintasDeAbajo).every((n) => n > 0);
+            const dato = { pixelesDistintosDelMunecoDePieMirandoHaciaAhi: peores, laReferenciaDeAbajoEsLaDeSiempre: abajoComoSiempre === 0, lasDemasReferenciasSonDistintas: distintasDeAbajo };
+            if (!referenciasBien) return { estado: "no se pudo", dato, capturas };
+            return { estado: Object.values(peores).every((n) => n === 0) ? "bien" : "mal", dato, capturas };
         });
 
         await comprobar(P, "andando", "Al echar a andar se deja la postura (y al parar, vuelve)", [pagina], async () => {
