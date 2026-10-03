@@ -13,6 +13,10 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
   acento `#c4461f`, amarillo `#ffd84a`. Letras Silkscreen (títulos) y Pixelify Sans (texto), sin ligaduras
   (Pixelify dibuja «fi» como una A). Las cifras (importes, fechas, horas, contadores), siempre a un tamaño de la
   rejilla de su letra: Silkscreen a 16 px (8, 24…); Pixelify Sans a 11, 16 o 21–22 px (ver `tareas/README.md`).
+  En `hotspot-retro.css` todo `font-size` es de esa rejilla (11 o 16 px; el de las burbujas lo calcula el parche 13):
+  la hora del chat y el mensaje citado, a 11 px; el mensaje y la franja de avisos (`WA.ui.banner`), a 16 px. Y lo que
+  lleva `letter-spacing: -0.027em` (burbujas y avisos junto al muñeco) lleva también `text-rendering:
+  geometricPrecision`: sin él, con «hinting» (Linux) los huecos entre letras salen desiguales.
 - **El servidor no es accesible desde Claude.** Lo que haya que hacer allí se prepara como un bloque para
   pegar en la consola (escrito a un archivo y ejecutado con `bash`, con copias `*.antes-…` de lo que toca),
   se prueba antes en seco con un `docker` falso y lo ejecuta una persona del equipo.
