@@ -3,7 +3,7 @@
  * algo. La llamada tiene que seguir en marcha 5 s después de cada cosa, para los dos, y nadie se mueve de su casilla.
  *
  * De paso, con el chat de la conversación abierto: que las teclas del mapa no lleguen al escribir en él (punto 2) y la
- * captura de un mensaje con su hora (punto 8).
+ * captura de un mensaje con su hora, los dos a un tamaño de la rejilla de la letra: 16 y 11 px (punto 8).
  */
 import { expect, test } from "@playwright/test";
 import {
@@ -144,8 +144,11 @@ test("5 · la llamada aguanta las acciones", async ({ browser }) => {
             const letra = await letraDe(alicia, ".message-bubble");
             const hora = await letraDe(alicia, "#message .font-condensed");
             const campoLetra = await letraDe(alicia, "[data-testid='messageInput']");
-            const bien = !!letra && letra.familia.includes("Pixelify Sans") && !!hora && hora.familia.includes("Pixelify Sans");
-            return { estado: bien ? "bien" : "mal", dato: { mensaje: letra, hora, campoDeEscribir: campoLetra, enLaPantallaDeBenito: deBenito }, capturas };
+            // La letra de la casa y a un tamaño de su rejilla: el mensaje a 16 px y la hora, que es una cifra, a 11 px
+            // (a los 13 px de WorkAdventure salía borrosa al lado del mensaje).
+            const enLaRejilla = { mensaje: letra?.tamano === "16px", hora: hora?.tamano === "11px" };
+            const bien = !!letra && letra.familia.includes("Pixelify Sans") && !!hora && hora.familia.includes("Pixelify Sans") && enLaRejilla.mensaje && enLaRejilla.hora;
+            return { estado: bien ? "bien" : "mal", dato: { enLaRejilla, mensaje: letra, hora, campoDeEscribir: campoLetra, enLaPantallaDeBenito: deBenito }, capturas };
         });
 
         await comprobar(P, "tras-el-chat", "Después de escribir en el chat, la llamada sigue", [alicia, benito], async () => {

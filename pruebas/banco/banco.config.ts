@@ -2,8 +2,9 @@
  * Banco de pruebas · configuración de Playwright. El flujo la copia a `tests/banco.config.ts` dentro del clon de
  * WorkAdventure y las especificaciones, a `tests/tests/banco/`.
  *
- * Un solo navegador (Chromium, con cámara y micrófono de mentira), de una en una y sin reintentos: cada prueba apunta
- * sus resultados en `apuntes.jsonl` y sigue aunque algo falle (ver `especificaciones/util.ts`).
+ * Un solo navegador (Chromium, con cámara y micrófono de mentira y con «hinting» completo en las letras), de una en una
+ * y sin reintentos: cada prueba apunta sus resultados en `apuntes.jsonl` y sigue aunque algo falle (ver
+ * `especificaciones/util.ts`).
  */
 import path from "path";
 import { defineConfig, devices } from "@playwright/test";
@@ -39,7 +40,12 @@ export default defineConfig({
                 viewport: { width: 1280, height: 800 },
                 permissions: ["microphone", "camera", "notifications"],
                 launchOptions: {
-                    args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"],
+                    // «--font-render-hinting=full»: las letras, ajustadas a la rejilla como en un Chromium de Linux. Es
+                    // donde se ven los fallos de las letras de píxeles (un retoque que avanza distinto que la letra
+                    // de al lado); dicho aquí, no depende de cómo venga el ejecutor. Solo lo entiende el Chromium sin
+                    // ventana de Playwright (el «headless shell», el de siempre): 08-letras apunta si de verdad se
+                    // aplica y repite sus medidas en otro navegador sin ajuste («--font-render-hinting=none»).
+                    args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", "--font-render-hinting=full"],
                 },
             },
         },
