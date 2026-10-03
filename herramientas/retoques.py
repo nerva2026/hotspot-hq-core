@@ -23,15 +23,22 @@ En el CSS se declaran con el MISMO nombre de familia y el MISMO peso que la letr
 y con `unicode-range`: el navegador saca de aquí esos caracteres y todo lo demás de la letra de siempre, sin tocar ni
 un `font-family`. Quitar las cuatro declaraciones `@font-face` de «retoques» lo deja todo como estaba.
 
+Cada una lleva además el mismo trato de «ajuste a la rejilla» («hinting») que la letra a la que acompaña (las tablas
+`prep` y `gasp`; ver `sin_ajuste()`): sin él, en Linux, las letras retocadas avanzaban distinto que las de al lado y
+entre letra y letra quedaban huecos desiguales.
+
 Van copiadas en los dos sitios que sirven letras: `archivos/play/public/static/fonts/hotspot/` (la oficina; también
 las usan los paneles del mapa) y `tareas/publico/fuentes/` (las pantallas del tablón).
 
 Uso (necesita Python 3 con fontTools):  python3 herramientas/retoques.py
-Al acabar imprime el `unicode-range` que hay que poner en el CSS.
+Al acabar imprime el `unicode-range` que hay que poner en el CSS. Si no ha cambiado ningún dibujo, los archivos salen
+idénticos, byte a byte, a los que había (llevan una fecha fija).
 """
 import os
 from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.ttGlyphPen import TTGlyphPen
+from fontTools.ttLib import newTable
+from fontTools.ttLib.tables import ttProgram
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DESTINOS = [os.path.join(RAIZ, 'archivos/play/public/static/fonts/hotspot'), os.path.join(RAIZ, 'tareas/publico/fuentes')]
@@ -88,12 +95,18 @@ TITULO = {
 # `grueso` es cuánto se ensancha cada píxel hacia la derecha en la negrita. El avance de cada carácter sale de su
 # ancho: el margen de la izquierda, sus columnas y el mismo margen a la derecha (el 1 es más estrecho que las demás
 # cifras, como en las dos letras: con el mismo ancho, «17:35» se leía «1 7:35»).
+# `ppem_entero` dice si la letra a la que acompaña pide que su tamaño se redondee a píxeles enteros antes de dibujarla
+# (el bit 3 de `head.flags`; ver `sin_ajuste()`): Silkscreen sí, Pixelify Sans no.
 ESTILOS = {
-    'hs-retoques-texto':        dict(dibujos=TEXTO,  x0=60,  px=93,  py=90,  grueso=0,   sube=920,  baja=-280, peso=400),
-    'hs-retoques-texto-negra':  dict(dibujos=TEXTO,  x0=60,  px=93,  py=90,  grueso=58,  sube=920,  baja=-280, peso=700),
-    'hs-retoques-titulo':       dict(dibujos=TITULO, x0=125, px=125, py=125, grueso=0,   sube=1030, baja=-250, peso=400),
-    'hs-retoques-titulo-negra': dict(dibujos=TITULO, x0=125, px=125, py=125, grueso=125, sube=1030, baja=-250, peso=700),
+    'hs-retoques-texto':        dict(dibujos=TEXTO,  x0=60,  px=93,  py=90,  grueso=0,   sube=920,  baja=-280, peso=400, ppem_entero=False),
+    'hs-retoques-texto-negra':  dict(dibujos=TEXTO,  x0=60,  px=93,  py=90,  grueso=58,  sube=920,  baja=-280, peso=700, ppem_entero=False),
+    'hs-retoques-titulo':       dict(dibujos=TITULO, x0=125, px=125, py=125, grueso=0,   sube=1030, baja=-250, peso=400, ppem_entero=True),
+    'hs-retoques-titulo-negra': dict(dibujos=TITULO, x0=125, px=125, py=125, grueso=125, sube=1030, baja=-250, peso=700, ppem_entero=True),
 }
+
+# La fecha que llevan dentro las cuatro fuentes (segundos desde 1904: el 1 de octubre de 2026). Fija, para que volver a
+# generarlas sin cambiar ningún dibujo dé los mismos archivos, byte a byte, y `git status` no enseñe nada.
+FECHA = 3873657600
 
 
 def glifo(filas, e, bajan=0):
@@ -114,6 +127,40 @@ def glifo(filas, e, bajan=0):
     return pen.glyph()
 
 
+def sin_ajuste(fuente, e):
+    """Le dice a quien pinta la letra que NO la ajuste a la rejilla por su cuenta: el mismo trato que tienen Pixelify
+    Sans y Silkscreen, que traen estas tablas.
+
+    Sin ellas, FreeType (el que pinta las letras en Chromium en Linux) da por hecho que una TrueType sin programa
+    `prep` ni `fpgm` ni instrucciones «no viene ajustada» y, donde hay «hinting» medio o completo, le pasa su ajuste
+    automático (el «autohinter»), que mueve los bordes de cada glifo y le cambia el avance: a 10,75 px una «o» de
+    Pixelify Sans avanzaba 6 px y una «a» retocada, 7, y en las burbujas salían huecos de 1 a 4 px dentro de una
+    palabra («¿B ailamos», «C af é»); al 1 se le soltaba el gancho. Con un `prep`, aunque no ajuste nada, FreeType usa
+    el intérprete de TrueType, que deja el glifo tal cual y su avance en el de diseño (redondeado a píxeles enteros,
+    como el de las letras de al lado).
+
+    - `prep`: el programa de las fuentes «sin ajuste» de Google Fonts (el de `gftools fix-nonhinting`, el mismo que
+      lleva Pixelify Sans): solo activa el control de «dropout» al rasterizar. Es la tabla que quita el autohinter
+      (comprobado: sin ella vuelve; sin `gasp`, no).
+    - `gasp`: suavizado y rejilla simétrica a todos los tamaños (0xFFFF → 15), como las dos letras.
+    - `head.flags`, bit 3 («tamaño en píxeles enteros»): Silkscreen lo lleva, y con ajuste se dibuja al tamaño
+      redondeado (a 21,5 px, como a 22: su A avanza 17 px y no 16); sus cifras tienen que hacer lo mismo o no
+      medirían igual que sus letras. Pixelify Sans no lo lleva, y sus retoques tampoco.
+    - `head.lowestRecPPEM` y `maxp.maxZones`, como los de la letra a la que acompaña (no cambian nada a la vista).
+    Aquí no se toca ni un contorno ni un avance: solo estas tablas."""
+    prep = newTable('prep')
+    prep.program = ttProgram.Program()
+    prep.program.fromAssembly(['PUSHW[]', '511', 'SCANCTRL[]', 'PUSHB[]', '4', 'SCANTYPE[]'])
+    fuente['prep'] = prep
+    gasp = newTable('gasp')
+    gasp.version = 1
+    gasp.gaspRange = {0xFFFF: 15}
+    fuente['gasp'] = gasp
+    fuente['head'].lowestRecPPEM = 6
+    if e['ppem_entero']: fuente['head'].flags |= 1 << 3
+    else: fuente['maxp'].maxZones = 1
+
+
 def construir(nombre, e):
     caracteres = sorted(e['dibujos'])
     nombres = {c: 'uni%04X' % ord(c) for c in caracteres}
@@ -131,6 +178,9 @@ def construir(nombre, e):
     fb.setupNameTable({'familyName': 'HS Retoques', 'styleName': 'Bold' if e['peso'] >= 600 else 'Regular'})
     fb.setupOS2(sTypoAscender=e['sube'], sTypoDescender=e['baja'], usWinAscent=e['sube'], usWinDescent=-e['baja'], usWeightClass=e['peso'])
     fb.setupPost()
+    sin_ajuste(fb.font, e)
+    fb.font['head'].created = fb.font['head'].modified = FECHA
+    fb.font.recalcTimestamp = False
     fb.font.flavor = 'woff'
     for d in DESTINOS:
         fb.save(os.path.join(d, nombre + '.woff'))
