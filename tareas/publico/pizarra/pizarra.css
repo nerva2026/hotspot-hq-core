@@ -588,6 +588,30 @@ body[data-herramienta="mover"] .elegida .redimensionar {
         box-shadow: none;
     }
 }
+/* Móviles estrechos. La segunda fila (el tamaño, deshacer, rehacer, descargar y vaciar) mide 372 px: en uno de 360 la
+   papelera salía cortada y la página se desplazaba de lado. Con menos de 372 px los botones van más juntos y el tamaño
+   ocupa lo justo para «100 %» (340 px). Con menos de 340 (un móvil de 320) tampoco caben las herramientas de arriba:
+   el botón del color y el grosor pierde su flecha, y «Descargar» se queda solo en el menú de la cuenta, donde ya
+   estaba («Descargar como imagen»). Todo sigue midiendo 44 px. */
+@media (max-width: 371.98px) {
+    .herramientas-pizarra .grupo-herramientas,
+    .herramientas-pizarra .zoom {
+        gap: 2px;
+    }
+    .boton-icono.texto-zoom {
+        min-width: 64px;
+    }
+}
+@media (max-width: 339.98px) {
+    .boton-trazo {
+        gap: 3px;
+        padding: 0 4px;
+    }
+    .boton-trazo .flecha,
+    .herramientas-pizarra .boton-descargar {
+        display: none;
+    }
+}
 @media (prefers-reduced-motion: reduce) {
     .cursor-pizarra {
         transition: none;

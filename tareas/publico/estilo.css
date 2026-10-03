@@ -2983,6 +2983,40 @@ table.lista {
         flex: 1 1 100%;
     }
 }
+/* Móviles estrechos. La cabecera del tablón (las vistas, «Filtros», «+ Nueva» y la cuenta) mide 390 px con la vista de
+   nombre más largo («Cronograma»): en uno de 360 o 375 px la cuenta salía cortada, y en uno de 320, también «+ Nueva».
+   Con menos de 390 px se quitan las flechas de «Filtros» y de la cuenta y se aprietan los huecos (355 px); con menos de
+   360, además, «+ Nueva» se queda en «+» (311 px). Nada baja de los 44 px que pide el dedo. */
+@media (max-width: 389.98px) {
+    .barra-tablon,
+    .barra-tablon .barra-derecha {
+        gap: 4px;
+    }
+    .boton-vista {
+        padding: 0 8px;
+    }
+    .barra-tablon .boton-filtros .flecha,
+    .barra-tablon .boton-yo .flecha {
+        display: none;
+    }
+    .barra-tablon .boton-yo {
+        justify-content: center;
+        min-width: 44px;
+        padding: 3px 4px;
+    }
+    #boton-nueva {
+        padding-left: 9px;
+        padding-right: 9px;
+    }
+}
+@media (max-width: 359.98px) {
+    #boton-nueva {
+        min-width: 44px;
+    }
+    #boton-nueva .texto-nueva {
+        display: none;
+    }
+}
 
 /* ---------- franja «Sin conexión…» (app/conexion.js): fija abajo, sin tapar clics ni mover nada ---------- */
 .aviso-conexion {

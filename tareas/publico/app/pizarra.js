@@ -1254,7 +1254,7 @@ function montar() {
                 h("span", { class: "separador-herramientas" }),
                 botonIcono("deshacer", "Deshacer (Ctrl+Z)", deshacer),
                 botonIcono("rehacer", "Rehacer (Ctrl+Mayús+Z)", rehacer),
-                botonIcono("descargar", "Descargar como imagen", descargar),
+                botonIcono("descargar", "Descargar como imagen", descargar, "boton-descargar"), // en un móvil de 320 px no cabe: queda en el menú de la cuenta
                 botonIcono("vaciar", "Vaciar la pizarra", vaciarPizarra, "peligro"),
                 h("button", { type: "button", class: "boton-icono texto boton-ayuda", title: "¿Cómo funciona?", "aria-label": "¿Cómo funciona?", onclick: ayuda }, "?"),
             ),

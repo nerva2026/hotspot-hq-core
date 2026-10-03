@@ -274,7 +274,13 @@ function montar() {
             // Solo en el móvil (≤ 600 px): las vistas en un botón y los filtros plegados detrás de otro, para que la cabecera quepa en una línea.
             h("button", { type: "button", class: "boton-vista", id: "boton-vista", "aria-haspopup": "menu", title: "Vistas", onclick: (e) => menuVistas(e.currentTarget) }),
             h("button", { type: "button", class: "filtro boton-filtros", id: "boton-filtros", "aria-controls": "filtros", "aria-expanded": "false", onclick: () => alternarFiltros() }, "Filtros", h("span", { class: "flecha" }, "▾")),
-            h("div", { class: "barra-derecha" }, h("button", { type: "button", class: "btn primario", id: "boton-nueva", title: "Nueva tarea (N)", onclick: () => nuevaTarea() }, "+ Nueva"), h("button", { type: "button", class: "boton-yo", id: "boton-yo", onclick: (e) => menuYo(e.currentTarget) })),
+            h(
+                "div",
+                { class: "barra-derecha" },
+                // «+ Nueva»: en un móvil de menos de 360 px no cabe entero y se queda en «+» (estilo.css); qué es lo dice «aria-label».
+                h("button", { type: "button", class: "btn primario", id: "boton-nueva", title: "Nueva tarea (N)", "aria-label": "Nueva tarea", onclick: () => nuevaTarea() }, h("span", { "aria-hidden": "true" }, "+"), h("span", { class: "texto-nueva" }, "Nueva")),
+                h("button", { type: "button", class: "boton-yo", id: "boton-yo", onclick: (e) => menuYo(e.currentTarget) }),
+            ),
         ),
         h("div", { id: "cumple-aviso", class: "cumple-zona", hidden: true }),
         h(

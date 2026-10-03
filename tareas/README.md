@@ -42,7 +42,9 @@ cualquier navegador.
   calendario y cronograma.
 - **Pantallas pequeñas:** con 600 px o menos la cabecera cabe en una línea (las vistas, en un solo botón con el nombre de
   la de ahora y, encima y en pequeño, «Tareas»; los filtros, con la búsqueda, plegados detrás de «Filtros») y, si no hay
-  una vista guardada, se abre la lista (por fecha) en vez del tablero. En el panel de la oficina, de 930 px o más caben
+  una vista guardada, se abre la lista (por fecha) en vez del tablero. En un móvil estrecho la cabecera se aprieta
+  para caber con la vista de nombre más largo («Cronograma»): con menos de 390 px, sin las flechas de «Filtros» y de
+  la cuenta; con menos de 360, «+ Nueva» se queda en «+». Ninguna pantalla se desplaza de lado desde 320 px. En el panel de la oficina, de 930 px o más caben
   las cuatro columnas (miden entre 215 y 300 px, sin tocar la letra); en uno de 721 a 929 px «Hecho» se pliega en una
   etiqueta con su número, que se despliega al pulsarla. En un móvil la oficina abre el tablón casi a pantalla completa
   (`src/hq.js` del repositorio de mapas).
@@ -203,6 +205,8 @@ misma sesión que el tablón.
   pizarra respecto a sus 1920 × 1200: entera en un móvil es un 19 %, no un 100 %).
 - **En el móvil (menos de 600 px):** las herramientas ocupan dos filas. El color y el grosor están plegados detrás de un
   botón que enseña los de ahora (se pliegan solos al empezar a pintar) y «¿Cómo funciona?» queda en el menú de la cuenta.
+  Con menos de 372 px los botones van más juntos y, con menos de 340 (un móvil de 320), «Descargar» se queda solo en el
+  menú de la cuenta: las dos filas caben sin cortar ningún botón.
 - **En directo:** cada uno ve el lápiz de los demás y lo que pintan mientras lo pintan, y quién tiene la
   pizarra abierta.
 - **Vaciar:** quita todo para todos; se puede recuperar durante 30 días.
