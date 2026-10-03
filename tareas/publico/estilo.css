@@ -999,11 +999,22 @@ body.arrastrando * {
 }
 
 /* ---------- lista ---------- */
+/* La tabla va en un marco que marca con una sombra el lado por el que sigue, si alguna vez no cabe a lo ancho (lista.js
+   pone la clase, como en el calendario). Con las columnas por anchos de más abajo no debería hacer falta. */
+.lista-marco {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
 .lista-envoltura {
     flex: 1;
     min-height: 0;
     overflow: auto;
     padding: 0 12px 24px;
+    /* las columnas de la tabla dependen de lo que mide esta caja, no la ventana (así cuenta también su barra de desplazar) */
+    container: lista / inline-size;
 }
 table.lista {
     border-collapse: separate;
@@ -1060,36 +1071,90 @@ table.lista {
 .lista td.col-hecha {
     box-shadow: inset 5px 0 0 var(--color-prioridad, transparent);
 }
+/* Las columnas. Cada una tiene su ancho de siempre (con sitio de sobra) y un mínimo, y lo que lleva dentro no la
+   ensancha (.celda, más abajo): así se sabe cuánto mide la tabla y se puede decidir qué cabe. La del título se queda
+   con lo que sobra. */
 .lista .col-titulo {
-    min-width: 300px;
+    min-width: 280px;
 }
 .lista .col-estado {
     width: 120px;
+    min-width: 108px;
 }
 .lista .col-prioridad {
     width: 100px;
+    min-width: 100px; /* «PRIORIDAD ▲», cuando se ordena por ella */
 }
 .lista .col-responsables,
 .lista .col-pedidoPor {
     width: 130px;
+    min-width: 112px;
 }
 .lista .col-fin {
     width: 128px;
+    min-width: 128px;
 }
 .lista .col-inicio {
     width: 110px;
+    min-width: 84px;
 }
 .col-inicio .celda {
     font-size: 16px;
 }
 .lista .col-etiquetas {
     width: 170px;
+    min-width: 110px;
+}
+/* La lista en un panel estrecho (el de la oficina, una ventana sin maximizar): la tabla cabe SIEMPRE a lo ancho, sin
+   cortar ninguna columna por la mitad. Cuando no caben las ocho, se esconden por orden las menos importantes («Pedido
+   por», «Etiquetas», «Empieza» y, al final, «Prioridad», que sigue viéndose en la franja de color de la fila); título,
+   estado, para quién y para cuándo están siempre, y lo demás, en la ficha de la tarea («Abrir»). Los cortes son lo que
+   mide la caja de la lista (su ancho menos 24 px de márgenes): 4 px del borde + 36 de la casilla + 280 del título + los
+   mínimos de las columnas que quedan (108 + 100 + 112 + 128 + 84 + 110 + 112). Con 720 px o menos de ventana manda la
+   lista de fichas (más abajo). Las columnas que quedan miden su mínimo y el título se queda con el resto. */
+@container lista (max-width: 1073.98px) {
+    table.lista {
+        min-width: 0;
+    }
+    .lista .col-estado {
+        width: 108px;
+    }
+    .lista .col-responsables {
+        width: 112px;
+    }
+    .lista .col-inicio {
+        width: 84px;
+    }
+    .lista .col-etiquetas {
+        width: 110px;
+    }
+    .lista .col-pedidoPor {
+        display: none;
+    }
+}
+@container lista (max-width: 961.98px) {
+    .lista .col-etiquetas {
+        display: none;
+    }
+}
+@container lista (max-width: 851.98px) {
+    .lista .col-inicio {
+        display: none;
+    }
+}
+@container lista (max-width: 767.98px) {
+    .lista .col-prioridad {
+        display: none;
+    }
 }
 .titulo-celda {
     display: flex;
     align-items: center;
     gap: 6px;
     padding-right: 6px;
+}
+.celda-titulo {
+    width: 0; /* mide lo que le deje la columna (flex: 1): su ancho «de fábrica» no la ensancha */
 }
 .celda-titulo,
 .celda-nueva {
@@ -1139,7 +1204,10 @@ table.lista {
     display: none;
 }
 .celda {
-    width: 100%;
+    /* ocupa su columna entera, pero no la ensancha: un nombre o una etiqueta largos se cortan dentro de la celda */
+    width: 0;
+    min-width: 100%;
+    overflow: hidden;
     min-height: 36px;
     display: flex;
     align-items: center;
@@ -1157,6 +1225,18 @@ table.lista {
 .celda .persona {
     margin-right: 0;
     white-space: nowrap;
+    max-width: 100%;
+    min-width: 0;
+}
+/* un nombre que no cabe en su columna acaba en «…» (entero, al pasar el ratón y en la ficha) */
+.celda .persona .texto {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.celda .etiqueta {
+    max-width: 100%;
+    overflow: hidden;
 }
 /* El estado, siempre en una línea (el cuadrado y su nombre juntos), aunque la tabla vaya apretada. */
 .col-estado .celda {
@@ -1222,7 +1302,9 @@ table.lista {
 }
 /* Por dónde sigue el mes cuando no cabe a lo ancho: una sombra a escalones en ese lado (calendario.js pone la clase). */
 .cal-marco::before,
-.cal-marco::after {
+.cal-marco::after,
+.lista-marco::before,
+.lista-marco::after {
     content: "";
     position: absolute;
     top: 0;
@@ -1232,16 +1314,20 @@ table.lista {
     pointer-events: none;
     opacity: 0;
 }
-.cal-marco::before {
+.cal-marco::before,
+.lista-marco::before {
     left: 0;
     background: linear-gradient(90deg, rgba(28, 23, 21, 0.34) 0 5px, rgba(28, 23, 21, 0.2) 5px 10px, rgba(28, 23, 21, 0.09) 10px 15px);
 }
-.cal-marco::after {
+.cal-marco::after,
+.lista-marco::after {
     right: 0;
     background: linear-gradient(270deg, rgba(28, 23, 21, 0.34) 0 5px, rgba(28, 23, 21, 0.2) 5px 10px, rgba(28, 23, 21, 0.09) 10px 15px);
 }
 .cal-marco.sigue-izquierda::before,
-.cal-marco.sigue-derecha::after {
+.cal-marco.sigue-derecha::after,
+.lista-marco.sigue-izquierda::before,
+.lista-marco.sigue-derecha::after {
     opacity: 1;
 }
 .cal-mes {
@@ -1250,6 +1336,14 @@ table.lista {
     background: var(--papel);
     border: 2px solid var(--tinta);
     box-shadow: var(--sombra);
+}
+/* Desde 600 px de ventana el mes se ve SIEMPRE entero, de lunes a domingo: si su hueco mide menos de 644 px (un panel
+   de 600 a 667 px, o la barra de desplazar de un ordenador), los días se estrechan (82 px en el peor caso) en vez de
+   salirse por la derecha. Más estrecho (un móvil) sigue midiendo 644 px y se desplaza, abierto por hoy. */
+@media (min-width: 600px) {
+    .cal-mes {
+        min-width: min(644px, 100%);
+    }
 }
 .cal-cabecera {
     display: grid;
@@ -2290,6 +2384,37 @@ table.lista {
         flex-basis: 190px;
     }
 }
+/* El calendario con 870 px o menos: el mes y, DEBAJO, «Sin fecha» (al lado, con sus 190 px, al mes no le quedan los
+   644 que mide: de 721 a 870 px se abría corrido, sin el lunes). Caben los dos en lo que queda de pantalla: el mes se
+   encoge (se desplaza por dentro) para dejarle sitio a la lista, que si no se quedaba debajo del borde de la pantalla
+   sin manera de llegar a ella en un móvil; si ni así caben (un móvil tumbado), se desplaza todo el bloque. */
+@media (max-width: 870px) {
+    .cal-cuerpo {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+    .cal-marco {
+        flex: 0 1 auto;
+        min-height: 200px;
+    }
+    .cal-sinfecha {
+        flex: none;
+        max-height: 40vh;
+    }
+}
+/* …y de 601 a 870 px, donde sobra ancho, las tareas sin fecha van en varias columnas: la lista ocupa menos alto y le
+   deja más al mes. */
+@media (min-width: 600.02px) and (max-width: 870px) {
+    .cal-sinfecha {
+        max-height: 30vh;
+    }
+    .cal-sinfecha-lista {
+        flex: 0 1 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        align-content: start;
+    }
+}
 @media (max-width: 720px) {
     :root {
         --ancho-nombre: 150px;
@@ -2316,21 +2441,6 @@ table.lista {
     .columna {
         flex: 0 0 min(290px, 85vw);
         min-width: 0;
-    }
-    /* El mes y, debajo, «Sin fecha»: caben los dos en lo que queda de pantalla. El mes se encoge (se desplaza por
-       dentro) para dejarle sitio a la lista, que antes se quedaba debajo del borde de la pantalla sin manera de llegar
-       a ella en un móvil; si ni así caben (un móvil tumbado), se desplaza todo el bloque. */
-    .cal-cuerpo {
-        flex-direction: column;
-        overflow-y: auto;
-    }
-    .cal-marco {
-        flex: 0 1 auto;
-        min-height: 200px;
-    }
-    .cal-sinfecha {
-        flex: none;
-        max-height: 40vh;
     }
     .propiedades {
         grid-template-columns: 100px 1fr;

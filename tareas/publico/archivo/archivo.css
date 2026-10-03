@@ -936,6 +936,14 @@ mark.hallazgo.actual {
 }
 
 /* ---------- pantallas estrechas (el móvil, o el panel de la oficina muy comprimido) ---------- */
+/* De 721 a 779 px los cuatro controles no caben en una fila y «Añadir enlace» se quedaba solo en la segunda. Ahí van
+   de dos en dos: arriba buscar y ordenar, debajo los dos botones (la búsqueda ocupa su fila menos el sitio del orden). */
+@media (min-width: 720.02px) and (max-width: 779.98px) {
+    .buscar-archivo {
+        flex: 1 1 calc(100% - 230px);
+        max-width: none;
+    }
+}
 @media (max-width: 720px) {
     .herramientas-archivo {
         padding: 8px;
