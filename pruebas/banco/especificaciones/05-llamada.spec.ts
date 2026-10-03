@@ -146,9 +146,12 @@ test("5 · la llamada aguanta las acciones", async ({ browser }) => {
             const campoLetra = await letraDe(alicia, "[data-testid='messageInput']");
             // La letra de la casa y a un tamaño de su rejilla: el mensaje a 16 px y la hora, que es una cifra, a 11 px
             // (a los 13 px de WorkAdventure salía borrosa al lado del mensaje).
-            const enLaRejilla = { mensaje: letra?.tamano === "16px", hora: hora?.tamano === "11px" };
-            const bien = !!letra && letra.familia.includes("Pixelify Sans") && !!hora && hora.familia.includes("Pixelify Sans") && enLaRejilla.mensaje && enLaRejilla.hora;
-            return { estado: bien ? "bien" : "mal", dato: { enLaRejilla, mensaje: letra, hora, campoDeEscribir: campoLetra, enLaPantallaDeBenito: deBenito }, capturas };
+            // El mensaje con el que empieza la conversación («Nueva discusión con…», con su hora): también a 11 px. Si en
+            // esta pasada no ha salido, no cuenta (es de WorkAdventure y no siempre lo pone).
+            const delSistema = await letraDe(alicia, "#chat .message > span.text-xs.text-center").catch(() => null);
+            const enLaRejilla = { mensaje: letra?.tamano === "16px", hora: hora?.tamano === "11px", mensajeDelSistema: delSistema ? delSistema.tamano === "11px" : null };
+            const bien = !!letra && letra.familia.includes("Pixelify Sans") && !!hora && hora.familia.includes("Pixelify Sans") && enLaRejilla.mensaje && enLaRejilla.hora && enLaRejilla.mensajeDelSistema !== false;
+            return { estado: bien ? "bien" : "mal", dato: { enLaRejilla, mensaje: letra, hora, mensajeDelSistema: delSistema, campoDeEscribir: campoLetra, enLaPantallaDeBenito: deBenito }, capturas };
         });
 
         await comprobar(P, "tras-el-chat", "Después de escribir en el chat, la llamada sigue", [alicia, benito], async () => {
