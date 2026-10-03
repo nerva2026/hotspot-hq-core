@@ -403,6 +403,12 @@ textarea {
     font-size: 11px;
     letter-spacing: 0.02em;
 }
+/* El mensaje con el que empieza cada conversación («Nueva discusión con…», con su hora): WorkAdventure lo escribe
+   con `text-xs` a secas (13 px), sin `font-condensed`. También a 11 px: lleva una hora. */
+#chat .message > span.text-xs.text-center {
+    font-size: 11px;
+    line-height: 14px;
+}
 
 /* ---------- la franja de avisos (WA.ui.banner: el cumpleaños, quién pincha) ---------- */
 /* WorkAdventure escribe el texto a 18 px (`text-lg`), fuera de la rejilla: a 16 px, como el botón de «¡Entendido!»,
