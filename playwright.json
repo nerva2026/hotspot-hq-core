@@ -1,0 +1,912 @@
+{
+  "config": {
+    "argv": [
+      "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+      "/home/runner/work/hotspot-hq-core/hotspot-hq-core/wa/node_modules/.bin/playwright",
+      "test",
+      "--config",
+      "banco.config.ts"
+    ],
+    "configFile": "/home/runner/work/hotspot-hq-core/hotspot-hq-core/wa/tests/banco.config.ts",
+    "rootDir": "/home/runner/work/hotspot-hq-core/hotspot-hq-core/wa/tests/tests/banco",
+    "failOnFlakyTests": false,
+    "forbidOnly": true,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/nerva2026/hotspot-hq-core/commit/3de978f65f11416eb1915df333857bfa7459cd92",
+        "commitHash": "3de978f65f11416eb1915df333857bfa7459cd92",
+        "buildHref": "https://github.com/nerva2026/hotspot-hq-core/actions/runs/37150548664"
+      },
+      "gitCommit": {
+        "shortHash": "b514d22",
+        "hash": "b514d22e161fffb6ee50a6824ff6f53ef63a8cd5",
+        "subject": "fix(chat): key the user list rooms by playUri instead of room name (#6548)",
+        "body": "fix(chat): key the user list rooms by playUri instead of room name (#6548)\n\nThe rooms `{#each}` in RoomUserList was keyed on the displayed room name.\nTwo different playUris can render the same label — the same map name served\nunder two domains, for instance — so switching between the chat and the user\nlist crashed with `each_key_duplicate`.\n\nKey on the playUri instead, which is the key of the `usersByRoomStore` Map and\ntherefore unique by construction. `shownRoomListStore` now tracks playUris too,\nso homonymous rooms expand independently and the expanded state survives a\nlanguage change.\n\nCo-authored-by: yannisdia <y.diarra@workadventu.re>\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>\n(cherry picked from commit bd44f3110352fb22343ab4c1b5eeabfd7c27b4f5)\n",
+        "author": {
+          "name": "ydiarra",
+          "email": "yd97@hotmail.fr",
+          "time": 1789479320000
+        },
+        "committer": {
+          "name": "David Négrier",
+          "email": "d.negrier@thecodingmachine.com",
+          "time": 1789734619000
+        },
+        "branch": "HEAD"
+      },
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/hotspot-hq-core/hotspot-hq-core/resultados/playwright",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/nerva2026/hotspot-hq-core/commit/3de978f65f11416eb1915df333857bfa7459cd92",
+            "commitHash": "3de978f65f11416eb1915df333857bfa7459cd92",
+            "buildHref": "https://github.com/nerva2026/hotspot-hq-core/actions/runs/37150548664"
+          },
+          "gitCommit": {
+            "shortHash": "b514d22",
+            "hash": "b514d22e161fffb6ee50a6824ff6f53ef63a8cd5",
+            "subject": "fix(chat): key the user list rooms by playUri instead of room name (#6548)",
+            "body": "fix(chat): key the user list rooms by playUri instead of room name (#6548)\n\nThe rooms `{#each}` in RoomUserList was keyed on the displayed room name.\nTwo different playUris can render the same label — the same map name served\nunder two domains, for instance — so switching between the chat and the user\nlist crashed with `each_key_duplicate`.\n\nKey on the playUri instead, which is the key of the `usersByRoomStore` Map and\ntherefore unique by construction. `shownRoomListStore` now tracks playUris too,\nso homonymous rooms expand independently and the expanded state survives a\nlanguage change.\n\nCo-authored-by: yannisdia <y.diarra@workadventu.re>\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>\n(cherry picked from commit bd44f3110352fb22343ab4c1b5eeabfd7c27b4f5)\n",
+            "author": {
+              "name": "ydiarra",
+              "email": "yd97@hotmail.fr",
+              "time": 1789479320000
+            },
+            "committer": {
+              "name": "David Négrier",
+              "email": "d.negrier@thecodingmachine.com",
+              "time": 1789734619000
+            },
+            "branch": "HEAD"
+          },
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/runner/work/hotspot-hq-core/hotspot-hq-core/wa/tests/tests/banco",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 300000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/home/runner/work/hotspot-hq-core/hotspot-hq-core/resultados/playwright.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.62.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "00-sonda.spec.ts",
+      "file": "00-sonda.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "0 · sonda: dos jugadores se juntan",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 420000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 19158,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "[banco] 0 · llamada · BIEN · {\"error\":\"\",\"antesDeJuntarse\":{\"webrtc\":0,\"cajas\":1,\"script\":false,\"entradas\":0,\"salidas\":0},\"alicia\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"salidas\":0},\"benito\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"salidas\":0},\"posiciones\":{\"alicia\":{\"x\":176,\"y\":272},\"benito\":{\"x\":208,\"y\":272}},\"scriptAlicia\":{\"dentro\":true,\"entradas\":[{\"t\":1791059265315,\"tipo\":\"[object Array]\",\"jugadores\"\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-03T20:27:36.351Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "7fb3e1f54e1eb753110f-0c826ccaec28253600ea",
+          "file": "00-sonda.spec.ts",
+          "line": 25,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "01-arranca.spec.ts",
+      "file": "01-arranca.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "1 · arranca: versión y aviso de bienvenida",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 420000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5293,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "[banco] 1 · entra · BIEN · {\"titulo\":\"HOT SPOT S.L.\",\"muneco\":\"hs-w01\",\"direccion\":\"https://play.workadventure.localhost/_/arranca/maps.workadventure.localhost/tests/banco/banco.tmj\",\"erroresDelScript\":[],\"posicion\":{\"x\":112,\"y\":112}}\n"
+                    },
+                    {
+                      "text": "[banco] 1 · aviso · BIEN · {\"titulo\":\"¡Bienvenido a la v0.4.1!\",\"lineas\":[\"Vuelven los botones de la barra de arriba (Saludar, Bailar, Sentarse…): en la v0.4.0 no salían.\",\"La letra e, redibujada: se lee mejor.\",\"ESPACIO sale resaltado en amarillo en los avisos.\",\"En la calle ya no te sales por los bordes.\",\"Las teclas de ayuda ya no quedan tapadas en ventanas estrechas.\",\"El retrete libre ya no dice «Ocupado».\",\"A los flig\n"
+                    },
+                    {
+                      "text": "[banco] 1 · historico · BIEN · {\"versiones\":[\"v0.4.0\",\"v0.3.0\"],\"fechas\":[\"3 oct 2026\",\"2 oct 2026\"],\"plegadas\":[true,true],\"abierta\":true,\"lineasDeLaPrimera\":[\"Teclas nuevas: X para sentarte, B para bailar, H para saludar y V para aplaudir. También mientras hablas con alguien.\",\"Los objetos hacen cosas: la nevera, la cafetera, el timbre, el espejo… y el baño.\",\"Oficina reformada: mesa larga en reuniones, despacho grande, aseos\n"
+                    },
+                    {
+                      "text": "[banco] 1 · aviso-cierra · BIEN · cerrado con el botón «Cerrar»\n"
+                    },
+                    {
+                      "text": "[banco] 1 · version · BIEN · {\"texto\":\"v0.4.1\",\"caja\":{\"x\":0,\"y\":779,\"width\":38.984375,\"height\":21},\"ventana\":{\"width\":1280,\"height\":800},\"versionDelRepositorio\":\"v0.4.1\"}\n"
+                    },
+                    {
+                      "text": "[banco] 1 · aviso-vuelve · BIEN · se abre al pulsar la versión y se cierra con Esc\n"
+                    },
+                    {
+                      "text": "[banco] 1 · medidas · DATO · {\"pixelesDePantallaPorCasilla\":{\"x\":48,\"y\":48},\"origenDelMapaEnPantalla\":{\"x\":0,\"y\":0},\"marcos\":[\"https://play.workadventure.localhost/local-script?script=https%3A%2F%2Fmaps.workadventure.localhost%2Ftests%2Fbanco%2Fbanco.js\"],\"lienzo\":{\"x\":0,\"y\":0,\"width\":1281,\"height\":801,\"top\":0,\"right\":1281,\"bottom\":801,\"left\":0},\"dpr\":1,\"idioma\":\"es-ES\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-03T20:27:55.783Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "a884564219b0dd5c9946-e998014f70cc434f33bd",
+          "file": "01-arranca.spec.ts",
+          "line": 23,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "02-teclas.spec.ts",
+      "file": "02-teclas.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "2 · teclas del mapa (parche 11)",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 300000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 9283,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "[banco] 2 · llegan · BIEN · {\"codigos\":[\"KeyX\",\"KeyB\",\"KeyH\",\"KeyG\",\"KeyV\"],\"eventos\":[{\"name\":\"hs:tecla\",\"data\":{\"code\":\"KeyX\"},\"senderId\":null,\"conSenderId\":false,\"t\":1791059284620},{\"name\":\"hs:tecla\",\"data\":{\"code\":\"KeyB\"},\"senderId\":null,\"conSenderId\":false,\"t\":1791059284856},{\"name\":\"hs:tecla\",\"data\":{\"code\":\"KeyH\"},\"senderId\":null,\"conSenderId\":false,\"t\":1791059285047},{\"name\":\"hs:tecla\",\"data\":{\"code\":\"KeyG\"},\"senderI\n"
+                    },
+                    {
+                      "text": "[banco] 2 · e-no · BIEN · {\"eventosNuevos\":0,\"laEAbreElExplorador\":true,\"eventosConElExploradorAbierto\":0}\n"
+                    },
+                    {
+                      "text": "[banco] 2 · con-ctrl · BIEN · {\"eventosNuevos\":0}\n"
+                    },
+                    {
+                      "text": "[banco] 2 · repeticion · BIEN · {\"conUnaPulsacionYCuatroRepeticiones\":1,\"conTresKeyboardDownDePlaywright\":1,\"eventos\":[{\"code\":\"KeyX\",\"ms\":0},{\"code\":\"KeyX\",\"ms\":766}]}\n"
+                    },
+                    {
+                      "text": "[banco] 2 · decir · BIEN · {\"eventosNuevos\":0,\"textoEnElCampo\":\"DecirPensar\"}\n"
+                    },
+                    {
+                      "text": "[banco] 2 · vuelven · BIEN · {\"eventosNuevos\":1}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-03T20:28:01.094Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "51444c10ef2163d0809c-48058b83e055fcd026cb",
+          "file": "02-teclas.spec.ts",
+          "line": 11,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "03-acciones.spec.ts",
+      "file": "03-acciones.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "3 · acciones y cosas en la mano (parche 08)",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 420000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 80698,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "[banco] 3 · referencia · DATO · {\"muneco\":\"hs-w01\",\"posicion\":{\"x\":400,\"y\":304},\"recorte\":{\"x\":516,\"y\":288,\"width\":168,\"height\":216},\"pixelesQueCambianSolos\":0}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-bailar · BIEN · {\"cambiaRespectoANada\":{\"distintos\":2406,\"total\":36288,\"cambioMedio\":66.3,\"caja\":{\"x0\":53,\"y0\":40,\"x1\":115,\"y1\":191}},\"cambiaEntreLasDosCapturas\":{\"distintos\":3372,\"total\":36288,\"cambioMedio\":62,\"caja\":{\"x0\":53,\"y0\":37,\"x1\":115,\"y1\":189}},\"teniaQueMoverse\":true,\"seHaVistoMoverse\":true,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-sentado-abajo · BIEN · {\"cambiaRespectoANada\":{\"distintos\":1926,\"total\":36288,\"cambioMedio\":90.2,\"caja\":{\"x0\":66,\"y0\":132,\"x1\":101,\"y1\":197}},\"cambiaEntreLasDosCapturas\":{\"distintos\":0,\"total\":36288,\"cambioMedio\":0,\"caja\":null},\"teniaQueMoverse\":false,\"seHaVistoMoverse\":false,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-sentado-izquierda · BIEN · {\"cambiaRespectoANada\":{\"distintos\":1683,\"total\":36288,\"cambioMedio\":83.4,\"caja\":{\"x0\":60,\"y0\":132,\"x1\":98,\"y1\":194}},\"cambiaEntreLasDosCapturas\":{\"distintos\":0,\"total\":36288,\"cambioMedio\":0,\"caja\":null},\"teniaQueMoverse\":false,\"seHaVistoMoverse\":false,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-sentado-derecha · BIEN · {\"cambiaRespectoANada\":{\"distintos\":1683,\"total\":36288,\"cambioMedio\":83.3,\"caja\":{\"x0\":69,\"y0\":132,\"x1\":107,\"y1\":194}},\"cambiaEntreLasDosCapturas\":{\"distintos\":0,\"total\":36288,\"cambioMedio\":0,\"caja\":null},\"teniaQueMoverse\":false,\"seHaVistoMoverse\":false,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-sentado-arriba · BIEN · {\"cambiaRespectoANada\":{\"distintos\":1764,\"total\":36288,\"cambioMedio\":89,\"caja\":{\"x0\":69,\"y0\":132,\"x1\":98,\"y1\":194}},\"cambiaEntreLasDosCapturas\":{\"distintos\":0,\"total\":36288,\"cambioMedio\":0,\"caja\":null},\"teniaQueMoverse\":false,\"seHaVistoMoverse\":false,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-saludar · BIEN · {\"cambiaRespectoANada\":{\"distintos\":697,\"total\":36288,\"cambioMedio\":63.7,\"caja\":{\"x0\":92,\"y0\":112,\"x1\":118,\"y1\":141}},\"cambiaEntreLasDosCapturas\":{\"distintos\":469,\"total\":36288,\"cambioMedio\":80.6,\"caja\":{\"x0\":87,\"y0\":112,\"x1\":118,\"y1\":141}},\"teniaQueMoverse\":true,\"seHaVistoMoverse\":true,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-aplaudir · BIEN · {\"cambiaRespectoANada\":{\"distintos\":1326,\"total\":36288,\"cambioMedio\":85.5,\"caja\":{\"x0\":56,\"y0\":130,\"x1\":112,\"y1\":191}},\"cambiaEntreLasDosCapturas\":{\"distintos\":144,\"total\":36288,\"cambioMedio\":120.1,\"caja\":{\"x0\":66,\"y0\":154,\"x1\":101,\"y1\":171}},\"teniaQueMoverse\":true,\"seHaVistoMoverse\":true,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-sentado-abajo-mano · BIEN · {\"cambiaRespectoANada\":{\"distintos\":2561,\"total\":36288,\"cambioMedio\":88.7,\"caja\":{\"x0\":66,\"y0\":124,\"x1\":118,\"y1\":197}},\"cambiaEntreLasDosCapturas\":{\"distintos\":480,\"total\":36288,\"cambioMedio\":106.4,\"caja\":{\"x0\":87,\"y0\":124,\"x1\":118,\"y1\":153}},\"teniaQueMoverse\":true,\"seHaVistoMoverse\":true,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-sentado-abajo-palmas · BIEN · {\"cambiaRespectoANada\":{\"distintos\":2010,\"total\":36288,\"cambioMedio\":86.8,\"caja\":{\"x0\":65,\"y0\":132,\"x1\":103,\"y1\":197}},\"cambiaEntreLasDosCapturas\":{\"distintos\":798,\"total\":36288,\"cambioMedio\":106.1,\"caja\":{\"x0\":56,\"y0\":156,\"x1\":112,\"y1\":185}},\"teniaQueMoverse\":true,\"seHaVistoMoverse\":true,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-bailar-mano · BIEN · {\"cambiaRespectoANada\":{\"distintos\":3829,\"total\":36288,\"cambioMedio\":68.7,\"caja\":{\"x0\":50,\"y0\":30,\"x1\":122,\"y1\":191}},\"cambiaEntreLasDosCapturas\":{\"distintos\":3338,\"total\":36288,\"cambioMedio\":62,\"caja\":{\"x0\":50,\"y0\":30,\"x1\":122,\"y1\":179}},\"teniaQueMoverse\":true,\"seHaVistoMoverse\":true,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-sentado-abajo-gotas · BIEN · {\"cambiaRespectoANada\":{\"distintos\":3033,\"total\":36288,\"cambioMedio\":77.2,\"caja\":{\"x0\":47,\"y0\":45,\"x1\":106,\"y1\":197}},\"cambiaEntreLasDosCapturas\":{\"distintos\":2079,\"total\":36288,\"cambioMedio\":52.8,\"caja\":{\"x0\":47,\"y0\":28,\"x1\":106,\"y1\":101}},\"teniaQueMoverse\":true,\"seHaVistoMoverse\":true,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-sentado-abajo-nube · BIEN · {\"cambiaRespectoANada\":{\"distintos\":3276,\"total\":36288,\"cambioMedio\":76.2,\"caja\":{\"x0\":47,\"y0\":39,\"x1\":121,\"y1\":197}},\"cambiaEntreLasDosCapturas\":{\"distintos\":2655,\"total\":36288,\"cambioMedio\":57.9,\"caja\":{\"x0\":41,\"y0\":39,\"x1\":127,\"y1\":93}},\"teniaQueMoverse\":true,\"seHaVistoMoverse\":true,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-quieto-burbujas · BIEN · {\"cambiaRespectoANada\":{\"distintos\":864,\"total\":36288,\"cambioMedio\":66.6,\"caja\":{\"x0\":63,\"y0\":48,\"x1\":121,\"y1\":101}},\"cambiaEntreLasDosCapturas\":{\"distintos\":1419,\"total\":36288,\"cambioMedio\":74.7,\"caja\":{\"x0\":62,\"y0\":48,\"x1\":121,\"y1\":101}},\"teniaQueMoverse\":true,\"seHaVistoMoverse\":true,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-sentado-abajo-zetas · BIEN · {\"cambiaRespectoANada\":{\"distintos\":2898,\"total\":36288,\"cambioMedio\":80.8,\"caja\":{\"x0\":51,\"y0\":39,\"x1\":116,\"y1\":197}},\"cambiaEntreLasDosCapturas\":{\"distintos\":1908,\"total\":36288,\"cambioMedio\":62.5,\"caja\":{\"x0\":51,\"y0\":39,\"x1\":116,\"y1\":93}},\"teniaQueMoverse\":true,\"seHaVistoMoverse\":true,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-quieto-corazones · BIEN · {\"cambiaRespectoANada\":{\"distintos\":1107,\"total\":36288,\"cambioMedio\":48,\"caja\":{\"x0\":47,\"y0\":45,\"x1\":106,\"y1\":101}},\"cambiaEntreLasDosCapturas\":{\"distintos\":1752,\"total\":36288,\"cambioMedio\":53.3,\"caja\":{\"x0\":47,\"y0\":45,\"x1\":106,\"y1\":101}},\"teniaQueMoverse\":true,\"seHaVistoMoverse\":true,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · accion-quieto-chispas · BIEN · {\"cambiaRespectoANada\":{\"distintos\":891,\"total\":36288,\"cambioMedio\":64,\"caja\":{\"x0\":50,\"y0\":36,\"x1\":118,\"y1\":92}},\"cambiaEntreLasDosCapturas\":{\"distintos\":1746,\"total\":36288,\"cambioMedio\":63.7,\"caja\":{\"x0\":44,\"y0\":36,\"x1\":124,\"y1\":93}},\"teniaQueMoverse\":true,\"seHaVistoMoverse\":true,\"capturasHechas\":2,\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · lleva-lata · BIEN · {\"cambiaRespectoANada\":{\"distintos\":432,\"total\":36288,\"cambioMedio\":84.3,\"caja\":{\"x0\":92,\"y0\":150,\"x1\":109,\"y1\":173}},\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · lleva-cafe · BIEN · {\"cambiaRespectoANada\":{\"distintos\":396,\"total\":36288,\"cambioMedio\":118.7,\"caja\":{\"x0\":90,\"y0\":153,\"x1\":110,\"y1\":173}},\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · lleva-agua · BIEN · {\"cambiaRespectoANada\":{\"distintos\":414,\"total\":36288,\"cambioMedio\":101.2,\"caja\":{\"x0\":92,\"y0\":150,\"x1\":109,\"y1\":173}},\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · lleva-cana · BIEN · {\"cambiaRespectoANada\":{\"distintos\":360,\"total\":36288,\"cambioMedio\":95.2,\"caja\":{\"x0\":92,\"y0\":153,\"x1\":109,\"y1\":173}},\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · lleva-snack · BIEN · {\"cambiaRespectoANada\":{\"distintos\":441,\"total\":36288,\"cambioMedio\":87.8,\"caja\":{\"x0\":90,\"y0\":153,\"x1\":110,\"y1\":173}},\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · lleva-disco · BIEN · {\"cambiaRespectoANada\":{\"distintos\":405,\"total\":36288,\"cambioMedio\":74.5,\"caja\":{\"x0\":90,\"y0\":153,\"x1\":110,\"y1\":173}},\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · beber · BIEN · {\"cambiaRespectoANada\":{\"distintos\":432,\"total\":36288,\"cambioMedio\":89,\"caja\":{\"x0\":80,\"y0\":127,\"x1\":97,\"y1\":150}},\"pixelesQueCambianEntreCapturas\":[336,336,336],\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · no-existe-volar · BIEN · {\"cambiaRespectoANada\":{\"distintos\":0,\"total\":36288,\"cambioMedio\":0,\"caja\":null},\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · no-existe-sentado-abajo-nada · BIEN · {\"cambiaRespectoANada\":{\"distintos\":0,\"total\":36288,\"cambioMedio\":0,\"caja\":null},\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · no-existe-lleva · BIEN · {\"cambiaRespectoANada\":{\"distintos\":0,\"total\":36288,\"cambioMedio\":0,\"caja\":null},\"errores\":[]}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · saludar-tras-sentarse · BIEN · {\"elCuerpoCambiaSegunDeDondeVenga\":{\"distintos\":0,\"total\":1080,\"cambioMedio\":0,\"caja\":null},\"saludandoDesdeNadaElCuerpoEstaComoDePie\":true,\"nota\":\"igual\"}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · de-pie-tras-sentarse · BIEN · {\"pixelesDistintosDelMunecoDePieMirandoHaciaAhi\":{\"abajo\":0,\"izquierda\":0,\"derecha\":0,\"arriba\":0},\"laReferenciaDeAbajoEsLaDeSiempre\":true,\"lasDemasReferenciasSonDistintas\":{\"izquierda\":792,\"derecha\":810,\"arriba\":225}}\n"
+                    },
+                    {
+                      "text": "[banco] 3 · andando · DATO · {\"nota\":\"mirar las capturas: sentado, andando, parado\",\"posicionFinal\":{\"x\":535,\"y\":304}}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-03T20:28:10.394Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "03707cdca31d95843ee1-788ea3bdb98313dc6d89",
+          "file": "03-acciones.spec.ts",
+          "line": 50,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "04-los-demas.spec.ts",
+      "file": "04-los-demas.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "4 · lo que hace uno lo ven los demás",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 420000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 22419,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "[banco] 4 · entra-despues · BIEN · {\"aliciaEnElMapa\":{\"x\":400,\"y\":304},\"aliciaEnLaPantallaDeBenito\":{\"x\":600,\"y\":456},\"benitoSeHaAcercado\":false,\"benito\":{\"x\":112,\"y\":80},\"cambiaEntreLasDosCapturas\":{\"distintos\":3640,\"total\":36288,\"cambioMedio\":64.1,\"caja\":{\"x0\":45,\"y0\":25,\"x1\":127,\"y1\":185}},\"llamada\":{\"webrtc\":0,\"cajas\":1,\"script\":false,\"entradas\":0,\"salidas\":0}}\n"
+                    },
+                    {
+                      "text": "[banco] 4 · saludar · BIEN · {\"cambiaEntreLasDosCapturas\":{\"distintos\":689,\"total\":36288,\"cambioMedio\":76.1,\"caja\":{\"x0\":87,\"y0\":112,\"x1\":121,\"y1\":141}}}\n"
+                    },
+                    {
+                      "text": "[banco] 4 · lata · BIEN · {\"laLataCambiaLaImagen\":{\"distintos\":432,\"total\":36288,\"cambioMedio\":84.3,\"caja\":{\"x0\":92,\"y0\":150,\"x1\":109,\"y1\":173}},\"sinNadaLaImagenEstaQuieta\":true,\"pixelesQueCambianSolos\":0}\n"
+                    },
+                    {
+                      "text": "[banco] 4 · bailar-en-directo · BIEN · {\"cambiaEntreLasDosCapturas\":{\"distintos\":2865,\"total\":36288,\"cambioMedio\":63.7,\"caja\":{\"x0\":51,\"y0\":31,\"x1\":124,\"y1\":180}},\"cambiaRespectoANada\":{\"distintos\":3360,\"total\":36288,\"cambioMedio\":77.6,\"caja\":{\"x0\":51,\"y0\":34,\"x1\":115,\"y1\":191}}}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-03T20:29:31.109Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e853df6dfc217a5f65c0-59d2b7c0451eeb5b31a2",
+          "file": "04-los-demas.spec.ts",
+          "line": 27,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "05-llamada.spec.ts",
+      "file": "05-llamada.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "5 · la llamada aguanta las acciones",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 480000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 42933,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "[banco] 5 · se-forma · BIEN · {\"alicia\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"salidas\":0},\"benito\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"salidas\":0},\"posiciones\":{\"alicia\":{\"x\":176,\"y\":272},\"benito\":{\"x\":208,\"y\":272}}}\n"
+                    },
+                    {
+                      "text": "[banco] 5 · bailar · BIEN · {\"sigueEnLlamada\":true,\"sinCortesNiReenganches\":true,\"nadieSeHaMovido\":true,\"muestras\":[{\"s\":1,\"alicia\":true,\"benito\":true},{\"s\":2,\"alicia\":true,\"benito\":true},{\"s\":3,\"alicia\":true,\"benito\":true},{\"s\":4,\"alicia\":true,\"benito\":true},{\"s\":5,\"alicia\":true,\"benito\":true}],\"alicia\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"salidas\":0},\"benito\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"s\n"
+                    },
+                    {
+                      "text": "[banco] 5 · saludar · BIEN · {\"sigueEnLlamada\":true,\"sinCortesNiReenganches\":true,\"nadieSeHaMovido\":true,\"muestras\":[{\"s\":1,\"alicia\":true,\"benito\":true},{\"s\":2,\"alicia\":true,\"benito\":true},{\"s\":3,\"alicia\":true,\"benito\":true},{\"s\":4,\"alicia\":true,\"benito\":true},{\"s\":5,\"alicia\":true,\"benito\":true}],\"alicia\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"salidas\":0},\"benito\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"s\n"
+                    },
+                    {
+                      "text": "[banco] 5 · lleva · BIEN · {\"sigueEnLlamada\":true,\"sinCortesNiReenganches\":true,\"nadieSeHaMovido\":true,\"muestras\":[{\"s\":1,\"alicia\":true,\"benito\":true},{\"s\":2,\"alicia\":true,\"benito\":true},{\"s\":3,\"alicia\":true,\"benito\":true},{\"s\":4,\"alicia\":true,\"benito\":true},{\"s\":5,\"alicia\":true,\"benito\":true}],\"alicia\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"salidas\":0},\"benito\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"s\n"
+                    },
+                    {
+                      "text": "[banco] 5 · quitar · BIEN · {\"sigueEnLlamada\":true,\"sinCortesNiReenganches\":true,\"nadieSeHaMovido\":true,\"muestras\":[{\"s\":1,\"alicia\":true,\"benito\":true},{\"s\":2,\"alicia\":true,\"benito\":true},{\"s\":3,\"alicia\":true,\"benito\":true},{\"s\":4,\"alicia\":true,\"benito\":true},{\"s\":5,\"alicia\":true,\"benito\":true}],\"alicia\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"salidas\":0},\"benito\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"s\n"
+                    },
+                    {
+                      "text": "[banco] 2 · chat · BIEN · {\"eventosNuevos\":0,\"textoEnElCampo\":\"xbhgv XBHGV\"}\n"
+                    },
+                    {
+                      "text": "[banco] 8 · chat · BIEN · {\"enLaRejilla\":{\"mensaje\":true,\"hora\":true,\"mensajeDelSistema\":true},\"mensaje\":{\"texto\":\"¿Bailamos a las 17:35? Café con Gabi\",\"familia\":\"\\\"Pixelify Sans\\\", ui-monospace, SFMono-Regular, Menlo, monospace\",\"tamano\":\"16px\",\"peso\":\"400\",\"interlineado\":\"22px\",\"color\":\"rgb(255, 255, 255)\",\"fondo\":\"rgba(0, 0, 0, 0)\"},\"hora\":{\"texto\":\"22:30\",\"familia\":\"\\\"Pixelify Sans\\\", ui-monospace, SFMono-Regular, Men\n"
+                    },
+                    {
+                      "text": "[banco] 5 · tras-el-chat · BIEN · {\"alicia\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"salidas\":0},\"benito\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"salidas\":0}}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-03T20:29:53.556Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "7cd5f528522ec957a191-584ef0bd4bd7cf9ea1b5",
+          "file": "05-llamada.spec.ts",
+          "line": 34,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "06-barra.spec.ts",
+      "file": "06-barra.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "6 · la barra de botones, sin llamada y en llamada",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 540000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 86664,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "[banco] 6 · sin-invitar · BIEN · {\"textosDeLaBarra\":\"3 Alicia En línea\",\"enElMenu\":[\"En línea\",\"Ocupado\",\"Vuelvo en un momento\",\"No molestar\",\"Editar tu nombre\",\"Personalizar tu avatar\",\"Añadir compañero\",\"Editar cámara / micrófono\",\"Reportar un problema\",\"Todas las configuraciones\",\"Ayuda y consejos\"]}\n"
+                    },
+                    {
+                      "text": "[banco] 6 · sin-llamada-1280x800 · BIEN · {\"aLaVista\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\"],\"escondidos\":[],\"ordenEnLaBarra\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\"],\"hayInvitar\":false,\"enElMenu\":[\"En línea\",\"Ocupado\",\"Vuelvo en un momento\",\"No molestar\",\"Editar tu nombre\",\"Personalizar tu avatar\",\"Añadir compañ\n"
+                    },
+                    {
+                      "text": "[banco] 6 · sin-llamada-1024x768 · BIEN · {\"aLaVista\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\"],\"escondidos\":[],\"ordenEnLaBarra\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\"],\"hayInvitar\":false,\"enElMenu\":[\"En línea\",\"Ocupado\",\"Vuelvo en un momento\",\"No molestar\",\"Editar tu nombre\",\"Personalizar tu avatar\",\"Añadir compañ\n"
+                    },
+                    {
+                      "text": "[banco] 6 · sin-llamada-1440x900 · BIEN · {\"aLaVista\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\"],\"escondidos\":[],\"ordenEnLaBarra\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\"],\"hayInvitar\":false,\"enElMenu\":[\"En línea\",\"Ocupado\",\"Vuelvo en un momento\",\"No molestar\",\"Editar tu nombre\",\"Personalizar tu avatar\",\"Añadir compañ\n"
+                    },
+                    {
+                      "text": "[banco] 6 · sin-llamada-anchos · DATO · {\"anchoMasEstrechoConLosCincoALaVista\":640,\"porAncho\":{\"640\":\"5 a la vista\",\"700\":\"5 a la vista\",\"740\":\"5 a la vista\",\"780\":\"5 a la vista\",\"820\":\"5 a la vista\",\"860\":\"5 a la vista\",\"900\":\"5 a la vista\",\"960\":\"5 a la vista\",\"1024\":\"5 a la vista\",\"1100\":\"5 a la vista\"}}\n"
+                    },
+                    {
+                      "text": "[banco] 6 · callback · BIEN · {\"pulsados\":[\"banco-5\",\"banco-2\"]}\n"
+                    },
+                    {
+                      "text": "[banco] 6 · sustituir · BIEN · {\"ordenAntes\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\"],\"ordenDespues\":[\"Botón 1 (círculo)\",\"Botón 2 (cambiado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\"],\"ordenAlVolver\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\"],\"imagenNueva\":\"circulo-amarillo.png\",\"pulsa\n"
+                    },
+                    {
+                      "text": "[banco] 6 · boton-con-icono-relativo · BIEN · {\"nota\":\"El mapa de prueba se carga por la dirección de su .tmj (la sala tiene `mapUrl`): el caso del servidor (mapa por su .wam, sin `mapUrl`) NO se prueba aquí.\",\"boton\":{\"nombre\":\"Relativo (prueba)\",\"etiqueta\":\"\",\"icono\":\"https://maps.workadventure.localhost/tests/banco/iconos/rombo.png\",\"cargado\":true},\"iconoEsperado\":\"https://maps.workadventure.localhost/tests/banco/iconos/rombo.png\",\"losDeSi\n"
+                    },
+                    {
+                      "text": "[banco] 6 · boton-con-icono-imposible · BIEN · {\"boton\":{\"nombre\":\"Imposible (prueba)\",\"etiqueta\":\"Imposible (prueba)\",\"icono\":null,\"cargado\":false},\"botonesDeSiempreEnLaBarra\":5,\"avisoEnLaConsola\":[\"[warning] [HOT SPOT] El icono del botón «banco-imposible»: no se ha podido saber su dirección («https://»). Se sigue sin ella.\"],\"excepcionesDeDireccion\":[],\"ordenAntes\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rom\n"
+                    },
+                    {
+                      "text": "[banco] 6 · llamada · DATO · {\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"salidas\":0}\n"
+                    },
+                    {
+                      "text": "[banco] 6 · en-llamada-1280x800 · BIEN · {\"aLaVista\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\"],\"escondidos\":[],\"ordenEnLaBarra\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\",\"participant-menu\"],\"hayInvitar\":false,\"enElMenu\":[\"En línea\",\"Ocupado\",\"Vuelvo en un momento\",\"No molestar\",\"Editar tu nombre\",\"Personalizar tu ava\n"
+                    },
+                    {
+                      "text": "[banco] 6 · en-llamada-1024x768 · BIEN · {\"aLaVista\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\"],\"escondidos\":[],\"ordenEnLaBarra\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\",\"participant-menu\"],\"hayInvitar\":false,\"enElMenu\":[\"En línea\",\"Ocupado\",\"Vuelvo en un momento\",\"No molestar\",\"Editar tu nombre\",\"Personalizar tu ava\n"
+                    },
+                    {
+                      "text": "[banco] 6 · en-llamada-1440x900 · BIEN · {\"aLaVista\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\"],\"escondidos\":[],\"ordenEnLaBarra\":[\"Botón 1 (círculo)\",\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\",\"participant-menu\"],\"hayInvitar\":false,\"enElMenu\":[\"En línea\",\"Ocupado\",\"Vuelvo en un momento\",\"No molestar\",\"Editar tu nombre\",\"Personalizar tu ava\n"
+                    },
+                    {
+                      "text": "[banco] 6 · en-llamada-anchos · DATO · {\"anchoMasEstrechoConLosCincoALaVista\":1024,\"porAncho\":{\"640\":\"0 a la vista (escondidos: Botón 1, Botón 2, Botón 3, Botón 4, Botón 5)\",\"700\":\"0 a la vista (escondidos: Botón 1, Botón 2, Botón 3, Botón 4, Botón 5)\",\"740\":\"0 a la vista (escondidos: Botón 1, Botón 2, Botón 3, Botón 4, Botón 5)\",\"780\":\"0 a la vista (escondidos: Botón 1, Botón 2, Botón 3, Botón 4, Botón 5)\",\"820\":\"1 a la vista (escondi\n"
+                    },
+                    {
+                      "text": "[banco] 6 · en-llamada-con-chat-1280x800 · BIEN · {\"aLaVista\":[\"Botón 2 (cuadrado)\",\"Botón 3 (triángulo)\",\"Botón 4 (rombo)\",\"Botón 5 (estrella)\"],\"escondidos\":[\"Botón 1 (círculo)\"],\"escondidosEnElMenu\":[\"Botón 1 (círculo)\"],\"anchoDeLaBarra\":946,\"chat\":{\"x\":0,\"ancho\":335}}\n"
+                    },
+                    {
+                      "text": "[banco] 6 · callback-en-llamada · BIEN · {\"pulsados\":[\"banco-5\"],\"laLlamadaSigue\":true}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-03T20:30:36.511Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "aa407781a7fcb86d8a3d-bff186e676fea21b0193",
+          "file": "06-barra.spec.ts",
+          "line": 179,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "07-volver-a-hablar.spec.ts",
+      "file": "07-volver-a-hablar.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "7 · volver a hablar sin moverse (parche 12)",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 480000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 21050,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "[banco] 7 · se-forma · DATO · {\"alicia\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":1,\"salidas\":0},\"sinElParche12\":false}\n"
+                    },
+                    {
+                      "text": "[banco] 7 · proximidad-corta · BIEN · {\"alicia\":{\"webrtc\":0,\"cajas\":0,\"script\":false,\"entradas\":1,\"salidas\":1},\"benito\":{\"webrtc\":0,\"cajas\":1,\"script\":false,\"entradas\":1,\"salidas\":1},\"nadieSeHaMovido\":true}\n"
+                    },
+                    {
+                      "text": "[banco] 7 · proximidad-vuelve · BIEN · {\"vuelve\":true,\"segundos\":0.8,\"nadieSeHaMovido\":true,\"sinElParche12\":false,\"alicia\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":2,\"salidas\":1},\"benito\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":2,\"salidas\":1}}\n"
+                    },
+                    {
+                      "text": "[banco] 7 · no-molestar-corta · BIEN · {\"alicia\":{\"webrtc\":0,\"cajas\":0,\"script\":false,\"entradas\":2,\"salidas\":2},\"benito\":{\"webrtc\":0,\"cajas\":1,\"script\":false,\"entradas\":2,\"salidas\":2},\"nadieSeHaMovido\":true}\n"
+                    },
+                    {
+                      "text": "[banco] 7 · no-molestar-vuelve · BIEN · {\"vuelve\":true,\"segundos\":0.7,\"nadieSeHaMovido\":true,\"sinElParche12\":false,\"alicia\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":3,\"salidas\":2},\"benito\":{\"webrtc\":1,\"cajas\":2,\"script\":true,\"entradas\":3,\"salidas\":2}}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-03T20:32:03.204Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "ead4802d3bfaf3ba5837-64de91de881cf0b489dd",
+          "file": "07-volver-a-hablar.spec.ts",
+          "line": 40,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "08-letras.spec.ts",
+      "file": "08-letras.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "8 · las letras de la casa",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 900000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 178140,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "[banco] 8 · nombre · BIEN · {\"texto\":\"Alicia\",\"familia\":\"Silkscreen, \\\"Pixelify Sans\\\", monospace\",\"tamano\":\"15px\",\"peso\":\"400\",\"interlineado\":\"22.5px\",\"color\":\"rgb(243, 230, 216)\",\"fondo\":\"rgba(0, 0, 0, 0)\"}\n"
+                    },
+                    {
+                      "text": "[banco] 8 · decir · BIEN · {\"letra\":{\"texto\":\"¿Bailamos a las 17:35? Café con Gabi\",\"familia\":\"\\\"Pixelify Sans\\\", ui-monospace, SFMono-Regular, Menlo, monospace\",\"tamano\":\"14.333px\",\"peso\":\"500\",\"interlineado\":\"17.333px\",\"color\":\"rgb(28, 23, 21)\",\"fondo\":\"rgb(243, 230, 216)\"},\"nitidez\":{\"enPantalla_px\":21.5,\"puntosDePantallaPorPuntoDeLetra\":2,\"limpia\":true},\"sitioDeLaBurbuja\":{\"burbuja\":{\"arriba\":315,\"abajo\":380,\"alto\":65,\"\n"
+                    },
+                    {
+                      "text": "[banco] 8 · decir-corto · BIEN · {\"sitioDeLaBurbuja\":{\"burbuja\":{\"arriba\":342,\"abajo\":381,\"alto\":39,\"ancho\":109},\"nombre\":{\"arriba\":389,\"abajo\":410},\"huecoEntreLaBurbujaYElNombre_px\":7,\"elPicoMide_px\":7.5,\"elNombreTapaElPico\":false,\"laBurbujaPisaElNombre\":false}}\n"
+                    },
+                    {
+                      "text": "[banco] 8 · decir-largo · BIEN · {\"sitioDeLaBurbuja\":{\"burbuja\":{\"arriba\":290,\"abajo\":381,\"alto\":91,\"ancho\":344},\"nombre\":{\"arriba\":389,\"abajo\":410},\"huecoEntreLaBurbujaYElNombre_px\":7.5,\"elPicoMide_px\":7.5,\"elNombreTapaElPico\":false,\"laBurbujaPisaElNombre\":false}}\n"
+                    },
+                    {
+                      "text": "[banco] 8 · pensar · BIEN · {\"letra\":{\"texto\":\"¿Bailamos a las 17:35? Café con Gabi\",\"familia\":\"\\\"Pixelify Sans\\\", ui-monospace, SFMono-Regular, Menlo, monospace\",\"tamano\":\"14.333px\",\"peso\":\"500\",\"interlineado\":\"17.333px\",\"color\":\"rgb(28, 23, 21)\",\"fondo\":\"rgba(0, 0, 0, 0)\"},\"nitidez\":{\"enPantalla_px\":21.5,\"puntosDePantallaPorPuntoDeLetra\":2,\"limpia\":true},\"sitioDeLaBurbuja\":{\"burbuja\":{\"arriba\":294,\"abajo\":359,\"alto\":65,\"an\n"
+                    },
+                    {
+                      "text": "[banco] 8 · zoom · DATO · {\"1280x800\":{\"ampliacion\":1.5,\"pixelesDePantallaPorPuntoDeLetraDe11\":1.5,\"letraDe11pxSeVeA_px\":16.5,\"sale\":\"con medios píxeles (ampliación no entera)\"},\"1440x900\":{\"ampliacion\":2,\"pixelesDePantallaPorPuntoDeLetraDe11\":2,\"letraDe11pxSeVeA_px\":22,\"sale\":\"limpia (ampliación entera)\"},\"1920x1080\":{\"ampliacion\":2,\"pixelesDePantallaPorPuntoDeLetraDe11\":2,\"letraDe11pxSeVeA_px\":22,\"sale\":\"limpia (ampliaci\n"
+                    },
+                    {
+                      "text": "[banco] 8 · aviso-de-zona · BIEN · {\"texto\":{\"texto\":\"Pulse ESPACIO o toque aquí para abrir el sitio web\",\"familia\":\"\\\"Pixelify Sans\\\", ui-monospace, SFMono-Regular, Menlo, monospace\",\"tamano\":\"16px\",\"peso\":\"400\",\"interlineado\":\"24px\",\"color\":\"rgb(255, 255, 255)\",\"fondo\":\"rgba(0, 0, 0, 0)\"},\"boton\":{\"texto\":\"Abrir\",\"familia\":\"\\\"Pixelify Sans\\\", ui-monospace, SFMono-Regular, Menlo, monospace\",\"tamano\":\"14px\",\"peso\":\"400\",\"interlinea\n"
+                    },
+                    {
+                      "text": "[banco] 8 · aviso-del-mapa · BIEN · {\"texto\":{\"texto\":\"Pulsa ESPACIO para abrir el panel de prueba\",\"familia\":\"\\\"Pixelify Sans\\\", ui-monospace, SFMono-Regular, Menlo, monospace\",\"tamano\":\"16px\",\"peso\":\"400\",\"interlineado\":\"24px\",\"color\":\"rgb(255, 255, 255)\",\"fondo\":\"rgba(0, 0, 0, 0)\"},\"boton\":{\"texto\":\"Abrir\",\"familia\":\"\\\"Pixelify Sans\\\", ui-monospace, SFMono-Regular, Menlo, monospace\",\"tamano\":\"14px\",\"peso\":\"400\",\"interlineado\":\"20\n"
+                    },
+                    {
+                      "text": "[banco] 8 · aviso-del-script · BIEN · {\"dondeSale\":\"abajo, en el centro de la pantalla (no junto al muñeco)\",\"texto\":{\"texto\":\"Pulsa ESPACIO para probar el aviso (17:35)\",\"familia\":\"\\\"Pixelify Sans\\\", ui-monospace, SFMono-Regular, Menlo, monospace\",\"tamano\":\"16px\",\"peso\":\"400\",\"interlineado\":\"24px\",\"color\":\"rgb(255, 255, 255)\",\"fondo\":\"rgba(0, 0, 0, 0)\"},\"boton\":null,\"caja\":{\"x\":441,\"y\":704,\"width\":398,\"height\":80},\"avisosJuntoAlMunec\n"
+                    },
+                    {
+                      "text": "[banco] 8 · aviso-junto-al-muneco · BIEN · {\"texto\":\"Pulsa ESPACIO para probar (17:35)\",\"familia\":\"\\\"Pixelify Sans\\\", ui-monospace, SFMono-Regular, Menlo, monospace\",\"tamano\":\"11px\",\"peso\":\"500\",\"interlineado\":\"14px\",\"color\":\"rgb(243, 230, 216)\",\"fondo\":\"rgba(28, 23, 21, 0.94)\"}\n"
+                    },
+                    {
+                      "text": "[banco] 8 · tecla-espacio · BIEN · {\"bien\":{\"zona\":true,\"script\":true,\"juntoAlMuneco\":true},\"fondoEsperado\":\"rgb(255, 216, 74)\",\"zona\":{\"esperado\":\"Pulsa ESPACIO para abrir el panel de prueba\",\"textoDelAviso\":\"Pulsa ESPACIO para abrir el panel de prueba\",\"teclas\":1,\"tecla\":{\"texto\":\"ESPACIO\",\"fondo\":\"rgb(255, 216, 74)\",\"color\":\"rgb(28, 23, 21)\",\"familia\":\"\\\"Pixelify Sans\\\", ui-monospace, SFMono-Regular, Menlo, monospace\",\"tamano\":\"\n"
+                    },
+                    {
+                      "text": "[banco] 8 · fuentes · BIEN · {\"carasDeLetra\":[{\"familia\":\"Silkscreen\",\"peso\":\"400\",\"estado\":\"loaded\",\"caracteres\":\"U+0-10FFFF\"},{\"familia\":\"Silkscreen\",\"peso\":\"700\",\"estado\":\"loaded\",\"caracteres\":\"U+0-10FFFF\"},{\"familia\":\"Pixelify Sans\",\"peso\":\"400 549\",\"estado\":\"loaded\",\"caracteres\":\"U+0-10FFFF\"},{\"familia\":\"Pixelify Sans\",\"peso\":\"550 700\",\"estado\":\"loaded\",\"caracteres\":\"U+0-10FFFF\"},{\"familia\":\"Silkscreen\",\"peso\":\"400\",\"est\n"
+                    },
+                    {
+                      "text": "[banco] 8 · franja · BIEN · {\"texto\":{\"texto\":\"Aviso de prueba del banco: 17:35\",\"familia\":\"\\\"Pixelify Sans\\\", ui-monospace, SFMono-Regular, Menlo, monospace\",\"tamano\":\"16px\",\"peso\":\"400\",\"interlineado\":\"24px\",\"color\":\"rgb(255, 255, 255)\",\"fondo\":\"rgba(0, 0, 0, 0)\"},\"boton\":{\"texto\":\"¡Entendido!\",\"familia\":\"\\\"Pixelify Sans\\\", ui-monospace, SFMono-Regular, Menlo, monospace\",\"tamano\":\"16px\",\"peso\":\"400\",\"interlineado\":\"24px\",\"\n"
+                    },
+                    {
+                      "text": "[banco] 8 · retoques · BIEN · {\"elNavegadorAjustaLasLetras\":true,\"retoquesMedidos\":380,\"desajustados\":0,\"losPrimeros\":[],\"muestra\":[\"Pixelify Sans 400 10.75px · o 6 · a* 6 · B* 6 · 5* 6 · 0* 5 · f* 4 · t* 4 · 1* 4 · I 4 · j* 3 · (* 3 · i 2\",\"Pixelify Sans 400 11px · o 6 · a* 6 · B* 6 · 5* 6 · 0* 5 · f* 4 · t* 4 · 1* 4 · I 4 · j* 3 · (* 3 · i 2\"],\"tabla\":\"diagnostico/8-avances-de-los-retoques.md\"}\n"
+                    },
+                    {
+                      "text": "[banco] 8 · huecos-decir · BIEN · {\"parejos\":true,\"trazado\":\"geometricprecision\",\"1280x800\":{\"letra_px\":14.333,\"ampliacion\":1.5,\"huecoDeLasRetocadas_puntos\":[1,1.01],\"huecoDeLasNormales_puntos\":[0.82,1.04],\"avanceDe5Columnas_px\":{\"retocadas\":12.02,\"normales\":12.16},\"desiguales\":[]},\"1440x900\":{\"letra_px\":10.75,\"ampliacion\":2,\"huecoDeLasRetocadas_puntos\":[1,1.02],\"huecoDeLasNormales_puntos\":[0.82,1.04],\"avanceDe5Columnas_px\":{\"reto\n"
+                    },
+                    {
+                      "text": "[banco] 8 · huecos-pensar · BIEN · {\"parejos\":true,\"trazado\":\"geometricprecision\",\"1280x800\":{\"letra_px\":14.333,\"ampliacion\":1.5,\"huecoDeLasRetocadas_puntos\":[1,1.01],\"huecoDeLasNormales_puntos\":[0.82,1.04],\"avanceDe5Columnas_px\":{\"retocadas\":12.02,\"normales\":12.16},\"desiguales\":[]},\"1440x900\":{\"letra_px\":10.75,\"ampliacion\":2,\"huecoDeLasRetocadas_puntos\":[1,1.02],\"huecoDeLasNormales_puntos\":[0.82,1.04],\"avanceDe5Columnas_px\":{\"reto\n"
+                    },
+                    {
+                      "text": "[banco] 8 · retoques-sin-hinting · BIEN · {\"elNavegadorAjustaLasLetras\":false,\"retoquesMedidos\":380,\"desajustados\":0,\"losPrimeros\":[],\"muestra\":[\"Pixelify Sans 400 10.75px · o 6.313 · a* 6.297 · B* 6.297 · 5* 6.313 · 0* 5.313 · f* 4.313 · t* 4.297 · 1* 4.297 · I 4.359 · j* 3.297 · (* 3.297 · i 2.406\",\"Pixelify Sans 400 11px · o 6.453 · a* 6.453 · B* 6.453 · 5* 6.453 · 0* 5.422 · f* 4.406 · t* 4.406 · 1* 4.406 · I 4.453 · j* 3.391 · (* 3.3\n"
+                    },
+                    {
+                      "text": "[banco] 8 · huecos-decir-sin-hinting · BIEN · {\"parejos\":true,\"trazado\":\"geometricprecision\",\"1280x800\":{\"letra_px\":14.333,\"ampliacion\":1.5,\"huecoDeLasRetocadas_puntos\":[1,1.01],\"huecoDeLasNormales_puntos\":[0.82,1.04],\"avanceDe5Columnas_px\":{\"retocadas\":12.02,\"normales\":12.16},\"desiguales\":[]},\"1440x900\":{\"letra_px\":10.75,\"ampliacion\":2,\"huecoDeLasRetocadas_puntos\":[1,1.02],\"huecoDeLasNormales_puntos\":[0.82,1.04],\"avanceDe5Columnas_px\":{\"reto\n"
+                    },
+                    {
+                      "text": "[banco] 8 · huecos-pensar-sin-hinting · BIEN · {\"parejos\":true,\"trazado\":\"geometricprecision\",\"1280x800\":{\"letra_px\":14.333,\"ampliacion\":1.5,\"huecoDeLasRetocadas_puntos\":[1,1.01],\"huecoDeLasNormales_puntos\":[0.82,1.04],\"avanceDe5Columnas_px\":{\"retocadas\":12.02,\"normales\":12.16},\"desiguales\":[]},\"1440x900\":{\"letra_px\":10.75,\"ampliacion\":2,\"huecoDeLasRetocadas_puntos\":[1,1.02],\"huecoDeLasNormales_puntos\":[0.82,1.04],\"avanceDe5Columnas_px\":{\"reto\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-03T20:32:24.296Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "d9aa0a3f5ee2b92959ed-c5a8d05d4204c771ee9d",
+          "file": "08-letras.spec.ts",
+          "line": 134,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "title": "09-sondeos.spec.ts",
+      "file": "09-sondeos.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "9 · sondeos de la API de los mapas (un jugador)",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 540000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 40192,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "[banco] 9a · libre · DATO · {\"saleDe\":{\"x\":112,\"y\":400},\"pedido\":{\"x\":240,\"y\":408,\"casilla\":{\"cx\":7,\"cy\":12}},\"loQueDevuelve\":{\"x\":240,\"y\":392,\"cancelled\":false},\"error\":null,\"acabaEn\":{\"x\":240,\"y\":392},\"casilla\":{\"cx\":7,\"cy\":12},\"avisos\":7,\"promesaALos_ms\":777,\"ultimoAvisoDeParado\":{\"ms\":776,\"que\":\"onPlayerMove\",\"moving\":false,\"x\":240,\"y\":392},\"queLlegaAntes\":\"el aviso onPlayerMove con moving: false, y después la promesa\",\"\n"
+                    },
+                    {
+                      "text": "[banco] 9a · pared · DATO · {\"saleDe\":{\"x\":240,\"y\":392},\"pedido\":{\"x\":304,\"y\":408,\"casilla\":{\"cx\":9,\"cy\":12}},\"loQueDevuelve\":{\"x\":272,\"y\":384,\"cancelled\":false},\"error\":null,\"acabaEn\":{\"x\":272,\"y\":384},\"casilla\":{\"cx\":8,\"cy\":12},\"avisos\":2,\"promesaALos_ms\":214,\"ultimoAvisoDeParado\":{\"ms\":214,\"que\":\"onPlayerMove\",\"moving\":false,\"x\":272,\"y\":384},\"queLlegaAntes\":\"el aviso onPlayerMove con moving: false, y después la promesa\",\"\n"
+                    },
+                    {
+                      "text": "[banco] 9a · sin-camino · DATO · {\"saleDe\":{\"x\":272,\"y\":384},\"pedido\":{\"x\":656,\"y\":408,\"casilla\":{\"cx\":20,\"cy\":12}},\"loQueDevuelve\":null,\"error\":\"No path found\",\"acabaEn\":{\"x\":272,\"y\":384},\"casilla\":{\"cx\":8,\"cy\":12},\"avisos\":0,\"promesaALos_ms\":16,\"ultimoAvisoDeParado\":null,\"queLlegaAntes\":\"no se sabe (falta la promesa o el aviso de parado)\",\"ultimosSucesos\":[{\"ms\":16,\"que\":\"promesa\",\"resultado\":null,\"error\":\"No path found\"}]}\n"
+                    },
+                    {
+                      "text": "[banco] 9c · abrir · DATO · {\"loQueDevuelveOpen\":{\"id\":\"cad1d227-114f-42c7-a344-3fc1b33c9fb0\",\"url\":\"https://maps.workadventure.localhost/tests/banco/panel.html?paso=1\",\"visible\":false},\"alAbrirEscondida\":{\"src\":\"https://maps.workadventure.localhost/tests/banco/panel.html?paso=1\",\"visibility\":\"hidden\",\"estilo\":\"border: 0px; height: 120px; width: 320px; visibility: hidden; margin: 0px 12px 88px 0px;\",\"caja\":{\"x\":949,\"y\":592,\"\n"
+                    },
+                    {
+                      "text": "[banco] 9d · banner · DATO · {\"caja\":{\"x\":431.484375,\"y\":720,\"width\":418.015625,\"height\":64},\"ventana\":{\"width\":1280,\"height\":800},\"texto\":\"Aviso de prueba del banco: 17:35 ¡Entendido!\",\"letraDelTexto\":{\"texto\":\"Aviso de prueba del banco: 17:35\",\"familia\":\"\\\"Pixelify Sans\\\", ui-monospace, SFMono-Regular, Menlo, monospace\",\"tamano\":\"16px\",\"peso\":\"400\",\"interlineado\":\"24px\",\"color\":\"rgb(255, 255, 255)\",\"fondo\":\"rgba(0, 0, 0, 0)\n"
+                    },
+                    {
+                      "text": "[banco] 9e · sonido · BIEN · {\"excepcion\":null,\"loQueDevuelvePlay\":\"https://maps.workadventure.localhost/tests/banco/pitido.wav\",\"segundaVez\":\"https://maps.workadventure.localhost/tests/banco/pitido.wav\",\"metodos\":[\"constructor\",\"play\",\"stop\"],\"elArchivoSeHaPedido\":[\"200 https://maps.workadventure.localhost/tests/banco/pitido.wav\"],\"erroresEnLaConsola\":[],\"elementosDeAudio\":1,\"contextoDeAudio\":\"hay AudioContext\"}\n"
+                    },
+                    {
+                      "text": "[banco] 9f · velo · DATO · {\"velo-a\":{\"seVeElVelo\":true,\"pixelesQueCambian\":\"36064 de 36288\",\"tiñeAlMuñeco\":true,\"cuerpo\":\"cambian 270 de 270 píxeles, 29.7 de media (de 255)\",\"etiquetaDelNombre\":\"cambian 1645 de 1869 píxeles, 4.3 de media (de 255)\",\"tiñeLasLetrasDelNombre\":false},\"velo-b\":{\"seVeElVelo\":true,\"pixelesQueCambian\":\"36064 de 36288\",\"tiñeAlMuñeco\":true,\"cuerpo\":\"cambian 270 de 270 píxeles, 64.8 de media (de 255)\"\n"
+                    },
+                    {
+                      "text": "[banco] 9g · casillas · DATO · {\"sePinta\":true,\"dondeCambia\":{\"x0\":57,\"y0\":57,\"x1\":86,\"y1\":86},\"seAnima\":true,\"pixelesQueCambianCada400ms\":[576,576,576],\"laCasillaSinAnimacionSePinta\":true,\"nullLaQuita\":true,\"pixelesQueQuedanDistintos\":0}\n"
+                    },
+                    {
+                      "text": "[banco] 9h · cartel · DATO · {\"pedido\":{\"x\":448,\"y\":384,\"width\":128,\"height\":40,\"scale\":0.5},\"loQueDevuelveCreate\":{\"name\":\"banco-cartel\",\"url\":\"https://maps.workadventure.localhost/tests/banco/cartel.html\",\"x\":448,\"y\":384,\"width\":128,\"height\":40,\"scale\":0.5,\"visible\":true},\"enPantalla\":{\"x\":672,\"y\":576,\"ancho\":192,\"alto\":60,\"anchoPropio\":256,\"altoPropio\":80,\"estilo\":\"width: 256px; height: 80px; margin: 0px; padding: 0px; bor\n"
+                    },
+                    {
+                      "text": "[banco] 9i · zona-panel · BIEN · {\"textoDelAviso\":\"Pulsa ESPACIO para abrir el panel de prueba\",\"textoDelBoton\":\"Abrir\",\"dondeSaleElAviso\":{\"x\":434,\"y\":676,\"width\":412,\"height\":108},\"avisosJuntoAlMuneco_characterTriggerAction\":0,\"marcosAntesDeEspacio\":0,\"panel\":{\"src\":\"https://maps.workadventure.localhost/tests/banco/panel.html\",\"title\":\"Cowebsite\",\"caja\":{\"x\":652,\"y\":68,\"ancho\":628,\"alto\":732},\"ventana\":{\"ancho\":1280,\"alto\":800}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-03T20:35:22.459Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "fa53cde4a08c866394a8-52390d4f5f9c10b6fa62",
+          "file": "09-sondeos.spec.ts",
+          "line": 38,
+          "column": 1
+        },
+        {
+          "title": "9 · sondeos de la API de los mapas (dos jugadores)",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 480000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 19541,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "[banco] 9b · avisos · BIEN · {\"playerId\":{\"alicia\":2,\"benito\":3},\"onJoin_enAlicia\":[{\"t\":1791059770625,\"tipo\":\"[object Array]\",\"jugadores\":[{\"playerId\":3,\"name\":\"Benito\"}]}],\"onJoin_enBenito\":[{\"t\":1791059770635,\"tipo\":\"[object Array]\",\"jugadores\":[{\"playerId\":2,\"name\":\"Alicia\"}]}],\"onLeave_enAlicia\":[{\"t\":1791059772531,\"argumentos\":1}],\"onLeave_enBenito\":[{\"t\":1791059772531,\"argumentos\":1}],\"antesDeJuntarse\":{\"alicia\":{\"dent\n"
+                    },
+                    {
+                      "text": "[banco] 9j · silencio · BIEN · {\"dentroNoHayLlamada\":true,\"muestrasDentro\":[{\"s\":1,\"alicia\":false,\"benito\":false},{\"s\":2,\"alicia\":false,\"benito\":false},{\"s\":3,\"alicia\":false,\"benito\":false},{\"s\":4,\"alicia\":false,\"benito\":false},{\"s\":5,\"alicia\":false,\"benito\":false},{\"s\":6,\"alicia\":false,\"benito\":false}],\"dentro\":{\"alicia\":{\"webrtc\":0,\"cajas\":0,\"script\":false,\"entradas\":2,\"salidas\":2},\"benito\":{\"webrtc\":0,\"cajas\":0,\"script\":fals\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-03T20:36:02.664Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "fa53cde4a08c866394a8-c3466297f653e6017ea8",
+          "file": "09-sondeos.spec.ts",
+          "line": 456,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-03T20:27:35.488Z",
+    "duration": 526797.213,
+    "expected": 11,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

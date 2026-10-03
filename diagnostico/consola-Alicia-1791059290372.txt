@@ -1,0 +1,22 @@
+[info] Sentry initialized
+[log] %cWorkAdventure / Phaser v4.2.0 (WebGL | Web Audio)%c https://phaser.io/v402 color: #ffffff; background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAOCAYAAAAmL5yKAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAARBJREFUeNpi/P//P0OHsPB/BiCoePuWkYFEwALSXJElzMBgLwE2CNkQxgWr/yMr/p8QimlBu5DQ//+8vBBco/ofzAe6imH+qv/53/6jYJAYSA4ZoxoANYTPKhiuCQZwGcJU+e4dqpMmvsDq14krV2MPAxDha2CMKvoXoiE/PBQUDgQD8j82UFae9B9bOIC8B9UD9gIjjIMN7Ns6lWHn4XMoYu62RgxO3tkMjIyMII2MYAOAtmFVhA+ADHf2ycGMRhAN
+[info] Map  _/teclas/maps.workadventure.localhost/tests/banco/banco.tmj  resolves to URL  https://maps.workadventure.localhost/tests/banco/banco.tmj
+[info] Storage may be cleared by the UA under storage pressure.
+[error] An SSL certificate error occurred when fetching the script.
+[error] Error registering the Service Worker:  SecurityError: Failed to register a ServiceWorker for scope ('https://play.workadventure.localhost/') with script ('https://play.workadventure.localhost/service-worker-prod.js?playUri=https://play.workadventure.localhost/_/teclas/maps.workadventure.localhost/tests/banco/banco.tmj'): An SSL certificate error occurred when fetching the script.
+[info] Autofocus processing was blocked because a document already has a focused element.
+[warning] Cannot load previous WOKA textures: Error: No valid Woka collection found for the saved texture ID
+    at g (https://play.workadventure.localhost/assets/main-D3nrDvqh.js:598:23238)
+    at h (https://play.workadventure.localhost/assets/main-D3nrDvqh.js:598:22969)
+[error] Failed to load resource: the server responded with a status of 404 ()
+[debug] [AudioContextManager] Created new AudioContext with default sample rate
+[info] starting https://play.workadventure.localhost/_/teclas/maps.workadventure.localhost/tests/banco/banco.tmj
+[info] EntityEditorTool subscribeToGameMapFrontWrapperEvents
+[info] EntityEditorTool subscribeToGameMapFrontWrapperEvents
+[info] Loading map related script at  https://maps.workadventure.localhost/tests/banco/banco.js
+[warning] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+[info] Socket has been opened
+[info] [banco] script del mapa listo
+[error] An error occurred server side: Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+[warning] The resource https://play.workadventure.localhost/assets/Workadventure-C_1IyOip.gif was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+[warning] Say: unknown status  1

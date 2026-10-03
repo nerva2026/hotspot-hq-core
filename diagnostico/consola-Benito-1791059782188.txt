@@ -1,0 +1,32 @@
+[info] Sentry initialized
+[log] %cWorkAdventure / Phaser v4.2.0 (WebGL | Web Audio)%c https://phaser.io/v402 color: #ffffff; background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAOCAYAAAAmL5yKAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAARBJREFUeNpi/P//P0OHsPB/BiCoePuWkYFEwALSXJElzMBgLwE2CNkQxgWr/yMr/p8QimlBu5DQ//+8vBBco/ofzAe6imH+qv/53/6jYJAYSA4ZoxoANYTPKhiuCQZwGcJU+e4dqpMmvsDq14krV2MPAxDha2CMKvoXoiE/PBQUDgQD8j82UFae9B9bOIC8B9UD9gIjjIMN7Ns6lWHn4XMoYu62RgxO3tkMjIyMII2MYAOAtmFVhA+ADHf2ycGMRhAN
+[info] Map  _/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj  resolves to URL  https://maps.workadventure.localhost/tests/banco/banco.tmj
+[info] Storage may be cleared by the UA under storage pressure.
+[error] An SSL certificate error occurred when fetching the script.
+[error] Error registering the Service Worker:  SecurityError: Failed to register a ServiceWorker for scope ('https://play.workadventure.localhost/') with script ('https://play.workadventure.localhost/service-worker-prod.js?playUri=https://play.workadventure.localhost/_/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj'): An SSL certificate error occurred when fetching the script.
+[info] Autofocus processing was blocked because a document already has a focused element.
+[warning] Cannot load previous WOKA textures: Error: No valid Woka collection found for the saved texture ID
+    at g (https://play.workadventure.localhost/assets/main-D3nrDvqh.js:598:23238)
+    at h (https://play.workadventure.localhost/assets/main-D3nrDvqh.js:598:22969)
+[error] Failed to load resource: the server responded with a status of 404 ()
+[debug] [AudioContextManager] Created new AudioContext with default sample rate
+[info] starting https://play.workadventure.localhost/_/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj
+[info] EntityEditorTool subscribeToGameMapFrontWrapperEvents
+[info] EntityEditorTool subscribeToGameMapFrontWrapperEvents
+[info] Loading map related script at  https://maps.workadventure.localhost/tests/banco/banco.js
+[warning] An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+[info] Socket has been opened
+[info] [banco] script del mapa listo
+[warning] Switching communication strategy to WEBRTC
+[log] [WebRTC] stream sent successfully {userId: https://play.workadventure.localhost/_/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj_2, spaceUserId: https://play.workadventure.localhost/_/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj_2, type: video, connectionId: bfe5c0df-bdd8-49de-bcdd-4f856416ddd7, audioTracks: 1}
+[log] [WebRTC] stream received successfully {userId: https://play.workadventure.localhost/_/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj_2, spaceUserId: https://play.workadventure.localhost/_/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj_2, type: video, connectionId: bfe5c0df-bdd8-49de-bcdd-4f856416ddd7, audioTracks: 1}
+[warning] Space is destroyed, skipping unregisterSpaceFilter
+[warning] Received a private message for a space that does not exist: "https://play.workadventure.localhost/_/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj#7#1791059770350". This should not happen unless the space was left a few milliseconds before.
+[warning] Switching communication strategy to WEBRTC
+[log] [WebRTC] stream sent successfully {userId: https://play.workadventure.localhost/_/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj_2, spaceUserId: https://play.workadventure.localhost/_/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj_2, type: video, connectionId: d190aef8-1cbf-4a94-872e-9b3a583015b2, audioTracks: 1}
+[warning] Space is destroyed, skipping unregisterSpaceFilter
+[warning] Received a private message for a space that does not exist: "https://play.workadventure.localhost/_/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj#8#1791059774361". This should not happen unless the space was left a few milliseconds before.
+[warning] The resource https://play.workadventure.localhost/assets/Workadventure-C_1IyOip.gif was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+[warning] Switching communication strategy to WEBRTC
+[log] [WebRTC] stream sent successfully {userId: https://play.workadventure.localhost/_/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj_2, spaceUserId: https://play.workadventure.localhost/_/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj_2, type: video, connectionId: bedc6320-9e66-4879-aed4-c8ab84643039, audioTracks: 1}
+[log] [WebRTC] stream received successfully {userId: https://play.workadventure.localhost/_/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj_2, spaceUserId: https://play.workadventure.localhost/_/sondeos2/maps.workadventure.localhost/tests/banco/banco.tmj_2, type: video, connectionId: bedc6320-9e66-4879-aed4-c8ab84643039, audioTracks: 1}

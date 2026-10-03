@@ -1,0 +1,117 @@
+play-1  | 
+play-1  | > workadventure-play@1.0.0 start
+play-1  | > if [ -n "$STARTUP_COMMAND" ]; then sh -c "$STARTUP_COMMAND"; fi && TSX_TSCONFIG_PATH=tsconfig-pusher.json tsx ./src/server.ts
+play-1  | 
+play-1  | Sentry initialized
+play-1  | Admin API not configured. Will use local implementations
+play-1  | WorkAdventure Pusher web-socket server started on port 3001!
+play-1  | WorkAdventure Pusher web-server started on port 3000!
+play-1  | (node:32) DeprecationWarning: Calling start() is no longer necessary. It can be safely omitted.
+play-1  | (Use `node --trace-deprecation ...` to show where the warning was created)
+play-1  | RoomAPI starting on port 50051!
+play-1  | Redis client is connected
+play-1  | Redis client is ready
+play-1  | Failed to override admin account ratelimit: TypeError: Invalid URL
+play-1  |     at new URL (node:internal/url:895:25)
+play-1  |     at dispatchHttpRequest (file:///usr/src/node_modules/axios/lib/adapters/http.js:648:22)
+play-1  |     at file:///usr/src/node_modules/axios/lib/adapters/http.js:451:5
+play-1  |     at new Promise (<anonymous>)
+play-1  |     at wrapAsync (file:///usr/src/node_modules/axios/lib/adapters/http.js:431:10)
+play-1  |     at http (file:///usr/src/node_modules/axios/lib/adapters/http.js:519:12)
+play-1  |     at Axios.dispatchRequest (file:///usr/src/node_modules/axios/lib/core/dispatchRequest.js:48:10)
+play-1  |     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+play-1  |     at async Axios.request (file:///usr/src/node_modules/axios/lib/core/Axios.js:41:14)
+play-1  |     at async MatrixProvider.loginToMatrix (/usr/src/play/src/pusher/services/MatrixProvider.ts:193:26)
+play-1  |     at Axios.request (file:///usr/src/node_modules/axios/lib/core/Axios.js:46:41)
+play-1  |     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+play-1  |     at async MatrixProvider.loginToMatrix (/usr/src/play/src/pusher/services/MatrixProvider.ts:193:26)
+play-1  |     at async MatrixProvider.loginAndCacheAccessToken (/usr/src/play/src/pusher/services/MatrixProvider.ts:170:41)
+play-1  |     at async MatrixProvider.getAccessToken (/usr/src/play/src/pusher/services/MatrixProvider.ts:102:33)
+play-1  |     at async MatrixProvider.getAxios (/usr/src/play/src/pusher/services/MatrixProvider.ts:47:29)
+play-1  |     at async MatrixProvider.overrideRateLimitForAdminAccount (/usr/src/play/src/pusher/services/MatrixProvider.ts:382:31)
+play-1  |     at async MatrixProvider.overrideRateLimitForAdminAccountWithRetry (/usr/src/play/src/pusher/services/MatrixProvider.ts:365:17) {
+play-1  |   code: 'ERR_INVALID_URL',
+play-1  |   input: '_matrix/client/r0/login'
+play-1  | }
+play-1  | Upgrading connection to WebSocket for tab e72e5d31-12c0-41e6-87af-d63b989f7f9a
+play-1  | Upgrading connection to WebSocket for tab 00535f47-7214-4ff9-80da-080558097a16
+play-1  | Error unregistering user from space localWorld.allWorldUser: SpaceDestroyedError: Query "removeSpaceUserAnswer" cancelled because the space is being destroyed (pending for 4ms)
+play-1  |     at Query.destroy (/usr/src/play/src/pusher/models/SpaceQuery.ts:111:17)
+play-1  |     at Space.cleanup (/usr/src/play/src/pusher/models/Space.ts:208:44)
+play-1  |     at SpaceToBackForwarder.unregisterUser (/usr/src/play/src/pusher/models/SpaceToBackForwarder.ts:188:29)
+play-1  |     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+play-1  |     at async <anonymous> (/usr/src/play/src/pusher/services/SocketManager.ts:841:21)
+play-1  |     at async Promise.all (index 0)
+play-1  |     at async SocketManager.leaveSpaces (/usr/src/play/src/pusher/services/SocketManager.ts:865:9)
+play-1  | Error unregistering user from space localWorld.https://play.workadventure.localhost/_/sonda/maps.workadventure.localhost/tests/banco/banco.tmj#1#1791059264966: SpaceDestroyedError: Query "removeSpaceUserAnswer" cancelled because the space is being destroyed (pending for 6ms)
+play-1  |     at Query.destroy (/usr/src/play/src/pusher/models/SpaceQuery.ts:111:17)
+play-1  |     at Space.cleanup (/usr/src/play/src/pusher/models/Space.ts:208:44)
+play-1  |     at SpaceToBackForwarder.unregisterUser (/usr/src/play/src/pusher/models/SpaceToBackForwarder.ts:188:29)
+play-1  |     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+play-1  |     at async <anonymous> (/usr/src/play/src/pusher/services/SocketManager.ts:841:21)
+play-1  |     at async Promise.all (index 1)
+play-1  |     at async SocketManager.leaveSpaces (/usr/src/play/src/pusher/services/SocketManager.ts:865:9)
+play-1  | Upgrading connection to WebSocket for tab 023ef1a8-9be2-4657-a607-a64aeaad25fc
+play-1  | Upgrading connection to WebSocket for tab d01c1c92-a39c-437a-b7af-76495c2c9f08
+play-1  | Error unregistering user from space localWorld.allWorldUser: SpaceDestroyedError: Query "removeSpaceUserAnswer" cancelled because the space is being destroyed (pending for 1ms)
+play-1  |     at Query.destroy (/usr/src/play/src/pusher/models/SpaceQuery.ts:111:17)
+play-1  |     at Space.cleanup (/usr/src/play/src/pusher/models/Space.ts:208:44)
+play-1  |     at SpaceToBackForwarder.unregisterUser (/usr/src/play/src/pusher/models/SpaceToBackForwarder.ts:188:29)
+play-1  |     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+play-1  |     at async <anonymous> (/usr/src/play/src/pusher/services/SocketManager.ts:841:21)
+play-1  |     at async Promise.all (index 0)
+play-1  |     at async SocketManager.leaveSpaces (/usr/src/play/src/pusher/services/SocketManager.ts:865:9)
+play-1  | Upgrading connection to WebSocket for tab 01f80a84-2a5b-49ff-b79a-13367eb18cfe
+play-1  | Error unregistering user from space localWorld.allWorldUser: SpaceDestroyedError: Query "removeSpaceUserAnswer" cancelled because the space is being destroyed (pending for 1ms)
+play-1  |     at Query.destroy (/usr/src/play/src/pusher/models/SpaceQuery.ts:111:17)
+play-1  |     at Space.cleanup (/usr/src/play/src/pusher/models/Space.ts:208:44)
+play-1  |     at SpaceToBackForwarder.unregisterUser (/usr/src/play/src/pusher/models/SpaceToBackForwarder.ts:188:29)
+play-1  |     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+play-1  |     at async <anonymous> (/usr/src/play/src/pusher/services/SocketManager.ts:841:21)
+play-1  |     at async Promise.all (index 0)
+play-1  |     at async SocketManager.leaveSpaces (/usr/src/play/src/pusher/services/SocketManager.ts:865:9)
+play-1  | Upgrading connection to WebSocket for tab 2748a930-97a5-4cd4-a8b4-5b93e0f39f64
+play-1  | Upgrading connection to WebSocket for tab ff1effbf-ddc8-4dd0-aa01-7c4ffd7d3747
+play-1  | Upgrading connection to WebSocket for tab bed12e29-59dc-4de9-87de-0aae1667c2f6
+play-1  | Upgrading connection to WebSocket for tab 6362645b-d375-43e6-af24-998bb9128f1a
+play-1  | Upgrading connection to WebSocket for tab 43d6173b-6716-45d2-be8f-7de50d0e9d8b
+play-1  | Upgrading connection to WebSocket for tab d40edc8c-fe40-499d-a86b-838af123155b
+play-1  | Upgrading connection to WebSocket for tab d9281c58-a9db-4937-9add-7b0b919570b5
+play-1  | Upgrading connection to WebSocket for tab 16821392-0edd-4507-ba58-43c7a804ee46
+play-1  | Error unregistering user from space localWorld.allWorldUser: SpaceDestroyedError: Query "removeSpaceUserAnswer" cancelled because the space is being destroyed (pending for 0ms)
+play-1  |     at Query.destroy (/usr/src/play/src/pusher/models/SpaceQuery.ts:111:17)
+play-1  |     at Space.cleanup (/usr/src/play/src/pusher/models/Space.ts:208:44)
+play-1  |     at SpaceToBackForwarder.unregisterUser (/usr/src/play/src/pusher/models/SpaceToBackForwarder.ts:188:29)
+play-1  |     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+play-1  |     at async <anonymous> (/usr/src/play/src/pusher/services/SocketManager.ts:841:21)
+play-1  |     at async Promise.all (index 0)
+play-1  |     at async SocketManager.leaveSpaces (/usr/src/play/src/pusher/services/SocketManager.ts:865:9)
+play-1  | Upgrading connection to WebSocket for tab 6149429f-a81f-4a73-97e9-87f403c08ffb
+play-1  | Error unregistering user from space localWorld.allWorldUser: SpaceDestroyedError: Query "removeSpaceUserAnswer" cancelled because the space is being destroyed (pending for 0ms)
+play-1  |     at Query.destroy (/usr/src/play/src/pusher/models/SpaceQuery.ts:111:17)
+play-1  |     at Space.cleanup (/usr/src/play/src/pusher/models/Space.ts:208:44)
+play-1  |     at SpaceToBackForwarder.unregisterUser (/usr/src/play/src/pusher/models/SpaceToBackForwarder.ts:188:29)
+play-1  |     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+play-1  |     at async <anonymous> (/usr/src/play/src/pusher/services/SocketManager.ts:841:21)
+play-1  |     at async Promise.all (index 0)
+play-1  |     at async SocketManager.leaveSpaces (/usr/src/play/src/pusher/services/SocketManager.ts:865:9)
+play-1  | Upgrading connection to WebSocket for tab 50362731-b614-4bfa-a655-921ffade1e4d
+play-1  | Error unregistering user from space localWorld.allWorldUser: SpaceDestroyedError: Query "removeSpaceUserAnswer" cancelled because the space is being destroyed (pending for 1ms)
+play-1  |     at Query.destroy (/usr/src/play/src/pusher/models/SpaceQuery.ts:111:17)
+play-1  |     at Space.cleanup (/usr/src/play/src/pusher/models/Space.ts:208:44)
+play-1  |     at SpaceToBackForwarder.unregisterUser (/usr/src/play/src/pusher/models/SpaceToBackForwarder.ts:188:29)
+play-1  |     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+play-1  |     at async <anonymous> (/usr/src/play/src/pusher/services/SocketManager.ts:841:21)
+play-1  |     at async Promise.all (index 0)
+play-1  |     at async SocketManager.leaveSpaces (/usr/src/play/src/pusher/services/SocketManager.ts:865:9)
+play-1  | Upgrading connection to WebSocket for tab 94a66fa9-9b32-405d-baad-8da69aed557b
+play-1  | Error unregistering user from space localWorld.allWorldUser: SpaceDestroyedError: Query "removeSpaceUserAnswer" cancelled because the space is being destroyed (pending for 0ms)
+play-1  |     at Query.destroy (/usr/src/play/src/pusher/models/SpaceQuery.ts:111:17)
+play-1  |     at Space.cleanup (/usr/src/play/src/pusher/models/Space.ts:208:44)
+play-1  |     at SpaceToBackForwarder.unregisterUser (/usr/src/play/src/pusher/models/SpaceToBackForwarder.ts:188:29)
+play-1  |     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+play-1  |     at async <anonymous> (/usr/src/play/src/pusher/services/SocketManager.ts:841:21)
+play-1  |     at async Promise.all (index 0)
+play-1  |     at async SocketManager.leaveSpaces (/usr/src/play/src/pusher/services/SocketManager.ts:865:9)
+play-1  | Upgrading connection to WebSocket for tab 60cdb6bd-85d7-422e-b082-568a4e828d71
+play-1  | Upgrading connection to WebSocket for tab c4a94285-62d8-4cff-a895-473432cfcae2

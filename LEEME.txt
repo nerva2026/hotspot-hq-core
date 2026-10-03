@@ -1,0 +1,3 @@
+Resultados del banco de pruebas (rama banco-pruebas). Se sustituyen enteros en cada ejecución.
+Ejecución: 37150548664 · job «banco»: success
+La carpeta variantes/ guarda la última ejecución de cada variante (hoy, solo «sin-parche-12»).

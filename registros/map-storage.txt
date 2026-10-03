@@ -1,0 +1,23 @@
+map-storage-1  | 
+map-storage-1  | > map-storage@1.0.0 start
+map-storage-1  | > if [ $PATH_PREFIX ]; then npm run front:build; fi && ESBK_TSCONFIG_PATH=tsconfig-node.json tsx ./src/index.ts
+map-storage-1  | 
+map-storage-1  | 
+map-storage-1  | > map-storage@1.0.0 front:build
+map-storage-1  | > vite build
+map-storage-1  | 
+map-storage-1  | 8:27:20 PM [vite-plugin-svelte] no Svelte config found at /usr/src/map-storage - using default configuration.
+map-storage-1  | vite v8.1.4 building client environment for production...
+map-storage-1  | [2Ktransforming...✓ 255 modules transformed.
+map-storage-1  | rendering chunks...
+map-storage-1  | computing gzip size...
+map-storage-1  | dist-ui/index.html                          0.43 kB │ gzip:  0.30 kB
+map-storage-1  | dist-ui/assets/icon-512x512-Dn1sa_le.png    4.33 kB
+map-storage-1  | dist-ui/assets/index-CKIR-uK9.js          220.73 kB │ gzip: 55.28 kB │ map: 1,099.05 kB
+map-storage-1  | 
+map-storage-1  | ✓ built in 680ms
+map-storage-1  | [2026-10-03T20:27:24.626Z] Application is running on port 3000
+map-storage-1  | (node:65) DeprecationWarning: Calling start() is no longer necessary. It can be safely omitted.
+map-storage-1  | (Use `node --trace-deprecation ...` to show where the warning was created)
+map-storage-1  | [2026-10-03T20:27:24.735Z] Application is running
+map-storage-1  | [2026-10-03T20:27:24.736Z] gRPC port is 50053

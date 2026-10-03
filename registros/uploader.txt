@@ -1,0 +1,11 @@
+uploader-1  | 
+uploader-1  | > workadventureuploader@1.0.0 start
+uploader-1  | > tsx ./server.ts
+uploader-1  | 
+uploader-1  | WorkAdventure uploader starting on port 8080!
+uploader-1  | (node:32) NOTE: The AWS SDK for JavaScript (v2) has reached end-of-support.
+uploader-1  | It will no longer receive updates or releases.
+uploader-1  | 
+uploader-1  | Please migrate your code to use AWS SDK for JavaScript (v3).
+uploader-1  | For more information, check the blog post at https://a.co/cUPnyil
+uploader-1  | (Use `node --trace-warnings ...` to show where the warning was created)

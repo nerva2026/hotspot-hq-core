@@ -1,0 +1,12 @@
+NAME                           IMAGE                                                 COMMAND                  SERVICE               CREATED         STATUS                     PORTS
+docker-back-1                  thecodingmachine/workadventure-back:v1.33.10          "docker-entrypoint.s…"   back                  9 minutes ago   Up 8 minutes (healthy)     8080/tcp, 50051/tcp
+docker-icon-1                  matthiasluedtke/iconserver:v3.21.0                    "/iconserver"            icon                  9 minutes ago   Up 9 minutes               
+docker-livekit-1               livekit/livekit-server:v1.10.1                        "/livekit-server --c…"   livekit               9 minutes ago   Up 9 minutes               0.0.0.0:7881->7881/tcp, [::]:7881->7881/tcp, 0.0.0.0:7882->7882/udp, [::]:7882->7882/udp
+docker-map-storage-1           thecodingmachine/workadventure-map-storage:v1.33.10   "docker-entrypoint.s…"   map-storage           9 minutes ago   Up 9 minutes (healthy)     3000/tcp, 50053/tcp
+docker-maps-1                  thecodingmachine/php:8.1-v4-apache-node12             "/usr/local/bin/dock…"   maps                  9 minutes ago   Up 9 minutes               80/tcp
+docker-play-1                  hotspot-play:banco                                    "docker-entrypoint.s…"   play                  9 minutes ago   Up 9 minutes (healthy)     3000/tcp
+docker-redis-1                 redis:6                                               "docker-entrypoint.s…"   redis                 9 minutes ago   Up 9 minutes               6379/tcp
+docker-reverse-proxy-1         traefik:v3.6.1                                        "/entrypoint.sh --lo…"   reverse-proxy         9 minutes ago   Up 8 minutes               0.0.0.0:80->80/tcp, [::]:80->80/tcp, 0.0.0.0:443->443/tcp, [::]:443->443/tcp, 0.0.0.0:50051->50051/tcp, [::]:50051->50051/tcp
+docker-rustfs-livekit-1        rustfs/rustfs:1.0.0-alpha.83                          "/entrypoint.sh /data"   rustfs-livekit        9 minutes ago   Up 9 minutes               9000-9001/tcp
+docker-rustfs-livekit-init-1   amazon/aws-cli:2.31.1                                 "/bin/sh -ec 'until …"   rustfs-livekit-init   9 minutes ago   Exited (0) 8 minutes ago   
+docker-uploader-1              thecodingmachine/workadventure-uploader:v1.33.10      "docker-entrypoint.s…"   uploader              9 minutes ago   Up 9 minutes               8080/tcp

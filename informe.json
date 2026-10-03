@@ -1,0 +1,4982 @@
+{
+ "ejecucion": {
+  "id": "37150548664",
+  "numero": "19",
+  "intento": "2",
+  "commit": "3de978f65f11416eb1915df333857bfa7459cd92",
+  "rama": "banco-pruebas",
+  "fecha": "2026-10-03T20:36:22.364Z",
+  "workadventure": "v1.33.10",
+  "oficina": "v0.4.1",
+  "variante": null,
+  "segundosDePruebas": 527
+ },
+ "cuenta": {
+  "bien": 92,
+  "mal": 0,
+  "no se pudo": 0,
+  "dato": 16
+ },
+ "puntos": [
+  {
+   "punto": "0",
+   "titulo": "SONDA (el banco monta una llamada)",
+   "claves": [
+    "llamada"
+   ],
+   "estado": "bien",
+   "comprobaciones": [
+    {
+     "punto": "0",
+     "clave": "llamada",
+     "titulo": "El banco es capaz de montar una llamada entre dos jugadores",
+     "estado": "bien",
+     "dato": {
+      "error": "",
+      "antesDeJuntarse": {
+       "webrtc": 0,
+       "cajas": 1,
+       "script": false,
+       "entradas": 0,
+       "salidas": 0
+      },
+      "alicia": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      },
+      "benito": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      },
+      "posiciones": {
+       "alicia": {
+        "x": 176,
+        "y": 272
+       },
+       "benito": {
+        "x": 208,
+        "y": 272
+       }
+      },
+      "scriptAlicia": {
+       "dentro": true,
+       "entradas": [
+        {
+         "t": 1791059265315,
+         "tipo": "[object Array]",
+         "jugadores": [
+          {
+           "playerId": 3,
+           "name": "Benito"
+          }
+         ]
+        }
+       ],
+       "salidas": []
+      },
+      "aLos10Segundos": {
+       "saleElAvisoDeQueNoSeOyeElMicrofono": false,
+       "cajasClarasOMarcosALaVista": [
+        {
+         "que": "video",
+         "id": "",
+         "clases": "bg-contrast/80 backdrop-blur absolute block object-fill",
+         "fondo": "rgb(29, 24, 22)",
+         "caja": {
+          "x": 382,
+          "y": 96,
+          "ancho": 251,
+          "alto": 141
+         },
+         "camino": "video[webrtc-video] < div < div < div < div < div < div"
+        },
+        {
+         "que": "video",
+         "id": "",
+         "clases": "bg-contrast/80 backdrop-blur absolute block object-fill",
+         "fondo": "rgb(29, 24, 22)",
+         "caja": {
+          "x": 648,
+          "y": 96,
+          "ancho": 252,
+          "alto": 141
+         },
+         "camino": "video[webrtc-video] < div < div < div < div < div < div"
+        }
+       ]
+      }
+     },
+     "capturas": [
+      "capturas/0-llamada-alicia.png",
+      "capturas/0-llamada-benito.png",
+      "capturas/0-llamada-alicia-a-los-10-s.png"
+     ],
+     "t": "2026-10-03T20:27:55.696Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "00-sonda.spec.ts",
+    "titulo": "0 · sonda: dos jugadores se juntan",
+    "estado": "passed",
+    "segundos": 19.2,
+    "error": ""
+   }
+  },
+  {
+   "punto": "1",
+   "titulo": "ARRANCA",
+   "claves": [
+    "entra",
+    "aviso",
+    "historico",
+    "aviso-cierra",
+    "version",
+    "aviso-vuelve",
+    "medidas"
+   ],
+   "estado": "bien",
+   "comprobaciones": [
+    {
+     "punto": "1",
+     "clave": "entra",
+     "titulo": "Se entra en el mapa de prueba con nuestra imagen",
+     "estado": "bien",
+     "dato": {
+      "titulo": "HOT SPOT S.L.",
+      "muneco": "hs-w01",
+      "direccion": "https://play.workadventure.localhost/_/arranca/maps.workadventure.localhost/tests/banco/banco.tmj",
+      "erroresDelScript": [],
+      "posicion": {
+       "x": 112,
+       "y": 112
+      }
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:27:59.382Z"
+    },
+    {
+     "punto": "1",
+     "clave": "aviso",
+     "titulo": "Sale el aviso «¡Bienvenido a la v0.4.1!»",
+     "estado": "bien",
+     "dato": {
+      "titulo": "¡Bienvenido a la v0.4.1!",
+      "lineas": [
+       "Vuelven los botones de la barra de arriba (Saludar, Bailar, Sentarse…): en la v0.4.0 no salían.",
+       "La letra e, redibujada: se lee mejor.",
+       "ESPACIO sale resaltado en amarillo en los avisos.",
+       "En la calle ya no te sales por los bordes.",
+       "Las teclas de ayuda ya no quedan tapadas en ventanas estrechas.",
+       "El retrete libre ya no dice «Ocupado».",
+       "A los flight cases se vuelve a llegar por arriba."
+      ]
+     },
+     "capturas": [
+      "capturas/1-aviso-pantalla.png",
+      "capturas/1-aviso.png"
+     ],
+     "t": "2026-10-03T20:28:00.631Z"
+    },
+    {
+     "punto": "1",
+     "clave": "historico",
+     "titulo": "Debajo de las novedades, el histórico: cada versión anterior, plegada, se abre y enseña lo que traía",
+     "estado": "bien",
+     "dato": {
+      "versiones": [
+       "v0.4.0",
+       "v0.3.0"
+      ],
+      "fechas": [
+       "3 oct 2026",
+       "2 oct 2026"
+      ],
+      "plegadas": [
+       true,
+       true
+      ],
+      "abierta": true,
+      "lineasDeLaPrimera": [
+       "Teclas nuevas: X para sentarte, B para bailar, H para saludar y V para aplaudir. También mientras hablas con alguien.",
+       "Los objetos hacen cosas: la nevera, la cafetera, el timbre, el espejo… y el baño.",
+       "Oficina reformada: mesa larga en reuniones, despacho grande, aseos pequeños y luz que cambia con la hora.",
+       "La calle y la terraza, terminadas. Ya te puedes sentar en ellas.",
+       "Los cumpleaños, en el calendario del hall.",
+       "Cada personaje enseña solo lo suyo.",
+       "Bombo, más gato que nunca.",
+       "Letras y números más claros, y burbujas de decir y pensar nuevas."
+      ]
+     },
+     "capturas": [
+      "capturas/1-aviso-historico.png"
+     ],
+     "t": "2026-10-03T20:28:00.837Z"
+    },
+    {
+     "punto": "1",
+     "clave": "aviso-cierra",
+     "titulo": "El aviso se cierra con su botón",
+     "estado": "bien",
+     "dato": "cerrado con el botón «Cerrar»",
+     "capturas": [],
+     "t": "2026-10-03T20:28:00.877Z"
+    },
+    {
+     "punto": "1",
+     "clave": "version",
+     "titulo": "Abajo a la izquierda pone la versión",
+     "estado": "bien",
+     "dato": {
+      "texto": "v0.4.1",
+      "caja": {
+       "x": 0,
+       "y": 779,
+       "width": 38.984375,
+       "height": 21
+      },
+      "ventana": {
+       "width": 1280,
+       "height": 800
+      },
+      "versionDelRepositorio": "v0.4.1"
+     },
+     "capturas": [
+      "capturas/1-pantalla-1280x800.png",
+      "capturas/1-version.png"
+     ],
+     "t": "2026-10-03T20:28:00.984Z"
+    },
+    {
+     "punto": "1",
+     "clave": "aviso-vuelve",
+     "titulo": "Pulsar la versión vuelve a abrir el aviso, y Esc lo cierra",
+     "estado": "bien",
+     "dato": "se abre al pulsar la versión y se cierra con Esc",
+     "capturas": [],
+     "t": "2026-10-03T20:28:01.036Z"
+    },
+    {
+     "punto": "1",
+     "clave": "medidas",
+     "titulo": "Medidas de la pantalla (para leer las capturas)",
+     "estado": "dato",
+     "dato": {
+      "pixelesDePantallaPorCasilla": {
+       "x": 48,
+       "y": 48
+      },
+      "origenDelMapaEnPantalla": {
+       "x": 0,
+       "y": 0
+      },
+      "marcos": [
+       "https://play.workadventure.localhost/local-script?script=https%3A%2F%2Fmaps.workadventure.localhost%2Ftests%2Fbanco%2Fbanco.js"
+      ],
+      "lienzo": {
+       "x": 0,
+       "y": 0,
+       "width": 1281,
+       "height": 801,
+       "top": 0,
+       "right": 1281,
+       "bottom": 801,
+       "left": 0
+      },
+      "dpr": 1,
+      "idioma": "es-ES"
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:28:01.073Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "01-arranca.spec.ts",
+    "titulo": "1 · arranca: versión y aviso de bienvenida",
+    "estado": "passed",
+    "segundos": 5.3,
+    "error": ""
+   }
+  },
+  {
+   "punto": "2",
+   "titulo": "TECLAS (parche 11)",
+   "claves": [
+    "llegan",
+    "e-no",
+    "con-ctrl",
+    "repeticion",
+    "decir",
+    "vuelven",
+    "chat"
+   ],
+   "estado": "bien",
+   "comprobaciones": [
+    {
+     "punto": "2",
+     "clave": "llegan",
+     "titulo": "X, B, H, G y V llegan como «hs:tecla» con { code } y sin senderId",
+     "estado": "bien",
+     "dato": {
+      "codigos": [
+       "KeyX",
+       "KeyB",
+       "KeyH",
+       "KeyG",
+       "KeyV"
+      ],
+      "eventos": [
+       {
+        "name": "hs:tecla",
+        "data": {
+         "code": "KeyX"
+        },
+        "senderId": null,
+        "conSenderId": false,
+        "t": 1791059284620
+       },
+       {
+        "name": "hs:tecla",
+        "data": {
+         "code": "KeyB"
+        },
+        "senderId": null,
+        "conSenderId": false,
+        "t": 1791059284856
+       },
+       {
+        "name": "hs:tecla",
+        "data": {
+         "code": "KeyH"
+        },
+        "senderId": null,
+        "conSenderId": false,
+        "t": 1791059285047
+       },
+       {
+        "name": "hs:tecla",
+        "data": {
+         "code": "KeyG"
+        },
+        "senderId": null,
+        "conSenderId": false,
+        "t": 1791059285247
+       },
+       {
+        "name": "hs:tecla",
+        "data": {
+         "code": "KeyV"
+        },
+        "senderId": null,
+        "conSenderId": false,
+        "t": 1791059285447
+       }
+      ]
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:28:05.649Z"
+    },
+    {
+     "punto": "2",
+     "clave": "e-no",
+     "titulo": "La E no llega (no está en la lista): abre el explorador de la sala, como siempre",
+     "estado": "bien",
+     "dato": {
+      "eventosNuevos": 0,
+      "laEAbreElExplorador": true,
+      "eventosConElExploradorAbierto": 0
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:28:07.475Z"
+    },
+    {
+     "punto": "2",
+     "clave": "con-ctrl",
+     "titulo": "Con Ctrl o Alt pulsado no llegan",
+     "estado": "bien",
+     "dato": {
+      "eventosNuevos": 0
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:28:07.892Z"
+    },
+    {
+     "punto": "2",
+     "clave": "repeticion",
+     "titulo": "Dejar la tecla pulsada no repite el evento",
+     "estado": "bien",
+     "dato": {
+      "conUnaPulsacionYCuatroRepeticiones": 1,
+      "conTresKeyboardDownDePlaywright": 1,
+      "eventos": [
+       {
+        "code": "KeyX",
+        "ms": 0
+       },
+       {
+        "code": "KeyX",
+        "ms": 766
+       }
+      ]
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:28:09.251Z"
+    },
+    {
+     "punto": "2",
+     "clave": "decir",
+     "titulo": "Escribiendo en el campo de «decir» no llegan",
+     "estado": "bien",
+     "dato": {
+      "eventosNuevos": 0,
+      "textoEnElCampo": "DecirPensar"
+     },
+     "capturas": [
+      "capturas/2-decir-escribiendo.png"
+     ],
+     "t": "2026-10-03T20:28:10.158Z"
+    },
+    {
+     "punto": "2",
+     "clave": "vuelven",
+     "titulo": "Al cerrar el campo, las teclas vuelven a llegar",
+     "estado": "bien",
+     "dato": {
+      "eventosNuevos": 1
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:28:10.372Z"
+    },
+    {
+     "punto": "2",
+     "clave": "chat",
+     "titulo": "Escribiendo en el chat, las teclas del mapa no llegan",
+     "estado": "bien",
+     "dato": {
+      "eventosNuevos": 0,
+      "textoEnElCampo": "xbhgv XBHGV"
+     },
+     "capturas": [
+      "capturas/2-chat-escribiendo.png"
+     ],
+     "t": "2026-10-03T20:30:34.584Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "02-teclas.spec.ts",
+    "titulo": "2 · teclas del mapa (parche 11)",
+    "estado": "passed",
+    "segundos": 9.3,
+    "error": ""
+   }
+  },
+  {
+   "punto": "3",
+   "titulo": "ACCIONES (parche 08)",
+   "claves": [
+    "referencia",
+    "accion-bailar",
+    "accion-sentado-abajo",
+    "accion-sentado-izquierda",
+    "accion-sentado-derecha",
+    "accion-sentado-arriba",
+    "accion-saludar",
+    "accion-aplaudir",
+    "accion-sentado-abajo-mano",
+    "accion-sentado-abajo-palmas",
+    "accion-bailar-mano",
+    "accion-sentado-abajo-gotas",
+    "accion-sentado-abajo-nube",
+    "accion-quieto-burbujas",
+    "accion-sentado-abajo-zetas",
+    "accion-quieto-corazones",
+    "accion-quieto-chispas",
+    "lleva-lata",
+    "lleva-cafe",
+    "lleva-agua",
+    "lleva-cana",
+    "lleva-snack",
+    "lleva-disco",
+    "beber",
+    "no-existe-volar",
+    "no-existe-sentado-abajo-nada",
+    "no-existe-lleva",
+    "saludar-tras-sentarse",
+    "de-pie-tras-sentarse",
+    "andando"
+   ],
+   "estado": "bien",
+   "comprobaciones": [
+    {
+     "punto": "3",
+     "clave": "referencia",
+     "titulo": "El muñeco sin hacer nada (referencia para comparar)",
+     "estado": "dato",
+     "dato": {
+      "muneco": "hs-w01",
+      "posicion": {
+       "x": 400,
+       "y": 304
+      },
+      "recorte": {
+       "x": 516,
+       "y": 288,
+       "width": 168,
+       "height": 216
+      },
+      "pixelesQueCambianSolos": 0
+     },
+     "capturas": [
+      "capturas/3-nada-1.png",
+      "capturas/3-nada-2.png"
+     ],
+     "t": "2026-10-03T20:28:17.074Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-bailar",
+     "titulo": "accion: \"bailar\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 2406,
+       "total": 36288,
+       "cambioMedio": 66.3,
+       "caja": {
+        "x0": 53,
+        "y0": 40,
+        "x1": 115,
+        "y1": 191
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 3372,
+       "total": 36288,
+       "cambioMedio": 62,
+       "caja": {
+        "x0": 53,
+        "y0": 37,
+        "x1": 115,
+        "y1": 189
+       }
+      },
+      "teniaQueMoverse": true,
+      "seHaVistoMoverse": true,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-bailar-1.png",
+      "capturas/3-accion-bailar-2.png"
+     ],
+     "t": "2026-10-03T20:28:19.462Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-sentado-abajo",
+     "titulo": "accion: \"sentado:abajo\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 1926,
+       "total": 36288,
+       "cambioMedio": 90.2,
+       "caja": {
+        "x0": 66,
+        "y0": 132,
+        "x1": 101,
+        "y1": 197
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 0,
+       "total": 36288,
+       "cambioMedio": 0,
+       "caja": null
+      },
+      "teniaQueMoverse": false,
+      "seHaVistoMoverse": false,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-sentado-abajo-1.png",
+      "capturas/3-accion-sentado-abajo-2.png"
+     ],
+     "t": "2026-10-03T20:28:21.225Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-sentado-izquierda",
+     "titulo": "accion: \"sentado:izquierda\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 1683,
+       "total": 36288,
+       "cambioMedio": 83.4,
+       "caja": {
+        "x0": 60,
+        "y0": 132,
+        "x1": 98,
+        "y1": 194
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 0,
+       "total": 36288,
+       "cambioMedio": 0,
+       "caja": null
+      },
+      "teniaQueMoverse": false,
+      "seHaVistoMoverse": false,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-sentado-izquierda-1.png",
+      "capturas/3-accion-sentado-izquierda-2.png"
+     ],
+     "t": "2026-10-03T20:28:22.926Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-sentado-derecha",
+     "titulo": "accion: \"sentado:derecha\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 1683,
+       "total": 36288,
+       "cambioMedio": 83.3,
+       "caja": {
+        "x0": 69,
+        "y0": 132,
+        "x1": 107,
+        "y1": 194
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 0,
+       "total": 36288,
+       "cambioMedio": 0,
+       "caja": null
+      },
+      "teniaQueMoverse": false,
+      "seHaVistoMoverse": false,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-sentado-derecha-1.png",
+      "capturas/3-accion-sentado-derecha-2.png"
+     ],
+     "t": "2026-10-03T20:28:24.626Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-sentado-arriba",
+     "titulo": "accion: \"sentado:arriba\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 1764,
+       "total": 36288,
+       "cambioMedio": 89,
+       "caja": {
+        "x0": 69,
+        "y0": 132,
+        "x1": 98,
+        "y1": 194
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 0,
+       "total": 36288,
+       "cambioMedio": 0,
+       "caja": null
+      },
+      "teniaQueMoverse": false,
+      "seHaVistoMoverse": false,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-sentado-arriba-1.png",
+      "capturas/3-accion-sentado-arriba-2.png"
+     ],
+     "t": "2026-10-03T20:28:26.324Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-saludar",
+     "titulo": "accion: \"saludar\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 697,
+       "total": 36288,
+       "cambioMedio": 63.7,
+       "caja": {
+        "x0": 92,
+        "y0": 112,
+        "x1": 118,
+        "y1": 141
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 469,
+       "total": 36288,
+       "cambioMedio": 80.6,
+       "caja": {
+        "x0": 87,
+        "y0": 112,
+        "x1": 118,
+        "y1": 141
+       }
+      },
+      "teniaQueMoverse": true,
+      "seHaVistoMoverse": true,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-saludar-1.png",
+      "capturas/3-accion-saludar-2.png"
+     ],
+     "t": "2026-10-03T20:28:28.514Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-aplaudir",
+     "titulo": "accion: \"aplaudir\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 1326,
+       "total": 36288,
+       "cambioMedio": 85.5,
+       "caja": {
+        "x0": 56,
+        "y0": 130,
+        "x1": 112,
+        "y1": 191
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 144,
+       "total": 36288,
+       "cambioMedio": 120.1,
+       "caja": {
+        "x0": 66,
+        "y0": 154,
+        "x1": 101,
+        "y1": 171
+       }
+      },
+      "teniaQueMoverse": true,
+      "seHaVistoMoverse": true,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-aplaudir-1.png",
+      "capturas/3-accion-aplaudir-2.png"
+     ],
+     "t": "2026-10-03T20:28:30.779Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-sentado-abajo-mano",
+     "titulo": "accion: \"sentado:abajo+mano\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 2561,
+       "total": 36288,
+       "cambioMedio": 88.7,
+       "caja": {
+        "x0": 66,
+        "y0": 124,
+        "x1": 118,
+        "y1": 197
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 480,
+       "total": 36288,
+       "cambioMedio": 106.4,
+       "caja": {
+        "x0": 87,
+        "y0": 124,
+        "x1": 118,
+        "y1": 153
+       }
+      },
+      "teniaQueMoverse": true,
+      "seHaVistoMoverse": true,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-sentado-abajo-mano-1.png",
+      "capturas/3-accion-sentado-abajo-mano-2.png"
+     ],
+     "t": "2026-10-03T20:28:33.034Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-sentado-abajo-palmas",
+     "titulo": "accion: \"sentado:abajo+palmas\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 2010,
+       "total": 36288,
+       "cambioMedio": 86.8,
+       "caja": {
+        "x0": 65,
+        "y0": 132,
+        "x1": 103,
+        "y1": 197
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 798,
+       "total": 36288,
+       "cambioMedio": 106.1,
+       "caja": {
+        "x0": 56,
+        "y0": 156,
+        "x1": 112,
+        "y1": 185
+       }
+      },
+      "teniaQueMoverse": true,
+      "seHaVistoMoverse": true,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-sentado-abajo-palmas-1.png",
+      "capturas/3-accion-sentado-abajo-palmas-2.png"
+     ],
+     "t": "2026-10-03T20:28:35.313Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-bailar-mano",
+     "titulo": "accion: \"bailar+mano\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 3829,
+       "total": 36288,
+       "cambioMedio": 68.7,
+       "caja": {
+        "x0": 50,
+        "y0": 30,
+        "x1": 122,
+        "y1": 191
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 3338,
+       "total": 36288,
+       "cambioMedio": 62,
+       "caja": {
+        "x0": 50,
+        "y0": 30,
+        "x1": 122,
+        "y1": 179
+       }
+      },
+      "teniaQueMoverse": true,
+      "seHaVistoMoverse": true,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-bailar-mano-1.png",
+      "capturas/3-accion-bailar-mano-2.png"
+     ],
+     "t": "2026-10-03T20:28:37.554Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-sentado-abajo-gotas",
+     "titulo": "accion: \"sentado:abajo+gotas\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 3033,
+       "total": 36288,
+       "cambioMedio": 77.2,
+       "caja": {
+        "x0": 47,
+        "y0": 45,
+        "x1": 106,
+        "y1": 197
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 2079,
+       "total": 36288,
+       "cambioMedio": 52.8,
+       "caja": {
+        "x0": 47,
+        "y0": 28,
+        "x1": 106,
+        "y1": 101
+       }
+      },
+      "teniaQueMoverse": true,
+      "seHaVistoMoverse": true,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-sentado-abajo-gotas-1.png",
+      "capturas/3-accion-sentado-abajo-gotas-2.png"
+     ],
+     "t": "2026-10-03T20:28:39.823Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-sentado-abajo-nube",
+     "titulo": "accion: \"sentado:abajo+nube\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 3276,
+       "total": 36288,
+       "cambioMedio": 76.2,
+       "caja": {
+        "x0": 47,
+        "y0": 39,
+        "x1": 121,
+        "y1": 197
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 2655,
+       "total": 36288,
+       "cambioMedio": 57.9,
+       "caja": {
+        "x0": 41,
+        "y0": 39,
+        "x1": 127,
+        "y1": 93
+       }
+      },
+      "teniaQueMoverse": true,
+      "seHaVistoMoverse": true,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-sentado-abajo-nube-1.png",
+      "capturas/3-accion-sentado-abajo-nube-2.png"
+     ],
+     "t": "2026-10-03T20:28:42.066Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-quieto-burbujas",
+     "titulo": "accion: \"quieto+burbujas\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 864,
+       "total": 36288,
+       "cambioMedio": 66.6,
+       "caja": {
+        "x0": 63,
+        "y0": 48,
+        "x1": 121,
+        "y1": 101
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 1419,
+       "total": 36288,
+       "cambioMedio": 74.7,
+       "caja": {
+        "x0": 62,
+        "y0": 48,
+        "x1": 121,
+        "y1": 101
+       }
+      },
+      "teniaQueMoverse": true,
+      "seHaVistoMoverse": true,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-quieto-burbujas-1.png",
+      "capturas/3-accion-quieto-burbujas-2.png"
+     ],
+     "t": "2026-10-03T20:28:44.308Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-sentado-abajo-zetas",
+     "titulo": "accion: \"sentado:abajo+zetas\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 2898,
+       "total": 36288,
+       "cambioMedio": 80.8,
+       "caja": {
+        "x0": 51,
+        "y0": 39,
+        "x1": 116,
+        "y1": 197
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 1908,
+       "total": 36288,
+       "cambioMedio": 62.5,
+       "caja": {
+        "x0": 51,
+        "y0": 39,
+        "x1": 116,
+        "y1": 93
+       }
+      },
+      "teniaQueMoverse": true,
+      "seHaVistoMoverse": true,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-sentado-abajo-zetas-1.png",
+      "capturas/3-accion-sentado-abajo-zetas-2.png"
+     ],
+     "t": "2026-10-03T20:28:46.557Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-quieto-corazones",
+     "titulo": "accion: \"quieto+corazones\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 1107,
+       "total": 36288,
+       "cambioMedio": 48,
+       "caja": {
+        "x0": 47,
+        "y0": 45,
+        "x1": 106,
+        "y1": 101
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 1752,
+       "total": 36288,
+       "cambioMedio": 53.3,
+       "caja": {
+        "x0": 47,
+        "y0": 45,
+        "x1": 106,
+        "y1": 101
+       }
+      },
+      "teniaQueMoverse": true,
+      "seHaVistoMoverse": true,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-quieto-corazones-1.png",
+      "capturas/3-accion-quieto-corazones-2.png"
+     ],
+     "t": "2026-10-03T20:28:48.806Z"
+    },
+    {
+     "punto": "3",
+     "clave": "accion-quieto-chispas",
+     "titulo": "accion: \"quieto+chispas\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 891,
+       "total": 36288,
+       "cambioMedio": 64,
+       "caja": {
+        "x0": 50,
+        "y0": 36,
+        "x1": 118,
+        "y1": 92
+       }
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 1746,
+       "total": 36288,
+       "cambioMedio": 63.7,
+       "caja": {
+        "x0": 44,
+        "y0": 36,
+        "x1": 124,
+        "y1": 93
+       }
+      },
+      "teniaQueMoverse": true,
+      "seHaVistoMoverse": true,
+      "capturasHechas": 2,
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-accion-quieto-chispas-1.png",
+      "capturas/3-accion-quieto-chispas-2.png"
+     ],
+     "t": "2026-10-03T20:28:51.040Z"
+    },
+    {
+     "punto": "3",
+     "clave": "lleva-lata",
+     "titulo": "lleva: \"lata\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 432,
+       "total": 36288,
+       "cambioMedio": 84.3,
+       "caja": {
+        "x0": 92,
+        "y0": 150,
+        "x1": 109,
+        "y1": 173
+       }
+      },
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-lleva-lata.png"
+     ],
+     "t": "2026-10-03T20:28:52.470Z"
+    },
+    {
+     "punto": "3",
+     "clave": "lleva-cafe",
+     "titulo": "lleva: \"cafe\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 396,
+       "total": 36288,
+       "cambioMedio": 118.7,
+       "caja": {
+        "x0": 90,
+        "y0": 153,
+        "x1": 110,
+        "y1": 173
+       }
+      },
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-lleva-cafe.png"
+     ],
+     "t": "2026-10-03T20:28:53.220Z"
+    },
+    {
+     "punto": "3",
+     "clave": "lleva-agua",
+     "titulo": "lleva: \"agua\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 414,
+       "total": 36288,
+       "cambioMedio": 101.2,
+       "caja": {
+        "x0": 92,
+        "y0": 150,
+        "x1": 109,
+        "y1": 173
+       }
+      },
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-lleva-agua.png"
+     ],
+     "t": "2026-10-03T20:28:53.987Z"
+    },
+    {
+     "punto": "3",
+     "clave": "lleva-cana",
+     "titulo": "lleva: \"cana\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 360,
+       "total": 36288,
+       "cambioMedio": 95.2,
+       "caja": {
+        "x0": 92,
+        "y0": 153,
+        "x1": 109,
+        "y1": 173
+       }
+      },
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-lleva-cana.png"
+     ],
+     "t": "2026-10-03T20:28:54.740Z"
+    },
+    {
+     "punto": "3",
+     "clave": "lleva-snack",
+     "titulo": "lleva: \"snack\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 441,
+       "total": 36288,
+       "cambioMedio": 87.8,
+       "caja": {
+        "x0": 90,
+        "y0": 153,
+        "x1": 110,
+        "y1": 173
+       }
+      },
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-lleva-snack.png"
+     ],
+     "t": "2026-10-03T20:28:55.490Z"
+    },
+    {
+     "punto": "3",
+     "clave": "lleva-disco",
+     "titulo": "lleva: \"disco\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 405,
+       "total": 36288,
+       "cambioMedio": 74.5,
+       "caja": {
+        "x0": 90,
+        "y0": 153,
+        "x1": 110,
+        "y1": 173
+       }
+      },
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-lleva-disco.png"
+     ],
+     "t": "2026-10-03T20:28:56.237Z"
+    },
+    {
+     "punto": "3",
+     "clave": "beber",
+     "titulo": "accion: \"beber\" con una lata en la mano",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 432,
+       "total": 36288,
+       "cambioMedio": 89,
+       "caja": {
+        "x0": 80,
+        "y0": 127,
+        "x1": 97,
+        "y1": 150
+       }
+      },
+      "pixelesQueCambianEntreCapturas": [
+       336,
+       336,
+       336
+      ],
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-beber-1.png",
+      "capturas/3-beber-2.png",
+      "capturas/3-beber-3.png",
+      "capturas/3-beber-4.png"
+     ],
+     "t": "2026-10-03T20:28:59.550Z"
+    },
+    {
+     "punto": "3",
+     "clave": "no-existe-volar",
+     "titulo": "Un valor que no existe: \"volar\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 0,
+       "total": 36288,
+       "cambioMedio": 0,
+       "caja": null
+      },
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-no-existe-volar.png"
+     ],
+     "t": "2026-10-03T20:29:01.587Z"
+    },
+    {
+     "punto": "3",
+     "clave": "no-existe-sentado-abajo-nada",
+     "titulo": "Un valor que no existe: \"sentado:abajo+nada\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 0,
+       "total": 36288,
+       "cambioMedio": 0,
+       "caja": null
+      },
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-no-existe-sentado-abajo-nada.png"
+     ],
+     "t": "2026-10-03T20:29:02.938Z"
+    },
+    {
+     "punto": "3",
+     "clave": "no-existe-lleva",
+     "titulo": "Algo en la mano que no existe: lleva \"piano\"",
+     "estado": "bien",
+     "dato": {
+      "cambiaRespectoANada": {
+       "distintos": 0,
+       "total": 36288,
+       "cambioMedio": 0,
+       "caja": null
+      },
+      "errores": []
+     },
+     "capturas": [
+      "capturas/3-no-existe-lleva-piano.png"
+     ],
+     "t": "2026-10-03T20:29:03.824Z"
+    },
+    {
+     "punto": "3",
+     "clave": "saludar-tras-sentarse",
+     "titulo": "El mismo valor se dibuja igual venga de donde venga: \"saludar\" desde nada y desde \"sentado:abajo\"",
+     "estado": "bien",
+     "dato": {
+      "elCuerpoCambiaSegunDeDondeVenga": {
+       "distintos": 0,
+       "total": 1080,
+       "cambioMedio": 0,
+       "caja": null
+      },
+      "saludandoDesdeNadaElCuerpoEstaComoDePie": true,
+      "nota": "igual"
+     },
+     "capturas": [
+      "capturas/3-saludar-desde-nada.png",
+      "capturas/3-saludar-desde-sentado.png"
+     ],
+     "t": "2026-10-03T20:29:09.052Z"
+    },
+    {
+     "punto": "3",
+     "clave": "de-pie-tras-sentarse",
+     "titulo": "Tras estar sentado (hacia los cuatro lados), el muñeco queda de pie, entero y mirando hacia donde miraba el asiento",
+     "estado": "bien",
+     "dato": {
+      "pixelesDistintosDelMunecoDePieMirandoHaciaAhi": {
+       "abajo": 0,
+       "izquierda": 0,
+       "derecha": 0,
+       "arriba": 0
+      },
+      "laReferenciaDeAbajoEsLaDeSiempre": true,
+      "lasDemasReferenciasSonDistintas": {
+       "izquierda": 792,
+       "derecha": 810,
+       "arriba": 225
+      }
+     },
+     "capturas": [
+      "capturas/3-de-pie-mirando-abajo.png",
+      "capturas/3-de-pie-mirando-izquierda.png",
+      "capturas/3-de-pie-mirando-derecha.png",
+      "capturas/3-de-pie-mirando-arriba.png",
+      "capturas/3-de-pie-tras-sentado-abajo.png",
+      "capturas/3-de-pie-tras-sentado-izquierda.png",
+      "capturas/3-de-pie-tras-sentado-derecha.png",
+      "capturas/3-de-pie-tras-sentado-arriba.png"
+     ],
+     "t": "2026-10-03T20:29:28.610Z"
+    },
+    {
+     "punto": "3",
+     "clave": "andando",
+     "titulo": "Al echar a andar se deja la postura (y al parar, vuelve)",
+     "estado": "dato",
+     "dato": {
+      "nota": "mirar las capturas: sentado, andando, parado",
+      "posicionFinal": {
+       "x": 535,
+       "y": 304
+      }
+     },
+     "capturas": [
+      "capturas/3-andando-0-sentado.png",
+      "capturas/3-andando-1-andando.png",
+      "capturas/3-andando-2-parado.png"
+     ],
+     "t": "2026-10-03T20:29:31.088Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "03-acciones.spec.ts",
+    "titulo": "3 · acciones y cosas en la mano (parche 08)",
+    "estado": "passed",
+    "segundos": 80.7,
+    "error": ""
+   }
+  },
+  {
+   "punto": "4",
+   "titulo": "LO VEN LOS DEMÁS",
+   "claves": [
+    "entra-despues",
+    "saludar",
+    "lata",
+    "bailar-en-directo"
+   ],
+   "estado": "bien",
+   "comprobaciones": [
+    {
+     "punto": "4",
+     "clave": "entra-despues",
+     "titulo": "Benito entra DESPUÉS y ve a Alicia bailando con la lata",
+     "estado": "bien",
+     "dato": {
+      "aliciaEnElMapa": {
+       "x": 400,
+       "y": 304
+      },
+      "aliciaEnLaPantallaDeBenito": {
+       "x": 600,
+       "y": 456
+      },
+      "benitoSeHaAcercado": false,
+      "benito": {
+       "x": 112,
+       "y": 80
+      },
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 3640,
+       "total": 36288,
+       "cambioMedio": 64.1,
+       "caja": {
+        "x0": 45,
+        "y0": 25,
+        "x1": 127,
+        "y1": 185
+       }
+      },
+      "llamada": {
+       "webrtc": 0,
+       "cajas": 1,
+       "script": false,
+       "entradas": 0,
+       "salidas": 0
+      }
+     },
+     "capturas": [
+      "capturas/4-entra-despues-bailar-1.png",
+      "capturas/4-entra-despues-bailar-2.png",
+      "capturas/4-pantalla-de-benito.png"
+     ],
+     "t": "2026-10-03T20:29:45.888Z"
+    },
+    {
+     "punto": "4",
+     "clave": "saludar",
+     "titulo": "Alicia saluda y Benito lo ve (en directo)",
+     "estado": "bien",
+     "dato": {
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 689,
+       "total": 36288,
+       "cambioMedio": 76.1,
+       "caja": {
+        "x0": 87,
+        "y0": 112,
+        "x1": 121,
+        "y1": 141
+       }
+      }
+     },
+     "capturas": [
+      "capturas/4-saludar-1.png",
+      "capturas/4-saludar-2.png"
+     ],
+     "t": "2026-10-03T20:29:48.293Z"
+    },
+    {
+     "punto": "4",
+     "clave": "lata",
+     "titulo": "Alicia lleva una lata y Benito la ve; al soltarla, deja de verla",
+     "estado": "bien",
+     "dato": {
+      "laLataCambiaLaImagen": {
+       "distintos": 432,
+       "total": 36288,
+       "cambioMedio": 84.3,
+       "caja": {
+        "x0": 92,
+        "y0": 150,
+        "x1": 109,
+        "y1": 173
+       }
+      },
+      "sinNadaLaImagenEstaQuieta": true,
+      "pixelesQueCambianSolos": 0
+     },
+     "capturas": [
+      "capturas/4-lata.png",
+      "capturas/4-nada-1.png"
+     ],
+     "t": "2026-10-03T20:29:50.647Z"
+    },
+    {
+     "punto": "4",
+     "clave": "bailar-en-directo",
+     "titulo": "Alicia se pone a bailar con Benito ya dentro y él lo ve",
+     "estado": "bien",
+     "dato": {
+      "cambiaEntreLasDosCapturas": {
+       "distintos": 2865,
+       "total": 36288,
+       "cambioMedio": 63.7,
+       "caja": {
+        "x0": 51,
+        "y0": 31,
+        "x1": 124,
+        "y1": 180
+       }
+      },
+      "cambiaRespectoANada": {
+       "distintos": 3360,
+       "total": 36288,
+       "cambioMedio": 77.6,
+       "caja": {
+        "x0": 51,
+        "y0": 34,
+        "x1": 115,
+        "y1": 191
+       }
+      }
+     },
+     "capturas": [
+      "capturas/4-bailar-en-directo-1.png",
+      "capturas/4-bailar-en-directo-2.png"
+     ],
+     "t": "2026-10-03T20:29:53.478Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "04-los-demas.spec.ts",
+    "titulo": "4 · lo que hace uno lo ven los demás",
+    "estado": "passed",
+    "segundos": 22.4,
+    "error": ""
+   }
+  },
+  {
+   "punto": "5",
+   "titulo": "LLAMADA Y ACCIONES",
+   "claves": [
+    "se-forma",
+    "bailar",
+    "saludar",
+    "lleva",
+    "quitar",
+    "tras-el-chat"
+   ],
+   "estado": "bien",
+   "comprobaciones": [
+    {
+     "punto": "5",
+     "clave": "se-forma",
+     "titulo": "Alicia y Benito se juntan y empieza la llamada",
+     "estado": "bien",
+     "dato": {
+      "alicia": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      },
+      "benito": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      },
+      "posiciones": {
+       "alicia": {
+        "x": 176,
+        "y": 272
+       },
+       "benito": {
+        "x": 208,
+        "y": 272
+       }
+      }
+     },
+     "capturas": [
+      "capturas/5-llamada-alicia.png",
+      "capturas/5-llamada-benito.png"
+     ],
+     "t": "2026-10-03T20:30:04.778Z"
+    },
+    {
+     "punto": "5",
+     "clave": "bailar",
+     "titulo": "Alicia guarda accion: \"bailar\": la llamada sigue 5 s después y nadie se mueve",
+     "estado": "bien",
+     "dato": {
+      "sigueEnLlamada": true,
+      "sinCortesNiReenganches": true,
+      "nadieSeHaMovido": true,
+      "muestras": [
+       {
+        "s": 1,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 2,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 3,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 4,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 5,
+        "alicia": true,
+        "benito": true
+       }
+      ],
+      "alicia": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      },
+      "benito": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      },
+      "casillas": {
+       "alicia": {
+        "cx": 5,
+        "cy": 8
+       },
+       "benito": {
+        "cx": 6,
+        "cy": 8
+       }
+      }
+     },
+     "capturas": [
+      "capturas/5-bailar-alicia.png",
+      "capturas/5-bailar-benito.png"
+     ],
+     "t": "2026-10-03T20:30:12.242Z"
+    },
+    {
+     "punto": "5",
+     "clave": "saludar",
+     "titulo": "Alicia guarda accion: \"saludar\": la llamada sigue 5 s después y nadie se mueve",
+     "estado": "bien",
+     "dato": {
+      "sigueEnLlamada": true,
+      "sinCortesNiReenganches": true,
+      "nadieSeHaMovido": true,
+      "muestras": [
+       {
+        "s": 1,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 2,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 3,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 4,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 5,
+        "alicia": true,
+        "benito": true
+       }
+      ],
+      "alicia": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      },
+      "benito": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      },
+      "casillas": {
+       "alicia": {
+        "cx": 5,
+        "cy": 8
+       },
+       "benito": {
+        "cx": 6,
+        "cy": 8
+       }
+      }
+     },
+     "capturas": [
+      "capturas/5-saludar-alicia.png",
+      "capturas/5-saludar-benito.png"
+     ],
+     "t": "2026-10-03T20:30:19.785Z"
+    },
+    {
+     "punto": "5",
+     "clave": "lleva",
+     "titulo": "Alicia guarda lleva: \"lata\": la llamada sigue 5 s después y nadie se mueve",
+     "estado": "bien",
+     "dato": {
+      "sigueEnLlamada": true,
+      "sinCortesNiReenganches": true,
+      "nadieSeHaMovido": true,
+      "muestras": [
+       {
+        "s": 1,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 2,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 3,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 4,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 5,
+        "alicia": true,
+        "benito": true
+       }
+      ],
+      "alicia": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      },
+      "benito": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      },
+      "casillas": {
+       "alicia": {
+        "cx": 5,
+        "cy": 8
+       },
+       "benito": {
+        "cx": 6,
+        "cy": 8
+       }
+      }
+     },
+     "capturas": [
+      "capturas/5-lleva-alicia.png",
+      "capturas/5-lleva-benito.png"
+     ],
+     "t": "2026-10-03T20:30:27.169Z"
+    },
+    {
+     "punto": "5",
+     "clave": "quitar",
+     "titulo": "Alicia lo quita todo (accion y lleva vacías): la llamada sigue 5 s después y nadie se mueve",
+     "estado": "bien",
+     "dato": {
+      "sigueEnLlamada": true,
+      "sinCortesNiReenganches": true,
+      "nadieSeHaMovido": true,
+      "muestras": [
+       {
+        "s": 1,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 2,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 3,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 4,
+        "alicia": true,
+        "benito": true
+       },
+       {
+        "s": 5,
+        "alicia": true,
+        "benito": true
+       }
+      ],
+      "alicia": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      },
+      "benito": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      },
+      "casillas": {
+       "alicia": {
+        "cx": 5,
+        "cy": 8
+       },
+       "benito": {
+        "cx": 6,
+        "cy": 8
+       }
+      }
+     },
+     "capturas": [
+      "capturas/5-quitar-alicia.png",
+      "capturas/5-quitar-benito.png"
+     ],
+     "t": "2026-10-03T20:30:32.796Z"
+    },
+    {
+     "punto": "5",
+     "clave": "tras-el-chat",
+     "titulo": "Después de escribir en el chat, la llamada sigue",
+     "estado": "bien",
+     "dato": {
+      "alicia": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      },
+      "benito": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      }
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:30:36.453Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "05-llamada.spec.ts",
+    "titulo": "5 · la llamada aguanta las acciones",
+    "estado": "passed",
+    "segundos": 42.9,
+    "error": ""
+   }
+  },
+  {
+   "punto": "6",
+   "titulo": "BARRA DE BOTONES EN LLAMADA",
+   "claves": [
+    "sin-invitar",
+    "sin-llamada-1280x800",
+    "sin-llamada-1024x768",
+    "sin-llamada-1440x900",
+    "sin-llamada-anchos",
+    "callback",
+    "sustituir",
+    "boton-con-icono-relativo",
+    "boton-con-icono-imposible",
+    "llamada",
+    "en-llamada-1280x800",
+    "en-llamada-1024x768",
+    "en-llamada-1440x900",
+    "en-llamada-anchos",
+    "en-llamada-con-chat-1280x800",
+    "callback-en-llamada"
+   ],
+   "estado": "bien",
+   "comprobaciones": [
+    {
+     "punto": "6",
+     "clave": "sin-invitar",
+     "titulo": "«Compartir/Invitar» no está en la barra ni en el menú",
+     "estado": "bien",
+     "dato": {
+      "textosDeLaBarra": "3 Alicia En línea",
+      "enElMenu": [
+       "En línea",
+       "Ocupado",
+       "Vuelvo en un momento",
+       "No molestar",
+       "Editar tu nombre",
+       "Personalizar tu avatar",
+       "Añadir compañero",
+       "Editar cámara / micrófono",
+       "Reportar un problema",
+       "Todas las configuraciones",
+       "Ayuda y consejos"
+      ]
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:30:42.416Z"
+    },
+    {
+     "punto": "6",
+     "clave": "sin-llamada-1280x800",
+     "titulo": "SIN llamada, 1280×800: botones del mapa a la vista",
+     "estado": "bien",
+     "dato": {
+      "aLaVista": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "escondidos": [],
+      "ordenEnLaBarra": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "hayInvitar": false,
+      "enElMenu": [
+       "En línea",
+       "Ocupado",
+       "Vuelvo en un momento",
+       "No molestar",
+       "Editar tu nombre",
+       "Personalizar tu avatar",
+       "Añadir compañero",
+       "Editar cámara / micrófono",
+       "Reportar un problema",
+       "Todas las configuraciones",
+       "Ayuda y consejos"
+      ],
+      "anchoDeLaBarra": 1281,
+      "botones": [
+       {
+        "nombre": "Botón 1 (círculo)",
+        "imagen": "circulo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 770,
+        "ancho": 60
+       },
+       {
+        "nombre": "Botón 2 (cuadrado)",
+        "imagen": "cuadrado.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 830,
+        "ancho": 56
+       },
+       {
+        "nombre": "Botón 3 (triángulo)",
+        "imagen": "triangulo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 886,
+        "ancho": 56
+       },
+       {
+        "nombre": "Botón 4 (rombo)",
+        "imagen": "rombo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 942,
+        "ancho": 56
+       },
+       {
+        "nombre": "Botón 5 (estrella)",
+        "imagen": "estrella.png",
+        "etiqueta": "3",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 998,
+        "ancho": 77
+       },
+       {
+        "nombre": "(vacío)",
+        "imagen": "",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": false,
+        "seVe": false,
+        "x": 1075,
+        "ancho": 0
+       },
+       {
+        "nombre": "(vacío)",
+        "imagen": "",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": false,
+        "seVe": false,
+        "x": 1075,
+        "ancho": 0
+       }
+      ]
+     },
+     "capturas": [
+      "capturas/6-barra-sin-llamada-1280x800.png",
+      "capturas/6-pantalla-sin-llamada-1280x800.png"
+     ],
+     "t": "2026-10-03T20:30:45.516Z"
+    },
+    {
+     "punto": "6",
+     "clave": "sin-llamada-1024x768",
+     "titulo": "SIN llamada, 1024×768: botones del mapa a la vista",
+     "estado": "bien",
+     "dato": {
+      "aLaVista": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "escondidos": [],
+      "ordenEnLaBarra": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "hayInvitar": false,
+      "enElMenu": [
+       "En línea",
+       "Ocupado",
+       "Vuelvo en un momento",
+       "No molestar",
+       "Editar tu nombre",
+       "Personalizar tu avatar",
+       "Añadir compañero",
+       "Editar cámara / micrófono",
+       "Reportar un problema",
+       "Todas las configuraciones",
+       "Ayuda y consejos"
+      ],
+      "anchoDeLaBarra": 1024,
+      "botones": [
+       {
+        "nombre": "Botón 1 (círculo)",
+        "imagen": "circulo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 587,
+        "ancho": 52
+       },
+       {
+        "nombre": "Botón 2 (cuadrado)",
+        "imagen": "cuadrado.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 639,
+        "ancho": 48
+       },
+       {
+        "nombre": "Botón 3 (triángulo)",
+        "imagen": "triangulo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 687,
+        "ancho": 48
+       },
+       {
+        "nombre": "Botón 4 (rombo)",
+        "imagen": "rombo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 735,
+        "ancho": 48
+       },
+       {
+        "nombre": "Botón 5 (estrella)",
+        "imagen": "estrella.png",
+        "etiqueta": "3",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 783,
+        "ancho": 68
+       },
+       {
+        "nombre": "(vacío)",
+        "imagen": "",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": false,
+        "seVe": false,
+        "x": 851,
+        "ancho": 0
+       },
+       {
+        "nombre": "(vacío)",
+        "imagen": "",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": false,
+        "seVe": false,
+        "x": 851,
+        "ancho": 0
+       }
+      ]
+     },
+     "capturas": [
+      "capturas/6-barra-sin-llamada-1024x768.png",
+      "capturas/6-pantalla-sin-llamada-1024x768.png"
+     ],
+     "t": "2026-10-03T20:30:48.649Z"
+    },
+    {
+     "punto": "6",
+     "clave": "sin-llamada-1440x900",
+     "titulo": "SIN llamada, 1440×900: botones del mapa a la vista",
+     "estado": "bien",
+     "dato": {
+      "aLaVista": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "escondidos": [],
+      "ordenEnLaBarra": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "hayInvitar": false,
+      "enElMenu": [
+       "En línea",
+       "Ocupado",
+       "Vuelvo en un momento",
+       "No molestar",
+       "Editar tu nombre",
+       "Personalizar tu avatar",
+       "Añadir compañero",
+       "Editar cámara / micrófono",
+       "Reportar un problema",
+       "Todas las configuraciones",
+       "Ayuda y consejos"
+      ],
+      "anchoDeLaBarra": 1440,
+      "botones": [
+       {
+        "nombre": "Botón 1 (círculo)",
+        "imagen": "circulo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 929,
+        "ancho": 60
+       },
+       {
+        "nombre": "Botón 2 (cuadrado)",
+        "imagen": "cuadrado.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 989,
+        "ancho": 56
+       },
+       {
+        "nombre": "Botón 3 (triángulo)",
+        "imagen": "triangulo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 1045,
+        "ancho": 56
+       },
+       {
+        "nombre": "Botón 4 (rombo)",
+        "imagen": "rombo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 1101,
+        "ancho": 56
+       },
+       {
+        "nombre": "Botón 5 (estrella)",
+        "imagen": "estrella.png",
+        "etiqueta": "3",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 1157,
+        "ancho": 77
+       },
+       {
+        "nombre": "(vacío)",
+        "imagen": "",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": false,
+        "seVe": false,
+        "x": 1234,
+        "ancho": 0
+       },
+       {
+        "nombre": "(vacío)",
+        "imagen": "",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": false,
+        "seVe": false,
+        "x": 1234,
+        "ancho": 0
+       }
+      ]
+     },
+     "capturas": [
+      "capturas/6-barra-sin-llamada-1440x900.png",
+      "capturas/6-pantalla-sin-llamada-1440x900.png"
+     ],
+     "t": "2026-10-03T20:30:51.798Z"
+    },
+    {
+     "punto": "6",
+     "clave": "sin-llamada-anchos",
+     "titulo": "SIN llamada: cuántos botones del mapa quedan a la vista según el ancho de la ventana",
+     "estado": "dato",
+     "dato": {
+      "anchoMasEstrechoConLosCincoALaVista": 640,
+      "porAncho": {
+       "640": "5 a la vista",
+       "700": "5 a la vista",
+       "740": "5 a la vista",
+       "780": "5 a la vista",
+       "820": "5 a la vista",
+       "860": "5 a la vista",
+       "900": "5 a la vista",
+       "960": "5 a la vista",
+       "1024": "5 a la vista",
+       "1100": "5 a la vista"
+      }
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:31:09.937Z"
+    },
+    {
+     "punto": "6",
+     "clave": "callback",
+     "titulo": "Pulsar un botón llama a su `callback`",
+     "estado": "bien",
+     "dato": {
+      "pulsados": [
+       "banco-5",
+       "banco-2"
+      ]
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:31:12.334Z"
+    },
+    {
+     "punto": "6",
+     "clave": "sustituir",
+     "titulo": "`addButton` con el mismo id sustituye el botón en su sitio (sin `removeButton`)",
+     "estado": "bien",
+     "dato": {
+      "ordenAntes": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "ordenDespues": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cambiado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "ordenAlVolver": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "imagenNueva": "circulo-amarillo.png",
+      "pulsados": [
+       {
+        "id": "banco-2",
+        "t": 1791059473640
+       }
+      ]
+     },
+     "capturas": [
+      "capturas/6-sustituir-despues.png"
+     ],
+     "t": "2026-10-03T20:31:14.822Z"
+    },
+    {
+     "punto": "6",
+     "clave": "boton-con-icono-relativo",
+     "titulo": "Un botón con el icono en una ruta relativa sale con su icono, que se pide junto al mapa",
+     "estado": "bien",
+     "dato": {
+      "nota": "El mapa de prueba se carga por la dirección de su .tmj (la sala tiene `mapUrl`): el caso del servidor (mapa por su .wam, sin `mapUrl`) NO se prueba aquí.",
+      "boton": {
+       "nombre": "Relativo (prueba)",
+       "etiqueta": "",
+       "icono": "https://maps.workadventure.localhost/tests/banco/iconos/rombo.png",
+       "cargado": true
+      },
+      "iconoEsperado": "https://maps.workadventure.localhost/tests/banco/iconos/rombo.png",
+      "losDeSiempre": [
+       {
+        "nombre": "Botón 1 (círculo)",
+        "icono": "https://maps.workadventure.localhost/tests/banco/iconos/circulo.png",
+        "cargado": true
+       },
+       {
+        "nombre": "Botón 2 (cuadrado)",
+        "icono": "https://maps.workadventure.localhost/tests/banco/iconos/cuadrado.png",
+        "cargado": true
+       },
+       {
+        "nombre": "Botón 3 (triángulo)",
+        "icono": "https://maps.workadventure.localhost/tests/banco/iconos/triangulo.png",
+        "cargado": true
+       },
+       {
+        "nombre": "Botón 4 (rombo)",
+        "icono": "https://maps.workadventure.localhost/tests/banco/iconos/rombo.png",
+        "cargado": true
+       },
+       {
+        "nombre": "Botón 5 (estrella)",
+        "icono": "https://maps.workadventure.localhost/tests/banco/iconos/estrella.png",
+        "cargado": true
+       }
+      ],
+      "ordenAntes": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "ordenAlQuitarlo": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ]
+     },
+     "capturas": [
+      "capturas/6-boton-con-icono-relativo.png"
+     ],
+     "t": "2026-10-03T20:31:16.087Z"
+    },
+    {
+     "punto": "6",
+     "clave": "boton-con-icono-imposible",
+     "titulo": "Un botón cuyo icono no tiene dirección que valga sale igual: sin icono, con su `toolTip` de etiqueta, y los demás siguen (parche 15)",
+     "estado": "bien",
+     "dato": {
+      "boton": {
+       "nombre": "Imposible (prueba)",
+       "etiqueta": "Imposible (prueba)",
+       "icono": null,
+       "cargado": false
+      },
+      "botonesDeSiempreEnLaBarra": 5,
+      "avisoEnLaConsola": [
+       "[warning] [HOT SPOT] El icono del botón «banco-imposible»: no se ha podido saber su dirección («https://»). Se sigue sin ella."
+      ],
+      "excepcionesDeDireccion": [],
+      "ordenAntes": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "ordenAlQuitarlo": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ]
+     },
+     "capturas": [
+      "capturas/6-boton-con-icono-imposible.png"
+     ],
+     "t": "2026-10-03T20:31:18.854Z"
+    },
+    {
+     "punto": "6",
+     "clave": "llamada",
+     "titulo": "Alicia y Benito en llamada (para medir la barra)",
+     "estado": "dato",
+     "dato": {
+      "webrtc": 1,
+      "cajas": 2,
+      "script": true,
+      "entradas": 1,
+      "salidas": 0
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:31:26.202Z"
+    },
+    {
+     "punto": "6",
+     "clave": "en-llamada-1280x800",
+     "titulo": "EN llamada, 1280×800: botones del mapa a la vista",
+     "estado": "bien",
+     "dato": {
+      "aLaVista": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "escondidos": [],
+      "ordenEnLaBarra": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)",
+       "participant-menu"
+      ],
+      "hayInvitar": false,
+      "enElMenu": [
+       "En línea",
+       "Ocupado",
+       "Vuelvo en un momento",
+       "No molestar",
+       "Editar tu nombre",
+       "Personalizar tu avatar",
+       "Añadir compañero",
+       "Editar cámara / micrófono",
+       "Reportar un problema",
+       "Todas las configuraciones",
+       "Ayuda y consejos"
+      ],
+      "anchoDeLaBarra": 1281,
+      "botones": [
+       {
+        "nombre": "Botón 1 (círculo)",
+        "imagen": "circulo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 736,
+        "ancho": 60
+       },
+       {
+        "nombre": "Botón 2 (cuadrado)",
+        "imagen": "cuadrado.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 796,
+        "ancho": 56
+       },
+       {
+        "nombre": "Botón 3 (triángulo)",
+        "imagen": "triangulo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 852,
+        "ancho": 56
+       },
+       {
+        "nombre": "Botón 4 (rombo)",
+        "imagen": "rombo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 908,
+        "ancho": 56
+       },
+       {
+        "nombre": "Botón 5 (estrella)",
+        "imagen": "estrella.png",
+        "etiqueta": "3",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 964,
+        "ancho": 77
+       },
+       {
+        "nombre": "(vacío)",
+        "imagen": "",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": false,
+        "seVe": false,
+        "x": 1041,
+        "ancho": 0
+       },
+       {
+        "nombre": "participant-menu",
+        "imagen": "7nUR54AAAAGSURBVAMAKyKcuZXRH+EAAAAASUVORK5CYII=",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 1041,
+        "ancho": 144
+       }
+      ],
+      "llamada": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      }
+     },
+     "capturas": [
+      "capturas/6-barra-en-llamada-1280x800.png",
+      "capturas/6-pantalla-en-llamada-1280x800.png"
+     ],
+     "t": "2026-10-03T20:31:29.800Z"
+    },
+    {
+     "punto": "6",
+     "clave": "en-llamada-1024x768",
+     "titulo": "EN llamada, 1024×768: botones del mapa a la vista",
+     "estado": "bien",
+     "dato": {
+      "aLaVista": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "escondidos": [],
+      "ordenEnLaBarra": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)",
+       "participant-menu"
+      ],
+      "hayInvitar": false,
+      "enElMenu": [
+       "En línea",
+       "Ocupado",
+       "Vuelvo en un momento",
+       "No molestar",
+       "Editar tu nombre",
+       "Personalizar tu avatar",
+       "Añadir compañero",
+       "Editar cámara / micrófono",
+       "Reportar un problema",
+       "Todas las configuraciones",
+       "Ayuda y consejos"
+      ],
+      "anchoDeLaBarra": 1024,
+      "botones": [
+       {
+        "nombre": "Botón 1 (círculo)",
+        "imagen": "circulo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 544,
+        "ancho": 52
+       },
+       {
+        "nombre": "Botón 2 (cuadrado)",
+        "imagen": "cuadrado.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 596,
+        "ancho": 48
+       },
+       {
+        "nombre": "Botón 3 (triángulo)",
+        "imagen": "triangulo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 644,
+        "ancho": 48
+       },
+       {
+        "nombre": "Botón 4 (rombo)",
+        "imagen": "rombo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 692,
+        "ancho": 48
+       },
+       {
+        "nombre": "Botón 5 (estrella)",
+        "imagen": "estrella.png",
+        "etiqueta": "3",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 740,
+        "ancho": 68
+       },
+       {
+        "nombre": "(vacío)",
+        "imagen": "",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": false,
+        "seVe": false,
+        "x": 808,
+        "ancho": 0
+       },
+       {
+        "nombre": "participant-menu",
+        "imagen": "7nUR54AAAAGSURBVAMAKyKcuZXRH+EAAAAASUVORK5CYII=",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 808,
+        "ancho": 144
+       }
+      ],
+      "llamada": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      }
+     },
+     "capturas": [
+      "capturas/6-barra-en-llamada-1024x768.png",
+      "capturas/6-pantalla-en-llamada-1024x768.png"
+     ],
+     "t": "2026-10-03T20:31:33.069Z"
+    },
+    {
+     "punto": "6",
+     "clave": "en-llamada-1440x900",
+     "titulo": "EN llamada, 1440×900: botones del mapa a la vista",
+     "estado": "bien",
+     "dato": {
+      "aLaVista": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "escondidos": [],
+      "ordenEnLaBarra": [
+       "Botón 1 (círculo)",
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)",
+       "participant-menu"
+      ],
+      "hayInvitar": false,
+      "enElMenu": [
+       "En línea",
+       "Ocupado",
+       "Vuelvo en un momento",
+       "No molestar",
+       "Editar tu nombre",
+       "Personalizar tu avatar",
+       "Añadir compañero",
+       "Editar cámara / micrófono",
+       "Reportar un problema",
+       "Todas las configuraciones",
+       "Ayuda y consejos"
+      ],
+      "anchoDeLaBarra": 1440,
+      "botones": [
+       {
+        "nombre": "Botón 1 (círculo)",
+        "imagen": "circulo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 895,
+        "ancho": 60
+       },
+       {
+        "nombre": "Botón 2 (cuadrado)",
+        "imagen": "cuadrado.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 955,
+        "ancho": 56
+       },
+       {
+        "nombre": "Botón 3 (triángulo)",
+        "imagen": "triangulo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 1011,
+        "ancho": 56
+       },
+       {
+        "nombre": "Botón 4 (rombo)",
+        "imagen": "rombo.png",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 1067,
+        "ancho": 56
+       },
+       {
+        "nombre": "Botón 5 (estrella)",
+        "imagen": "estrella.png",
+        "etiqueta": "3",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 1123,
+        "ancho": 77
+       },
+       {
+        "nombre": "(vacío)",
+        "imagen": "",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": false,
+        "seVe": false,
+        "x": 1200,
+        "ancho": 0
+       },
+       {
+        "nombre": "participant-menu",
+        "imagen": "7nUR54AAAAGSURBVAMAKyKcuZXRH+EAAAAASUVORK5CYII=",
+        "etiqueta": "",
+        "marcadoInvisible": false,
+        "entero": true,
+        "seVe": true,
+        "x": 1200,
+        "ancho": 144
+       }
+      ],
+      "llamada": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      }
+     },
+     "capturas": [
+      "capturas/6-barra-en-llamada-1440x900.png",
+      "capturas/6-pantalla-en-llamada-1440x900.png"
+     ],
+     "t": "2026-10-03T20:31:36.338Z"
+    },
+    {
+     "punto": "6",
+     "clave": "en-llamada-anchos",
+     "titulo": "EN llamada: cuántos botones del mapa quedan a la vista según el ancho de la ventana",
+     "estado": "dato",
+     "dato": {
+      "anchoMasEstrechoConLosCincoALaVista": 1024,
+      "porAncho": {
+       "640": "0 a la vista (escondidos: Botón 1, Botón 2, Botón 3, Botón 4, Botón 5)",
+       "700": "0 a la vista (escondidos: Botón 1, Botón 2, Botón 3, Botón 4, Botón 5)",
+       "740": "0 a la vista (escondidos: Botón 1, Botón 2, Botón 3, Botón 4, Botón 5)",
+       "780": "0 a la vista (escondidos: Botón 1, Botón 2, Botón 3, Botón 4, Botón 5)",
+       "820": "1 a la vista (escondidos: Botón 1, Botón 2, Botón 3, Botón 4)",
+       "860": "1 a la vista (escondidos: Botón 1, Botón 2, Botón 3, Botón 4)",
+       "900": "2 a la vista (escondidos: Botón 1, Botón 2, Botón 3)",
+       "960": "4 a la vista (escondidos: Botón 1)",
+       "1024": "5 a la vista",
+       "1100": "5 a la vista",
+       "captura": "960"
+      }
+     },
+     "capturas": [
+      "capturas/6-barra-en-llamada-960-ya-no-caben.png"
+     ],
+     "t": "2026-10-03T20:31:54.536Z"
+    },
+    {
+     "punto": "6",
+     "clave": "en-llamada-con-chat-1280x800",
+     "titulo": "EN llamada y con el chat abierto, 1280×800: las cuatro acciones a la vista y lo que no cabe, en el menú ☰",
+     "estado": "bien",
+     "dato": {
+      "aLaVista": [
+       "Botón 2 (cuadrado)",
+       "Botón 3 (triángulo)",
+       "Botón 4 (rombo)",
+       "Botón 5 (estrella)"
+      ],
+      "escondidos": [
+       "Botón 1 (círculo)"
+      ],
+      "escondidosEnElMenu": [
+       "Botón 1 (círculo)"
+      ],
+      "anchoDeLaBarra": 946,
+      "chat": {
+       "x": 0,
+       "ancho": 335
+      }
+     },
+     "capturas": [
+      "capturas/6-pantalla-en-llamada-con-chat-1280x800.png",
+      "capturas/6-barra-en-llamada-con-chat-1280x800.png",
+      "capturas/6-menu-en-llamada-con-chat-1280x800.png"
+     ],
+     "t": "2026-10-03T20:32:02.634Z"
+    },
+    {
+     "punto": "6",
+     "clave": "callback-en-llamada",
+     "titulo": "En llamada, pulsar un botón del mapa sigue llamando a su `callback`",
+     "estado": "bien",
+     "dato": {
+      "pulsados": [
+       "banco-5"
+      ],
+      "laLlamadaSigue": true
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:32:03.148Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "06-barra.spec.ts",
+    "titulo": "6 · la barra de botones, sin llamada y en llamada",
+    "estado": "passed",
+    "segundos": 86.7,
+    "error": ""
+   }
+  },
+  {
+   "punto": "7",
+   "titulo": "VOLVER A HABLAR (parche 12)",
+   "claves": [
+    "se-forma",
+    "proximidad-corta",
+    "proximidad-vuelve",
+    "no-molestar-corta",
+    "no-molestar-vuelve"
+   ],
+   "estado": "bien",
+   "comprobaciones": [
+    {
+     "punto": "7",
+     "clave": "se-forma",
+     "titulo": "Alicia y Benito, pegados y en llamada",
+     "estado": "dato",
+     "dato": {
+      "alicia": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 1,
+       "salidas": 0
+      },
+      "sinElParche12": false
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:32:14.158Z"
+    },
+    {
+     "punto": "7",
+     "clave": "proximidad-corta",
+     "titulo": "disablePlayerProximityMeeting() y restorePlayerProximityMeeting(): al pasar al estado que no deja hablar, la llamada se corta",
+     "estado": "bien",
+     "dato": {
+      "alicia": {
+       "webrtc": 0,
+       "cajas": 0,
+       "script": false,
+       "entradas": 1,
+       "salidas": 1
+      },
+      "benito": {
+       "webrtc": 0,
+       "cajas": 1,
+       "script": false,
+       "entradas": 1,
+       "salidas": 1
+      },
+      "nadieSeHaMovido": true
+     },
+     "capturas": [
+      "capturas/7-proximidad-cortada-alicia.png"
+     ],
+     "t": "2026-10-03T20:32:17.915Z"
+    },
+    {
+     "punto": "7",
+     "clave": "proximidad-vuelve",
+     "titulo": "disablePlayerProximityMeeting() y restorePlayerProximityMeeting(): al dejarlo, SIN moverse nadie, la llamada vuelve sola",
+     "estado": "bien",
+     "dato": {
+      "vuelve": true,
+      "segundos": 0.8,
+      "nadieSeHaMovido": true,
+      "sinElParche12": false,
+      "alicia": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 2,
+       "salidas": 1
+      },
+      "benito": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 2,
+       "salidas": 1
+      }
+     },
+     "capturas": [
+      "capturas/7-proximidad-vuelta-alicia.png",
+      "capturas/7-proximidad-vuelta-benito.png"
+     ],
+     "t": "2026-10-03T20:32:19.267Z"
+    },
+    {
+     "punto": "7",
+     "clave": "no-molestar-corta",
+     "titulo": "setStatus(\"DO_NOT_DISTURB\") y setStatus(\"ONLINE\"): al pasar al estado que no deja hablar, la llamada se corta",
+     "estado": "bien",
+     "dato": {
+      "alicia": {
+       "webrtc": 0,
+       "cajas": 0,
+       "script": false,
+       "entradas": 2,
+       "salidas": 2
+      },
+      "benito": {
+       "webrtc": 0,
+       "cajas": 1,
+       "script": false,
+       "entradas": 2,
+       "salidas": 2
+      },
+      "nadieSeHaMovido": true
+     },
+     "capturas": [
+      "capturas/7-no-molestar-cortada-alicia.png"
+     ],
+     "t": "2026-10-03T20:32:22.946Z"
+    },
+    {
+     "punto": "7",
+     "clave": "no-molestar-vuelve",
+     "titulo": "setStatus(\"DO_NOT_DISTURB\") y setStatus(\"ONLINE\"): al dejarlo, SIN moverse nadie, la llamada vuelve sola",
+     "estado": "bien",
+     "dato": {
+      "vuelve": true,
+      "segundos": 0.7,
+      "nadieSeHaMovido": true,
+      "sinElParche12": false,
+      "alicia": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 3,
+       "salidas": 2
+      },
+      "benito": {
+       "webrtc": 1,
+       "cajas": 2,
+       "script": true,
+       "entradas": 3,
+       "salidas": 2
+      }
+     },
+     "capturas": [
+      "capturas/7-no-molestar-vuelta-alicia.png",
+      "capturas/7-no-molestar-vuelta-benito.png"
+     ],
+     "t": "2026-10-03T20:32:24.216Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "07-volver-a-hablar.spec.ts",
+    "titulo": "7 · volver a hablar sin moverse (parche 12)",
+    "estado": "passed",
+    "segundos": 21.1,
+    "error": ""
+   }
+  },
+  {
+   "punto": "8",
+   "titulo": "LETRAS",
+   "claves": [
+    "decir",
+    "decir-corto",
+    "decir-largo",
+    "pensar",
+    "chat",
+    "nombre",
+    "aviso-de-zona",
+    "aviso-del-mapa",
+    "aviso-del-script",
+    "aviso-junto-al-muneco",
+    "tecla-espacio",
+    "fuentes",
+    "zoom",
+    "franja",
+    "retoques",
+    "huecos-decir",
+    "huecos-pensar",
+    "retoques-sin-hinting",
+    "huecos-decir-sin-hinting",
+    "huecos-pensar-sin-hinting"
+   ],
+   "estado": "bien",
+   "comprobaciones": [
+    {
+     "punto": "8",
+     "clave": "decir",
+     "titulo": "(a) La burbuja de «decir» (dos líneas)",
+     "estado": "bien",
+     "dato": {
+      "letra": {
+       "texto": "¿Bailamos a las 17:35? Café con Gabi",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "14.333px",
+       "peso": "500",
+       "interlineado": "17.333px",
+       "color": "rgb(28, 23, 21)",
+       "fondo": "rgb(243, 230, 216)"
+      },
+      "nitidez": {
+       "enPantalla_px": 21.5,
+       "puntosDePantallaPorPuntoDeLetra": 2,
+       "limpia": true
+      },
+      "sitioDeLaBurbuja": {
+       "burbuja": {
+        "arriba": 315,
+        "abajo": 380,
+        "alto": 65,
+        "ancho": 344
+       },
+       "nombre": {
+        "arriba": 389,
+        "abajo": 410
+       },
+       "huecoEntreLaBurbujaYElNombre_px": 8,
+       "elPicoMide_px": 7.5,
+       "elNombreTapaElPico": false,
+       "laBurbujaPisaElNombre": false
+      }
+     },
+     "capturas": [
+      "capturas/8a-decir.png",
+      "capturas/8a-decir-muneco.png"
+     ],
+     "t": "2026-10-03T20:32:30.989Z"
+    },
+    {
+     "punto": "8",
+     "clave": "decir-corto",
+     "titulo": "(a) La burbuja de «decir» con un texto corto (una línea)",
+     "estado": "bien",
+     "dato": {
+      "sitioDeLaBurbuja": {
+       "burbuja": {
+        "arriba": 342,
+        "abajo": 381,
+        "alto": 39,
+        "ancho": 109
+       },
+       "nombre": {
+        "arriba": 389,
+        "abajo": 410
+       },
+       "huecoEntreLaBurbujaYElNombre_px": 7,
+       "elPicoMide_px": 7.5,
+       "elNombreTapaElPico": false,
+       "laBurbujaPisaElNombre": false
+      }
+     },
+     "capturas": [
+      "capturas/8a-decir-corto.png",
+      "capturas/8a-decir-corto-muneco.png"
+     ],
+     "t": "2026-10-03T20:32:36.969Z"
+    },
+    {
+     "punto": "8",
+     "clave": "decir-largo",
+     "titulo": "(a) La burbuja de «decir» con un texto largo (tres líneas o más)",
+     "estado": "bien",
+     "dato": {
+      "sitioDeLaBurbuja": {
+       "burbuja": {
+        "arriba": 290,
+        "abajo": 381,
+        "alto": 91,
+        "ancho": 344
+       },
+       "nombre": {
+        "arriba": 389,
+        "abajo": 410
+       },
+       "huecoEntreLaBurbujaYElNombre_px": 7.5,
+       "elPicoMide_px": 7.5,
+       "elNombreTapaElPico": false,
+       "laBurbujaPisaElNombre": false
+      }
+     },
+     "capturas": [
+      "capturas/8a-decir-largo-muneco.png"
+     ],
+     "t": "2026-10-03T20:32:43.886Z"
+    },
+    {
+     "punto": "8",
+     "clave": "pensar",
+     "titulo": "(b) La burbuja de «pensar»",
+     "estado": "bien",
+     "dato": {
+      "letra": {
+       "texto": "¿Bailamos a las 17:35? Café con Gabi",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "14.333px",
+       "peso": "500",
+       "interlineado": "17.333px",
+       "color": "rgb(28, 23, 21)",
+       "fondo": "rgba(0, 0, 0, 0)"
+      },
+      "nitidez": {
+       "enPantalla_px": 21.5,
+       "puntosDePantallaPorPuntoDeLetra": 2,
+       "limpia": true
+      },
+      "sitioDeLaBurbuja": {
+       "burbuja": {
+        "arriba": 294,
+        "abajo": 359,
+        "alto": 65,
+        "ancho": 344
+       },
+       "nombre": {
+        "arriba": 389,
+        "abajo": 410
+       },
+       "huecoEntreLaBurbujaYElNombre_px": 29,
+       "elPicoMide_px": 7.5,
+       "elNombreTapaElPico": false,
+       "laBurbujaPisaElNombre": false
+      }
+     },
+     "capturas": [
+      "capturas/8b-pensar.png",
+      "capturas/8b-pensar-muneco.png"
+     ],
+     "t": "2026-10-03T20:32:50.222Z"
+    },
+    {
+     "punto": "8",
+     "clave": "chat",
+     "titulo": "Un mensaje en el chat, con su hora",
+     "estado": "bien",
+     "dato": {
+      "enLaRejilla": {
+       "mensaje": true,
+       "hora": true,
+       "mensajeDelSistema": true
+      },
+      "mensaje": {
+       "texto": "¿Bailamos a las 17:35? Café con Gabi",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "16px",
+       "peso": "400",
+       "interlineado": "22px",
+       "color": "rgb(255, 255, 255)",
+       "fondo": "rgba(0, 0, 0, 0)"
+      },
+      "hora": {
+       "texto": "22:30",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "11px",
+       "peso": "400",
+       "interlineado": "20px",
+       "color": "rgb(255, 255, 255)",
+       "fondo": "rgba(0, 0, 0, 0)"
+      },
+      "mensajeDelSistema": {
+       "texto": "Nueva discusión con Benito 22:30",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "11px",
+       "peso": "400",
+       "interlineado": "14px",
+       "color": "rgb(255, 255, 255)",
+       "fondo": "rgba(0, 0, 0, 0)"
+      },
+      "campoDeEscribir": {
+       "texto": "",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "16px",
+       "peso": "400",
+       "interlineado": "24px",
+       "color": "rgb(255, 255, 255)",
+       "fondo": "oklab(0.999994 0.0000455678 0.0000200868 / 0.05)"
+      },
+      "enLaPantallaDeBenito": {
+       "texto": "¿Bailamos a las 17:35? Café con Gabi",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "16px",
+       "peso": "400",
+       "interlineado": "22px",
+       "color": "rgb(255, 255, 255)",
+       "fondo": "rgba(0, 0, 0, 0)"
+      }
+     },
+     "capturas": [
+      "capturas/8c-chat-mensaje.png",
+      "capturas/8c-chat-pantalla.png",
+      "capturas/8c-chat-mensaje-benito.png"
+     ],
+     "t": "2026-10-03T20:30:36.439Z"
+    },
+    {
+     "punto": "8",
+     "clave": "nombre",
+     "titulo": "(d) El nombre sobre la cabeza",
+     "estado": "bien",
+     "dato": {
+      "texto": "Alicia",
+      "familia": "Silkscreen, \"Pixelify Sans\", monospace",
+      "tamano": "15px",
+      "peso": "400",
+      "interlineado": "22.5px",
+      "color": "rgb(243, 230, 216)",
+      "fondo": "rgba(0, 0, 0, 0)"
+     },
+     "capturas": [
+      "capturas/8d-nombre.png",
+      "capturas/8d-nombre-muneco.png"
+     ],
+     "t": "2026-10-03T20:32:29.825Z"
+    },
+    {
+     "punto": "8",
+     "clave": "aviso-de-zona",
+     "titulo": "(e) El aviso de una zona con el texto de WorkAdventure («Pulse ESPACIO…»)",
+     "estado": "bien",
+     "dato": {
+      "texto": {
+       "texto": "Pulse ESPACIO o toque aquí para abrir el sitio web",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "16px",
+       "peso": "400",
+       "interlineado": "24px",
+       "color": "rgb(255, 255, 255)",
+       "fondo": "rgba(0, 0, 0, 0)"
+      },
+      "boton": {
+       "texto": "Abrir",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "14px",
+       "peso": "400",
+       "interlineado": "20px",
+       "color": "rgb(249, 250, 251)",
+       "fondo": "rgb(223, 87, 42)"
+      },
+      "caja": {
+       "x": 414.5,
+       "y": 676,
+       "width": 451,
+       "height": 108
+      },
+      "avisosJuntoAlMuneco_characterTriggerAction": 0
+     },
+     "capturas": [
+      "capturas/8e-aviso-de-zona.png",
+      "capturas/8e-aviso-de-zona-pantalla.png"
+     ],
+     "t": "2026-10-03T20:33:12.174Z"
+    },
+    {
+     "punto": "8",
+     "clave": "aviso-del-mapa",
+     "titulo": "(e) El aviso de una zona con el texto que pone el mapa",
+     "estado": "bien",
+     "dato": {
+      "texto": {
+       "texto": "Pulsa ESPACIO para abrir el panel de prueba",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "16px",
+       "peso": "400",
+       "interlineado": "24px",
+       "color": "rgb(255, 255, 255)",
+       "fondo": "rgba(0, 0, 0, 0)"
+      },
+      "boton": {
+       "texto": "Abrir",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "14px",
+       "peso": "400",
+       "interlineado": "20px",
+       "color": "rgb(249, 250, 251)",
+       "fondo": "rgb(223, 87, 42)"
+      },
+      "caja": {
+       "x": 434,
+       "y": 676,
+       "width": 412,
+       "height": 108
+      }
+     },
+     "capturas": [
+      "capturas/8e-aviso-del-mapa.png"
+     ],
+     "t": "2026-10-03T20:33:14.397Z"
+    },
+    {
+     "punto": "8",
+     "clave": "aviso-del-script",
+     "titulo": "(e) Un aviso puesto por el script del mapa con ui.displayActionMessage",
+     "estado": "bien",
+     "dato": {
+      "dondeSale": "abajo, en el centro de la pantalla (no junto al muñeco)",
+      "texto": {
+       "texto": "Pulsa ESPACIO para probar el aviso (17:35)",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "16px",
+       "peso": "400",
+       "interlineado": "24px",
+       "color": "rgb(255, 255, 255)",
+       "fondo": "rgba(0, 0, 0, 0)"
+      },
+      "boton": null,
+      "caja": {
+       "x": 441,
+       "y": 704,
+       "width": 398,
+       "height": 80
+      },
+      "avisosJuntoAlMuneco_characterTriggerAction": 0,
+      "espacioLlamaAlCallback": 1,
+      "trasEspacioElAvisoSigue": false
+     },
+     "capturas": [
+      "capturas/8e-aviso-del-script.png",
+      "capturas/8e-aviso-del-script-pantalla.png"
+     ],
+     "t": "2026-10-03T20:33:16.069Z"
+    },
+    {
+     "punto": "8",
+     "clave": "aviso-junto-al-muneco",
+     "titulo": "(e) Un aviso junto al muñeco (ui.displayPlayerMessage): es el que viste hotspot-retro.css (.characterTriggerAction)",
+     "estado": "bien",
+     "dato": {
+      "texto": "Pulsa ESPACIO para probar (17:35)",
+      "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+      "tamano": "11px",
+      "peso": "500",
+      "interlineado": "14px",
+      "color": "rgb(243, 230, 216)",
+      "fondo": "rgba(28, 23, 21, 0.94)"
+     },
+     "capturas": [
+      "capturas/8e-aviso-junto-al-muneco.png",
+      "capturas/8e-aviso-junto-al-muneco-muneco.png"
+     ],
+     "t": "2026-10-03T20:33:17.178Z"
+    },
+    {
+     "punto": "8",
+     "clave": "tecla-espacio",
+     "titulo": "(e) La palabra ESPACIO de los avisos sale dibujada como una tecla (parche 14) y el texto del aviso es el mismo",
+     "estado": "bien",
+     "dato": {
+      "bien": {
+       "zona": true,
+       "script": true,
+       "juntoAlMuneco": true
+      },
+      "fondoEsperado": "rgb(255, 216, 74)",
+      "zona": {
+       "esperado": "Pulsa ESPACIO para abrir el panel de prueba",
+       "textoDelAviso": "Pulsa ESPACIO para abrir el panel de prueba",
+       "teclas": 1,
+       "tecla": {
+        "texto": "ESPACIO",
+        "fondo": "rgb(255, 216, 74)",
+        "color": "rgb(28, 23, 21)",
+        "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+        "tamano": "16px",
+        "ancho": 70,
+        "alto": 16
+       },
+       "altoDelTexto": 24,
+       "interlinea": 24,
+       "teclaDentro": true
+      },
+      "script": {
+       "esperado": "Pulsa ESPACIO para probar la tecla (17:35)",
+       "textoDelAviso": "Pulsa ESPACIO para probar la tecla (17:35)",
+       "teclas": 1,
+       "tecla": {
+        "texto": "ESPACIO",
+        "fondo": "rgb(255, 216, 74)",
+        "color": "rgb(28, 23, 21)",
+        "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+        "tamano": "16px",
+        "ancho": 70,
+        "alto": 16
+       },
+       "altoDelTexto": 24,
+       "interlinea": 24,
+       "teclaDentro": true
+      },
+      "juntoAlMuneco": {
+       "esperado": "Pulsa ESPACIO para probar (17:35)",
+       "textoDelAviso": "Pulsa ESPACIO para probar (17:35)",
+       "teclas": 1,
+       "tecla": {
+        "texto": "ESPACIO",
+        "fondo": "rgb(255, 216, 74)",
+        "color": "rgb(28, 23, 21)",
+        "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+        "tamano": "11px",
+        "ancho": 70.55,
+        "alto": 16.5
+       },
+       "altoDelTexto": 37.5,
+       "interlinea": 14,
+       "teclaDentro": true
+      }
+     },
+     "capturas": [
+      "capturas/8e-tecla-en-el-aviso-de-zona.png",
+      "capturas/8e-tecla-en-el-aviso-del-script.png",
+      "capturas/8e-tecla-en-el-aviso-junto-al-muneco.png"
+     ],
+     "t": "2026-10-03T20:33:21.375Z"
+    },
+    {
+     "punto": "8",
+     "clave": "fuentes",
+     "titulo": "Las letras de la casa y sus retoques (hs-retoques-*.woff) se han cargado",
+     "estado": "bien",
+     "dato": {
+      "carasDeLetra": [
+       {
+        "familia": "Silkscreen",
+        "peso": "400",
+        "estado": "loaded",
+        "caracteres": "U+0-10FFFF"
+       },
+       {
+        "familia": "Silkscreen",
+        "peso": "700",
+        "estado": "loaded",
+        "caracteres": "U+0-10FFFF"
+       },
+       {
+        "familia": "Pixelify Sans",
+        "peso": "400 549",
+        "estado": "loaded",
+        "caracteres": "U+0-10FFFF"
+       },
+       {
+        "familia": "Pixelify Sans",
+        "peso": "550 700",
+        "estado": "loaded",
+        "caracteres": "U+0-10FFFF"
+       },
+       {
+        "familia": "Silkscreen",
+        "peso": "400",
+        "estado": "loaded",
+        "caracteres": "U+30-39"
+       },
+       {
+        "familia": "Silkscreen",
+        "peso": "700",
+        "estado": "loaded",
+        "caracteres": "U+30-39"
+       },
+       {
+        "familia": "Pixelify Sans",
+        "peso": "400 549",
+        "estado": "loaded",
+        "caracteres": "U+28-29, U+30-39, U+42-43, U+45, U+47, U+5A, U+61, U+63, U+65-66, U+6A, U+74, U+C9, U+E0-E1, U+E8-E9, U+ED, U+20AC"
+       },
+       {
+        "familia": "Pixelify Sans",
+        "peso": "550 700",
+        "estado": "loaded",
+        "caracteres": "U+28-29, U+30-39, U+42-43, U+45, U+47, U+5A, U+61, U+63, U+65-66, U+6A, U+74, U+C9, U+E0-E1, U+E8-E9, U+ED, U+20AC"
+       }
+      ],
+      "laEEsUnRetoque": true,
+      "disponibles": {
+       "pixelify500": true,
+       "silkscreen400": true
+      },
+      "puntosQueCambian": {
+       "5 y S (Pixelify)": 1106,
+       "B y 8 (Pixelify)": 234,
+       "a y o (Pixelify)": 700,
+       "C y G (Pixelify)": 369,
+       "c y o (Pixelify)": 632,
+       "e y a (Pixelify)": 225,
+       "e y o (Pixelify)": 638,
+       "Z y 2 (Pixelify)": 809,
+       "S y S (control: tiene que dar 0)": 0
+      },
+      "archivosPedidos": [
+       "200 /static/fonts/hotspot/pixelify-sans.woff",
+       "200 /static/fonts/hotspot/hs-retoques-texto.woff",
+       "200 /static/fonts/hotspot/hs-retoques-texto-negra.woff",
+       "200 /static/fonts/hotspot/silkscreen-bold.woff",
+       "200 /static/fonts/hotspot/silkscreen-regular.woff",
+       "200 /static/fonts/hotspot/hs-retoques-titulo-negra.woff",
+       "200 /static/fonts/hotspot/hs-retoques-titulo.woff"
+      ]
+     },
+     "capturas": [
+      "capturas/8-muestra-de-letras.png"
+     ],
+     "t": "2026-10-03T20:33:21.402Z"
+    },
+    {
+     "punto": "8",
+     "clave": "zoom",
+     "titulo": "Con qué ampliación se ve el juego (de ella depende que las letras de las burbujas salgan limpias)",
+     "estado": "dato",
+     "dato": {
+      "1280x800": {
+       "ampliacion": 1.5,
+       "pixelesDePantallaPorPuntoDeLetraDe11": 1.5,
+       "letraDe11pxSeVeA_px": 16.5,
+       "sale": "con medios píxeles (ampliación no entera)"
+      },
+      "1440x900": {
+       "ampliacion": 2,
+       "pixelesDePantallaPorPuntoDeLetraDe11": 2,
+       "letraDe11pxSeVeA_px": 22,
+       "sale": "limpia (ampliación entera)"
+      },
+      "1920x1080": {
+       "ampliacion": 2,
+       "pixelesDePantallaPorPuntoDeLetraDe11": 2,
+       "letraDe11pxSeVeA_px": 22,
+       "sale": "limpia (ampliación entera)"
+      }
+     },
+     "capturas": [
+      "capturas/8a-decir-1440x900.png",
+      "capturas/8a-decir-1920x1080.png"
+     ],
+     "t": "2026-10-03T20:33:10.749Z"
+    },
+    {
+     "punto": "8",
+     "clave": "franja",
+     "titulo": "La franja de avisos (WA.ui.banner), a un tamaño de la rejilla de la letra: 16 px el texto y el botón",
+     "estado": "bien",
+     "dato": {
+      "texto": {
+       "texto": "Aviso de prueba del banco: 17:35",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "16px",
+       "peso": "400",
+       "interlineado": "24px",
+       "color": "rgb(255, 255, 255)",
+       "fondo": "rgba(0, 0, 0, 0)"
+      },
+      "boton": {
+       "texto": "¡Entendido!",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "16px",
+       "peso": "400",
+       "interlineado": "24px",
+       "color": "rgb(224, 86, 42)",
+       "fondo": "rgb(255, 255, 255)"
+      }
+     },
+     "capturas": [
+      "capturas/8g-franja.png"
+     ],
+     "t": "2026-10-03T20:33:22.984Z"
+    },
+    {
+     "punto": "8",
+     "clave": "retoques",
+     "titulo": "Cada letra retocada avanza lo que dice su dibujo y lo mismo que una normal de su ancho (con «hinting» completo)",
+     "estado": "bien",
+     "dato": {
+      "elNavegadorAjustaLasLetras": true,
+      "retoquesMedidos": 380,
+      "desajustados": 0,
+      "losPrimeros": [],
+      "muestra": [
+       "Pixelify Sans 400 10.75px · o 6 · a* 6 · B* 6 · 5* 6 · 0* 5 · f* 4 · t* 4 · 1* 4 · I 4 · j* 3 · (* 3 · i 2",
+       "Pixelify Sans 400 11px · o 6 · a* 6 · B* 6 · 5* 6 · 0* 5 · f* 4 · t* 4 · 1* 4 · I 4 · j* 3 · (* 3 · i 2"
+      ],
+      "tabla": "diagnostico/8-avances-de-los-retoques.md"
+     },
+     "capturas": [
+      "diagnostico/8-avances-de-los-retoques.md"
+     ],
+     "t": "2026-10-03T20:33:23.419Z"
+    },
+    {
+     "punto": "8",
+     "clave": "huecos-decir",
+     "titulo": "Huecos parejos entre letras en la burbuja de «decir», a 1280, 1440 y 1920 px (con «hinting» completo)",
+     "estado": "bien",
+     "dato": {
+      "parejos": true,
+      "trazado": "geometricprecision",
+      "1280x800": {
+       "letra_px": 14.333,
+       "ampliacion": 1.5,
+       "huecoDeLasRetocadas_puntos": [
+        1,
+        1.01
+       ],
+       "huecoDeLasNormales_puntos": [
+        0.82,
+        1.04
+       ],
+       "avanceDe5Columnas_px": {
+        "retocadas": 12.02,
+        "normales": 12.16
+       },
+       "desiguales": []
+      },
+      "1440x900": {
+       "letra_px": 10.75,
+       "ampliacion": 2,
+       "huecoDeLasRetocadas_puntos": [
+        1,
+        1.02
+       ],
+       "huecoDeLasNormales_puntos": [
+        0.82,
+        1.04
+       ],
+       "avanceDe5Columnas_px": {
+        "retocadas": 12.03,
+        "normales": 12.19
+       },
+       "desiguales": []
+      },
+      "1920x1080": {
+       "letra_px": 10.75,
+       "ampliacion": 2,
+       "huecoDeLasRetocadas_puntos": [
+        1,
+        1.02
+       ],
+       "huecoDeLasNormales_puntos": [
+        0.82,
+        1.04
+       ],
+       "avanceDe5Columnas_px": {
+        "retocadas": 12.03,
+        "normales": 12.19
+       },
+       "desiguales": []
+      }
+     },
+     "capturas": [
+      "capturas/8f-huecos-decir-1280x800.png",
+      "capturas/8f-huecos-decir-1440x900.png",
+      "capturas/8f-huecos-decir-1920x1080.png",
+      "diagnostico/8-huecos-decir.md"
+     ],
+     "t": "2026-10-03T20:33:50.706Z"
+    },
+    {
+     "punto": "8",
+     "clave": "huecos-pensar",
+     "titulo": "Huecos parejos entre letras en la burbuja de «pensar», a 1280, 1440 y 1920 px (con «hinting» completo)",
+     "estado": "bien",
+     "dato": {
+      "parejos": true,
+      "trazado": "geometricprecision",
+      "1280x800": {
+       "letra_px": 14.333,
+       "ampliacion": 1.5,
+       "huecoDeLasRetocadas_puntos": [
+        1,
+        1.01
+       ],
+       "huecoDeLasNormales_puntos": [
+        0.82,
+        1.04
+       ],
+       "avanceDe5Columnas_px": {
+        "retocadas": 12.02,
+        "normales": 12.16
+       },
+       "desiguales": []
+      },
+      "1440x900": {
+       "letra_px": 10.75,
+       "ampliacion": 2,
+       "huecoDeLasRetocadas_puntos": [
+        1,
+        1.02
+       ],
+       "huecoDeLasNormales_puntos": [
+        0.82,
+        1.04
+       ],
+       "avanceDe5Columnas_px": {
+        "retocadas": 12.03,
+        "normales": 12.19
+       },
+       "desiguales": []
+      },
+      "1920x1080": {
+       "letra_px": 10.75,
+       "ampliacion": 2,
+       "huecoDeLasRetocadas_puntos": [
+        1,
+        1.02
+       ],
+       "huecoDeLasNormales_puntos": [
+        0.82,
+        1.04
+       ],
+       "avanceDe5Columnas_px": {
+        "retocadas": 12.03,
+        "normales": 12.19
+       },
+       "desiguales": []
+      }
+     },
+     "capturas": [
+      "capturas/8f-huecos-pensar-1280x800.png",
+      "capturas/8f-huecos-pensar-1440x900.png",
+      "capturas/8f-huecos-pensar-1920x1080.png",
+      "diagnostico/8-huecos-pensar.md"
+     ],
+     "t": "2026-10-03T20:34:18.024Z"
+    },
+    {
+     "punto": "8",
+     "clave": "retoques-sin-hinting",
+     "titulo": "Cada letra retocada avanza lo que dice su dibujo y lo mismo que una normal de su ancho (sin «hinting»)",
+     "estado": "bien",
+     "dato": {
+      "elNavegadorAjustaLasLetras": false,
+      "retoquesMedidos": 380,
+      "desajustados": 0,
+      "losPrimeros": [],
+      "muestra": [
+       "Pixelify Sans 400 10.75px · o 6.313 · a* 6.297 · B* 6.297 · 5* 6.313 · 0* 5.313 · f* 4.313 · t* 4.297 · 1* 4.297 · I 4.359 · j* 3.297 · (* 3.297 · i 2.406",
+       "Pixelify Sans 400 11px · o 6.453 · a* 6.453 · B* 6.453 · 5* 6.453 · 0* 5.422 · f* 4.406 · t* 4.406 · 1* 4.406 · I 4.453 · j* 3.391 · (* 3.375 · i 2.469"
+      ],
+      "tabla": "diagnostico/8-avances-de-los-retoques-sin-hinting.md"
+     },
+     "capturas": [
+      "diagnostico/8-avances-de-los-retoques-sin-hinting.md"
+     ],
+     "t": "2026-10-03T20:34:25.641Z"
+    },
+    {
+     "punto": "8",
+     "clave": "huecos-decir-sin-hinting",
+     "titulo": "Huecos parejos entre letras en la burbuja de «decir», a 1280, 1440 y 1920 px (sin «hinting»)",
+     "estado": "bien",
+     "dato": {
+      "parejos": true,
+      "trazado": "geometricprecision",
+      "1280x800": {
+       "letra_px": 14.333,
+       "ampliacion": 1.5,
+       "huecoDeLasRetocadas_puntos": [
+        1,
+        1.01
+       ],
+       "huecoDeLasNormales_puntos": [
+        0.82,
+        1.04
+       ],
+       "avanceDe5Columnas_px": {
+        "retocadas": 12.02,
+        "normales": 12.16
+       },
+       "desiguales": []
+      },
+      "1440x900": {
+       "letra_px": 10.75,
+       "ampliacion": 2,
+       "huecoDeLasRetocadas_puntos": [
+        1,
+        1.02
+       ],
+       "huecoDeLasNormales_puntos": [
+        0.82,
+        1.04
+       ],
+       "avanceDe5Columnas_px": {
+        "retocadas": 12.03,
+        "normales": 12.19
+       },
+       "desiguales": []
+      },
+      "1920x1080": {
+       "letra_px": 10.75,
+       "ampliacion": 2,
+       "huecoDeLasRetocadas_puntos": [
+        1,
+        1.02
+       ],
+       "huecoDeLasNormales_puntos": [
+        0.82,
+        1.04
+       ],
+       "avanceDe5Columnas_px": {
+        "retocadas": 12.03,
+        "normales": 12.19
+       },
+       "desiguales": []
+      }
+     },
+     "capturas": [
+      "capturas/8f-huecos-decir-1280x800-sin-hinting.png",
+      "capturas/8f-huecos-decir-1440x900-sin-hinting.png",
+      "capturas/8f-huecos-decir-1920x1080-sin-hinting.png",
+      "diagnostico/8-huecos-decir-sin-hinting.md"
+     ],
+     "t": "2026-10-03T20:34:52.936Z"
+    },
+    {
+     "punto": "8",
+     "clave": "huecos-pensar-sin-hinting",
+     "titulo": "Huecos parejos entre letras en la burbuja de «pensar», a 1280, 1440 y 1920 px (sin «hinting»)",
+     "estado": "bien",
+     "dato": {
+      "parejos": true,
+      "trazado": "geometricprecision",
+      "1280x800": {
+       "letra_px": 14.333,
+       "ampliacion": 1.5,
+       "huecoDeLasRetocadas_puntos": [
+        1,
+        1.01
+       ],
+       "huecoDeLasNormales_puntos": [
+        0.82,
+        1.04
+       ],
+       "avanceDe5Columnas_px": {
+        "retocadas": 12.02,
+        "normales": 12.16
+       },
+       "desiguales": []
+      },
+      "1440x900": {
+       "letra_px": 10.75,
+       "ampliacion": 2,
+       "huecoDeLasRetocadas_puntos": [
+        1,
+        1.02
+       ],
+       "huecoDeLasNormales_puntos": [
+        0.82,
+        1.04
+       ],
+       "avanceDe5Columnas_px": {
+        "retocadas": 12.03,
+        "normales": 12.19
+       },
+       "desiguales": []
+      },
+      "1920x1080": {
+       "letra_px": 10.75,
+       "ampliacion": 2,
+       "huecoDeLasRetocadas_puntos": [
+        1,
+        1.02
+       ],
+       "huecoDeLasNormales_puntos": [
+        0.82,
+        1.04
+       ],
+       "avanceDe5Columnas_px": {
+        "retocadas": 12.03,
+        "normales": 12.19
+       },
+       "desiguales": []
+      }
+     },
+     "capturas": [
+      "capturas/8f-huecos-pensar-1280x800-sin-hinting.png",
+      "capturas/8f-huecos-pensar-1440x900-sin-hinting.png",
+      "capturas/8f-huecos-pensar-1920x1080-sin-hinting.png",
+      "diagnostico/8-huecos-pensar-sin-hinting.md"
+     ],
+     "t": "2026-10-03T20:35:20.386Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "08-letras.spec.ts",
+    "titulo": "8 · las letras de la casa",
+    "estado": "passed",
+    "segundos": 178.1,
+    "error": ""
+   }
+  },
+  {
+   "punto": "9a",
+   "titulo": "SONDEO moveTo",
+   "claves": [
+    "libre",
+    "pared",
+    "sin-camino"
+   ],
+   "estado": "dato",
+   "comprobaciones": [
+    {
+     "punto": "9a",
+     "clave": "libre",
+     "titulo": "moveTo a una casilla libre a 4 casillas: dónde acaba y qué llega antes",
+     "estado": "dato",
+     "dato": {
+      "saleDe": {
+       "x": 112,
+       "y": 400
+      },
+      "pedido": {
+       "x": 240,
+       "y": 408,
+       "casilla": {
+        "cx": 7,
+        "cy": 12
+       }
+      },
+      "loQueDevuelve": {
+       "x": 240,
+       "y": 392,
+       "cancelled": false
+      },
+      "error": null,
+      "acabaEn": {
+       "x": 240,
+       "y": 392
+      },
+      "casilla": {
+       "cx": 7,
+       "cy": 12
+      },
+      "avisos": 7,
+      "promesaALos_ms": 777,
+      "ultimoAvisoDeParado": {
+       "ms": 776,
+       "que": "onPlayerMove",
+       "moving": false,
+       "x": 240,
+       "y": 392
+      },
+      "queLlegaAntes": "el aviso onPlayerMove con moving: false, y después la promesa",
+      "ultimosSucesos": [
+       {
+        "ms": 293,
+        "que": "onPlayerMove",
+        "moving": true,
+        "x": 156,
+        "y": 384
+       },
+       {
+        "ms": 490,
+        "que": "onPlayerMove",
+        "moving": true,
+        "x": 192,
+        "y": 384
+       },
+       {
+        "ms": 709,
+        "que": "onPlayerMove",
+        "moving": true,
+        "x": 231,
+        "y": 390
+       },
+       {
+        "ms": 776,
+        "que": "onPlayerMove",
+        "moving": false,
+        "x": 240,
+        "y": 392
+       },
+       {
+        "ms": 777,
+        "que": "promesa",
+        "resultado": {
+         "x": 240,
+         "y": 392,
+         "cancelled": false
+        },
+        "error": null
+       }
+      ]
+     },
+     "capturas": [
+      "capturas/9a-moveto-libre.png"
+     ],
+     "t": "2026-10-03T20:35:29.667Z"
+    },
+    {
+     "punto": "9a",
+     "clave": "pared",
+     "titulo": "moveTo a una casilla que es pared: qué devuelve",
+     "estado": "dato",
+     "dato": {
+      "saleDe": {
+       "x": 240,
+       "y": 392
+      },
+      "pedido": {
+       "x": 304,
+       "y": 408,
+       "casilla": {
+        "cx": 9,
+        "cy": 12
+       }
+      },
+      "loQueDevuelve": {
+       "x": 272,
+       "y": 384,
+       "cancelled": false
+      },
+      "error": null,
+      "acabaEn": {
+       "x": 272,
+       "y": 384
+      },
+      "casilla": {
+       "cx": 8,
+       "cy": 12
+      },
+      "avisos": 2,
+      "promesaALos_ms": 214,
+      "ultimoAvisoDeParado": {
+       "ms": 214,
+       "que": "onPlayerMove",
+       "moving": false,
+       "x": 272,
+       "y": 384
+      },
+      "queLlegaAntes": "el aviso onPlayerMove con moving: false, y después la promesa",
+      "ultimosSucesos": [
+       {
+        "ms": 41,
+        "que": "onPlayerMove",
+        "moving": true,
+        "x": 243,
+        "y": 391
+       },
+       {
+        "ms": 214,
+        "que": "onPlayerMove",
+        "moving": false,
+        "x": 272,
+        "y": 384
+       },
+       {
+        "ms": 214,
+        "que": "promesa",
+        "resultado": {
+         "x": 272,
+         "y": 384,
+         "cancelled": false
+        },
+        "error": null
+       }
+      ]
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:35:31.398Z"
+    },
+    {
+     "punto": "9a",
+     "clave": "sin-camino",
+     "titulo": "moveTo a una casilla libre a la que no se puede llegar: qué devuelve",
+     "estado": "dato",
+     "dato": {
+      "saleDe": {
+       "x": 272,
+       "y": 384
+      },
+      "pedido": {
+       "x": 656,
+       "y": 408,
+       "casilla": {
+        "cx": 20,
+        "cy": 12
+       }
+      },
+      "loQueDevuelve": null,
+      "error": "No path found",
+      "acabaEn": {
+       "x": 272,
+       "y": 384
+      },
+      "casilla": {
+       "cx": 8,
+       "cy": 12
+      },
+      "avisos": 0,
+      "promesaALos_ms": 16,
+      "ultimoAvisoDeParado": null,
+      "queLlegaAntes": "no se sabe (falta la promesa o el aviso de parado)",
+      "ultimosSucesos": [
+       {
+        "ms": 16,
+        "que": "promesa",
+        "resultado": null,
+        "error": "No path found"
+       }
+      ]
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:35:32.923Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "09-sondeos.spec.ts",
+    "titulo": "9 · sondeos de la API de los mapas (un jugador)",
+    "estado": "passed",
+    "segundos": 40.2,
+    "error": ""
+   }
+  },
+  {
+   "punto": "9b",
+   "titulo": "SONDEO proximityMeeting",
+   "claves": [
+    "avisos"
+   ],
+   "estado": "bien",
+   "comprobaciones": [
+    {
+     "punto": "9b",
+     "clave": "avisos",
+     "titulo": "proximityMeeting.onJoin() y onLeave(): ¿saltan al formarse y deshacerse la burbuja?, ¿con qué datos?",
+     "estado": "bien",
+     "dato": {
+      "playerId": {
+       "alicia": 2,
+       "benito": 3
+      },
+      "onJoin_enAlicia": [
+       {
+        "t": 1791059770625,
+        "tipo": "[object Array]",
+        "jugadores": [
+         {
+          "playerId": 3,
+          "name": "Benito"
+         }
+        ]
+       }
+      ],
+      "onJoin_enBenito": [
+       {
+        "t": 1791059770635,
+        "tipo": "[object Array]",
+        "jugadores": [
+         {
+          "playerId": 2,
+          "name": "Alicia"
+         }
+        ]
+       }
+      ],
+      "onLeave_enAlicia": [
+       {
+        "t": 1791059772531,
+        "argumentos": 1
+       }
+      ],
+      "onLeave_enBenito": [
+       {
+        "t": 1791059772531,
+        "argumentos": 1
+       }
+      ],
+      "antesDeJuntarse": {
+       "alicia": {
+        "dentro": false,
+        "entradas": [],
+        "salidas": []
+       },
+       "benito": {
+        "dentro": false,
+        "entradas": [],
+        "salidas": []
+       }
+      }
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:36:13.948Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "09-sondeos.spec.ts",
+    "titulo": "9 · sondeos de la API de los mapas (un jugador)",
+    "estado": "passed",
+    "segundos": 40.2,
+    "error": ""
+   }
+  },
+  {
+   "punto": "9c",
+   "titulo": "SONDEO ui.website",
+   "claves": [
+    "abrir"
+   ],
+   "estado": "dato",
+   "comprobaciones": [
+    {
+     "punto": "9c",
+     "clave": "abrir",
+     "titulo": "ui.website.open escondida; cambiar después `visible` y `url`",
+     "estado": "dato",
+     "dato": {
+      "loQueDevuelveOpen": {
+       "id": "cad1d227-114f-42c7-a344-3fc1b33c9fb0",
+       "url": "https://maps.workadventure.localhost/tests/banco/panel.html?paso=1",
+       "visible": false
+      },
+      "alAbrirEscondida": {
+       "src": "https://maps.workadventure.localhost/tests/banco/panel.html?paso=1",
+       "visibility": "hidden",
+       "estilo": "border: 0px; height: 120px; width: 320px; visibility: hidden; margin: 0px 12px 88px 0px;",
+       "caja": {
+        "x": 949,
+        "y": 592,
+        "ancho": 320,
+        "alto": 120
+       },
+       "ventana": {
+        "ancho": 1280,
+        "alto": 800
+       }
+      },
+      "trasPonerVisibleTrue": {
+       "src": "https://maps.workadventure.localhost/tests/banco/panel.html?paso=1",
+       "visibility": "visible",
+       "estilo": "border: 0px; height: 120px; width: 320px; visibility: visible; margin: 0px 12px 88px 0px;",
+       "caja": {
+        "x": 949,
+        "y": 592,
+        "ancho": 320,
+        "alto": 120
+       },
+       "ventana": {
+        "ancho": 1280,
+        "alto": 800
+       }
+      },
+      "trasCambiarUrl": {
+       "src": "https://maps.workadventure.localhost/tests/banco/panel.html?paso=2",
+       "visibility": "visible",
+       "estilo": "border: 0px; height: 120px; width: 320px; visibility: visible; margin: 0px 12px 88px 0px;",
+       "caja": {
+        "x": 949,
+        "y": 592,
+        "ancho": 320,
+        "alto": 120
+       },
+       "ventana": {
+        "ancho": 1280,
+        "alto": 800
+       }
+      },
+      "trasPonerVisibleFalse": {
+       "src": "https://maps.workadventure.localhost/tests/banco/panel.html?paso=2",
+       "visibility": "hidden",
+       "estilo": "border: 0px; height: 120px; width: 320px; visibility: hidden; margin: 0px 12px 88px 0px;",
+       "caja": {
+        "x": 949,
+        "y": 592,
+        "ancho": 320,
+        "alto": 120
+       },
+       "ventana": {
+        "ancho": 1280,
+        "alto": 800
+       }
+      },
+      "trasClose": "el <iframe> ya no está",
+      "seReflejaVisible": true,
+      "seReflejaUrl": true
+     },
+     "capturas": [
+      "capturas/9c-website-visible.png"
+     ],
+     "t": "2026-10-03T20:35:38.317Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "09-sondeos.spec.ts",
+    "titulo": "9 · sondeos de la API de los mapas (un jugador)",
+    "estado": "passed",
+    "segundos": 40.2,
+    "error": ""
+   }
+  },
+  {
+   "punto": "9d",
+   "titulo": "SONDEO banner",
+   "claves": [
+    "banner"
+   ],
+   "estado": "dato",
+   "comprobaciones": [
+    {
+     "punto": "9d",
+     "clave": "banner",
+     "titulo": "ui.banner.openBanner: dónde sale y si se cierra solo",
+     "estado": "dato",
+     "dato": {
+      "caja": {
+       "x": 431.484375,
+       "y": 720,
+       "width": 418.015625,
+       "height": 64
+      },
+      "ventana": {
+       "width": 1280,
+       "height": 800
+      },
+      "texto": "Aviso de prueba del banco: 17:35 ¡Entendido!",
+      "letraDelTexto": {
+       "texto": "Aviso de prueba del banco: 17:35",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "16px",
+       "peso": "400",
+       "interlineado": "24px",
+       "color": "rgb(255, 255, 255)",
+       "fondo": "rgba(0, 0, 0, 0)"
+      },
+      "letraDelBoton": {
+       "texto": "¡Entendido!",
+       "familia": "\"Pixelify Sans\", ui-monospace, SFMono-Regular, Menlo, monospace",
+       "tamano": "16px",
+       "peso": "400",
+       "interlineado": "24px",
+       "color": "rgb(224, 86, 42)",
+       "fondo": "rgb(255, 255, 255)"
+      },
+      "esquinasDelBoton": "8px",
+      "seCierraSolo": true,
+      "alosSegundos": 4.5,
+      "pedido_timeToClose_ms": 4000
+     },
+     "capturas": [
+      "capturas/9d-banner-pantalla.png",
+      "capturas/9d-banner.png"
+     ],
+     "t": "2026-10-03T20:35:42.977Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "09-sondeos.spec.ts",
+    "titulo": "9 · sondeos de la API de los mapas (un jugador)",
+    "estado": "passed",
+    "segundos": 40.2,
+    "error": ""
+   }
+  },
+  {
+   "punto": "9e",
+   "titulo": "SONDEO sonido",
+   "claves": [
+    "sonido"
+   ],
+   "estado": "bien",
+   "comprobaciones": [
+    {
+     "punto": "9e",
+     "clave": "sonido",
+     "titulo": "sound.loadSound(url).play({ volume: 0.25 }) con un .wav pequeño",
+     "estado": "bien",
+     "dato": {
+      "excepcion": null,
+      "loQueDevuelvePlay": "https://maps.workadventure.localhost/tests/banco/pitido.wav",
+      "segundaVez": "https://maps.workadventure.localhost/tests/banco/pitido.wav",
+      "metodos": [
+       "constructor",
+       "play",
+       "stop"
+      ],
+      "elArchivoSeHaPedido": [
+       "200 https://maps.workadventure.localhost/tests/banco/pitido.wav"
+      ],
+      "erroresEnLaConsola": [],
+      "elementosDeAudio": 1,
+      "contextoDeAudio": "hay AudioContext"
+     },
+     "capturas": [],
+     "t": "2026-10-03T20:35:45.987Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "09-sondeos.spec.ts",
+    "titulo": "9 · sondeos de la API de los mapas (un jugador)",
+    "estado": "passed",
+    "segundos": 40.2,
+    "error": ""
+   }
+  },
+  {
+   "punto": "9f",
+   "titulo": "SONDEO capas (velo)",
+   "claves": [
+    "velo"
+   ],
+   "estado": "dato",
+   "comprobaciones": [
+    {
+     "punto": "9f",
+     "clave": "velo",
+     "titulo": "room.showLayer de una capa de velo por encima de todo: ¿tiñe al muñeco y a su nombre?",
+     "estado": "dato",
+     "dato": {
+      "velo-a": {
+       "seVeElVelo": true,
+       "pixelesQueCambian": "36064 de 36288",
+       "tiñeAlMuñeco": true,
+       "cuerpo": "cambian 270 de 270 píxeles, 29.7 de media (de 255)",
+       "etiquetaDelNombre": "cambian 1645 de 1869 píxeles, 4.3 de media (de 255)",
+       "tiñeLasLetrasDelNombre": false
+      },
+      "velo-b": {
+       "seVeElVelo": true,
+       "pixelesQueCambian": "36064 de 36288",
+       "tiñeAlMuñeco": true,
+       "cuerpo": "cambian 270 de 270 píxeles, 64.8 de media (de 255)",
+       "etiquetaDelNombre": "cambian 1645 de 1869 píxeles, 8 de media (de 255)",
+       "tiñeLasLetrasDelNombre": false
+      },
+      "alEsconderlaVuelveAEstarComoAntes": true
+     },
+     "capturas": [
+      "capturas/9f-sin-velo.png",
+      "capturas/9f-con-velo-a.png",
+      "capturas/9f-con-velo-b.png"
+     ],
+     "t": "2026-10-03T20:35:51.621Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "09-sondeos.spec.ts",
+    "titulo": "9 · sondeos de la API de los mapas (un jugador)",
+    "estado": "passed",
+    "segundos": 40.2,
+    "error": ""
+   }
+  },
+  {
+   "punto": "9g",
+   "titulo": "SONDEO setTiles",
+   "claves": [
+    "casillas"
+   ],
+   "estado": "dato",
+   "comprobaciones": [
+    {
+     "punto": "9g",
+     "clave": "casillas",
+     "titulo": "room.setTiles con una casilla con nombre y animación: ¿se pinta?, ¿se anima?, ¿null la quita?",
+     "estado": "dato",
+     "dato": {
+      "sePinta": true,
+      "dondeCambia": {
+       "x0": 57,
+       "y0": 57,
+       "x1": 86,
+       "y1": 86
+      },
+      "seAnima": true,
+      "pixelesQueCambianCada400ms": [
+       576,
+       576,
+       576
+      ],
+      "laCasillaSinAnimacionSePinta": true,
+      "nullLaQuita": true,
+      "pixelesQueQuedanDistintos": 0
+     },
+     "capturas": [
+      "capturas/9g-antes.png",
+      "capturas/9g-faro-1.png",
+      "capturas/9g-faro-2.png",
+      "capturas/9g-faro-3.png",
+      "capturas/9g-faro-4.png",
+      "capturas/9g-faro-y-poste.png",
+      "capturas/9g-despues-de-null.png"
+     ],
+     "t": "2026-10-03T20:35:55.619Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "09-sondeos.spec.ts",
+    "titulo": "9 · sondeos de la API de los mapas (un jugador)",
+    "estado": "passed",
+    "segundos": 40.2,
+    "error": ""
+   }
+  },
+  {
+   "punto": "9h",
+   "titulo": "SONDEO room.website",
+   "claves": [
+    "cartel"
+   ],
+   "estado": "dato",
+   "comprobaciones": [
+    {
+     "punto": "9h",
+     "clave": "cartel",
+     "titulo": "room.website.create con scale: 0.5: ¿sale donde se pide y de qué tamaño?",
+     "estado": "dato",
+     "dato": {
+      "pedido": {
+       "x": 448,
+       "y": 384,
+       "width": 128,
+       "height": 40,
+       "scale": 0.5
+      },
+      "loQueDevuelveCreate": {
+       "name": "banco-cartel",
+       "url": "https://maps.workadventure.localhost/tests/banco/cartel.html",
+       "x": 448,
+       "y": 384,
+       "width": 128,
+       "height": 40,
+       "scale": 0.5,
+       "visible": true
+      },
+      "enPantalla": {
+       "x": 672,
+       "y": 576,
+       "ancho": 192,
+       "alto": 60,
+       "anchoPropio": 256,
+       "altoPropio": 80,
+       "estilo": "width: 256px; height: 80px; margin: 0px; padding: 0px; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; z-index: 0; display: block; position: absolute; visibility: visible; opacity: 1; pointer-events: auto; mix-blend-mode: normal; transform: matrix(0.5, 0, 0, 0.5, 448, 384) skew(0rad, 0rad) rotate3d(0, 0, 0, 0deg); transform-origin: 0% 0%;"
+      },
+      "pixelesPorPuntoDelMapa": 1.5,
+      "medidoEnPuntosDelMapa": {
+       "x": 448,
+       "y": 384,
+       "ancho": 128,
+       "alto": 40
+      }
+     },
+     "capturas": [
+      "capturas/9h-cartel.png"
+     ],
+     "t": "2026-10-03T20:35:57.732Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "09-sondeos.spec.ts",
+    "titulo": "9 · sondeos de la API de los mapas (un jugador)",
+    "estado": "passed",
+    "segundos": 40.2,
+    "error": ""
+   }
+  },
+  {
+   "punto": "9i",
+   "titulo": "SONDEO zona con panel",
+   "claves": [
+    "zona-panel"
+   ],
+   "estado": "bien",
+   "comprobaciones": [
+    {
+     "punto": "9i",
+     "clave": "zona-panel",
+     "titulo": "Zona con openWebsite + onaction + texto: sale el aviso y ESPACIO abre el panel",
+     "estado": "bien",
+     "dato": {
+      "textoDelAviso": "Pulsa ESPACIO para abrir el panel de prueba",
+      "textoDelBoton": "Abrir",
+      "dondeSaleElAviso": {
+       "x": 434,
+       "y": 676,
+       "width": 412,
+       "height": 108
+      },
+      "avisosJuntoAlMuneco_characterTriggerAction": 0,
+      "marcosAntesDeEspacio": 0,
+      "panel": {
+       "src": "https://maps.workadventure.localhost/tests/banco/panel.html",
+       "title": "Cowebsite",
+       "caja": {
+        "x": 652,
+        "y": 68,
+        "ancho": 628,
+        "alto": 732
+       },
+       "ventana": {
+        "ancho": 1280,
+        "alto": 800
+       }
+      },
+      "elAvisoSigueConElPanelAbierto": false,
+      "marcosDelPanelAlSalirDeLaZona": 0
+     },
+     "capturas": [
+      "capturas/9i-aviso-pantalla.png",
+      "capturas/9i-aviso.png",
+      "capturas/9i-panel-abierto.png"
+     ],
+     "t": "2026-10-03T20:36:02.648Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "09-sondeos.spec.ts",
+    "titulo": "9 · sondeos de la API de los mapas (un jugador)",
+    "estado": "passed",
+    "segundos": 40.2,
+    "error": ""
+   }
+  },
+  {
+   "punto": "9j",
+   "titulo": "SONDEO zona silenciosa",
+   "claves": [
+    "silencio"
+   ],
+   "estado": "bien",
+   "comprobaciones": [
+    {
+     "punto": "9j",
+     "clave": "silencio",
+     "titulo": "Zona `silent`: dentro no hay llamada; al salir andando, vuelve",
+     "estado": "bien",
+     "dato": {
+      "dentroNoHayLlamada": true,
+      "muestrasDentro": [
+       {
+        "s": 1,
+        "alicia": false,
+        "benito": false
+       },
+       {
+        "s": 2,
+        "alicia": false,
+        "benito": false
+       },
+       {
+        "s": 3,
+        "alicia": false,
+        "benito": false
+       },
+       {
+        "s": 4,
+        "alicia": false,
+        "benito": false
+       },
+       {
+        "s": 5,
+        "alicia": false,
+        "benito": false
+       },
+       {
+        "s": 6,
+        "alicia": false,
+        "benito": false
+       }
+      ],
+      "dentro": {
+       "alicia": {
+        "webrtc": 0,
+        "cajas": 0,
+        "script": false,
+        "entradas": 2,
+        "salidas": 2
+       },
+       "benito": {
+        "webrtc": 0,
+        "cajas": 0,
+        "script": false,
+        "entradas": 2,
+        "salidas": 2
+       },
+       "posiciones": {
+        "alicia": {
+         "x": 528,
+         "y": 176
+        },
+        "benito": {
+         "x": 528,
+         "y": 208
+        }
+       }
+      },
+      "textoJuntoALaBarra": "3 Alicia Silencioso Zona silenciosa 🤐 Estás en una zona silenciosa. Solo puedes ver y oír a las personas con las que estás. No puedes ver ni oír a las otras personas en la sala.",
+      "paseoDeSalida": {
+       "x": 496,
+       "y": 200,
+       "cancelled": false
+      },
+      "alSalirVuelveLaLlamada": true,
+      "segundosDesdeQueEchaAAndar": 0.6,
+      "fuera": {
+       "alicia": {
+        "webrtc": 1,
+        "cajas": 2,
+        "script": true,
+        "entradas": 3,
+        "salidas": 2
+       },
+       "posicion": {
+        "x": 496,
+        "y": 200
+       }
+      }
+     },
+     "capturas": [
+      "capturas/9j-dentro-alicia.png",
+      "capturas/9j-fuera-alicia.png"
+     ],
+     "t": "2026-10-03T20:36:22.162Z"
+    }
+   ],
+   "prueba": {
+    "archivo": "09-sondeos.spec.ts",
+    "titulo": "9 · sondeos de la API de los mapas (un jugador)",
+    "estado": "passed",
+    "segundos": 40.2,
+    "error": ""
+   }
+  }
+ ],
+ "playwright": {
+  "pruebas": [
+   {
+    "archivo": "00-sonda.spec.ts",
+    "titulo": "0 · sonda: dos jugadores se juntan",
+    "estado": "passed",
+    "segundos": 19.2,
+    "error": ""
+   },
+   {
+    "archivo": "01-arranca.spec.ts",
+    "titulo": "1 · arranca: versión y aviso de bienvenida",
+    "estado": "passed",
+    "segundos": 5.3,
+    "error": ""
+   },
+   {
+    "archivo": "02-teclas.spec.ts",
+    "titulo": "2 · teclas del mapa (parche 11)",
+    "estado": "passed",
+    "segundos": 9.3,
+    "error": ""
+   },
+   {
+    "archivo": "03-acciones.spec.ts",
+    "titulo": "3 · acciones y cosas en la mano (parche 08)",
+    "estado": "passed",
+    "segundos": 80.7,
+    "error": ""
+   },
+   {
+    "archivo": "04-los-demas.spec.ts",
+    "titulo": "4 · lo que hace uno lo ven los demás",
+    "estado": "passed",
+    "segundos": 22.4,
+    "error": ""
+   },
+   {
+    "archivo": "05-llamada.spec.ts",
+    "titulo": "5 · la llamada aguanta las acciones",
+    "estado": "passed",
+    "segundos": 42.9,
+    "error": ""
+   },
+   {
+    "archivo": "06-barra.spec.ts",
+    "titulo": "6 · la barra de botones, sin llamada y en llamada",
+    "estado": "passed",
+    "segundos": 86.7,
+    "error": ""
+   },
+   {
+    "archivo": "07-volver-a-hablar.spec.ts",
+    "titulo": "7 · volver a hablar sin moverse (parche 12)",
+    "estado": "passed",
+    "segundos": 21.1,
+    "error": ""
+   },
+   {
+    "archivo": "08-letras.spec.ts",
+    "titulo": "8 · las letras de la casa",
+    "estado": "passed",
+    "segundos": 178.1,
+    "error": ""
+   },
+   {
+    "archivo": "09-sondeos.spec.ts",
+    "titulo": "9 · sondeos de la API de los mapas (un jugador)",
+    "estado": "passed",
+    "segundos": 40.2,
+    "error": ""
+   },
+   {
+    "archivo": "09-sondeos.spec.ts",
+    "titulo": "9 · sondeos de la API de los mapas (dos jugadores)",
+    "estado": "passed",
+    "segundos": 19.5,
+    "error": ""
+   }
+  ],
+  "segundos": 527,
+  "errores": []
+ }
+}

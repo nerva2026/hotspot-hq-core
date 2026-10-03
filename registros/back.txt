@@ -1,0 +1,80 @@
+back-1  | (node:1) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+back-1  | (Use `node --trace-warnings ...` to show where the warning was created)
+back-1  | 
+back-1  | > workadventureback@1.0.0 runprod
+back-1  | > tsx src/server.ts
+back-1  | 
+back-1  | Sentry initialized
+back-1  | Admin API not configured. Will use local implementations
+back-1  | WorkAdventure HTTP API starting on port 8080!
+back-1  | CPU high threshold alert. Going in "overheat" mode
+back-1  | (node:31) DeprecationWarning: Calling start() is no longer necessary. It can be safely omitted.
+back-1  | (Use `node --trace-deprecation ...` to show where the warning was created)
+back-1  | WorkAdventure HTTP/2 API starting on port 50051!
+back-1  | CPU is back to normal. Canceling "overheat" mode
+back-1  | Redis client is connected
+back-1  | Redis client is ready
+back-1  | (node:31) Warning: Setting the NODE_TLS_REJECT_UNAUTHORIZED environment variable to '0' makes TLS connections and HTTPS requests insecure by disabling certificate verification.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | An error occurred while sending a disconnect in WebRTCCommunicationStrategy shutdownConnection 1 https://play.workadventure.localhost/_/sonda/maps.workadventure.localhost/tests/banco/banco.tmj_2 https://play.workadventure.localhost/_/sonda/maps.workadventure.localhost/tests/banco/banco.tmj_3 Error: Sender https://play.workadventure.localhost/_/sonda/maps.workadventure.localhost/tests/banco/banco.tmj_2 not found in space localWorld.https://play.workadventure.localhost/_/sonda/maps.workadventure.localhost/tests/banco/banco.tmj#1#1791059264966
+back-1  |     at Space.dispatchPrivateEvent (/usr/src/back/src/Model/Space.ts:500:19)
+back-1  |     at WebRTCCommunicationStrategy.sendWebRTCDisconnect (/usr/src/back/src/Model/Strategies/WebRTCCommunicationStrategy.ts:235:21)
+back-1  |     at WebRTCCommunicationStrategy.shutdownConnection (/usr/src/back/src/Model/Strategies/WebRTCCommunicationStrategy.ts:166:18)
+back-1  |     at WebRTCCommunicationStrategy.deleteUserFromNotify (/usr/src/back/src/Model/Strategies/WebRTCCommunicationStrategy.ts:154:18)
+back-1  |     at WebRTCState.handleUserToNotifyDeleted (/usr/src/back/src/Model/States/AbstractCommunicationState.ts:84:31)
+back-1  |     at CommunicationManager.handleUserToNotifyDeleted (/usr/src/back/src/Model/CommunicationManager.ts:175:55)
+back-1  |     at Space.deleteUserToNotify (/usr/src/back/src/Model/Space.ts:404:35)
+back-1  |     at SocketManager.handleDeleteSpaceUserToNotifyMessage (/usr/src/back/src/Services/SocketManager.ts:1814:15)
+back-1  |     at ServerDuplexStreamImpl.<anonymous> (/usr/src/back/src/SpaceManager.ts:99:39)
+back-1  |     at ServerDuplexStreamImpl.emit (node:events:514:28)
+back-1  | User not found in this space https://play.workadventure.localhost/_/sonda/maps.workadventure.localhost/tests/banco/banco.tmj_2
+back-1  | User not found in this space https://play.workadventure.localhost/_/sonda/maps.workadventure.localhost/tests/banco/banco.tmj_2
+back-1  | User not found in this space https://play.workadventure.localhost/_/sonda/maps.workadventure.localhost/tests/banco/banco.tmj_3
+back-1  | User not found in this space https://play.workadventure.localhost/_/sonda/maps.workadventure.localhost/tests/banco/banco.tmj_3
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | User not found in this space https://play.workadventure.localhost/_/teclas/maps.workadventure.localhost/tests/banco/banco.tmj_2
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | CPU high threshold alert. Going in "overheat" mode
+back-1  | CPU is back to normal. Canceling "overheat" mode
+back-1  | User not found in this space https://play.workadventure.localhost/_/acciones/maps.workadventure.localhost/tests/banco/banco.tmj_2
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | User not found in this space https://play.workadventure.localhost/_/demas/maps.workadventure.localhost/tests/banco/banco.tmj_2
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | CPU high threshold alert. Going in "overheat" mode
+back-1  | CPU is back to normal. Canceling "overheat" mode
+back-1  | An error occurred while sending a disconnect in WebRTCCommunicationStrategy shutdownConnection 1 https://play.workadventure.localhost/_/barra/maps.workadventure.localhost/tests/banco/banco.tmj_2 https://play.workadventure.localhost/_/barra/maps.workadventure.localhost/tests/banco/banco.tmj_3 Error: Sender https://play.workadventure.localhost/_/barra/maps.workadventure.localhost/tests/banco/banco.tmj_2 not found in space localWorld.https://play.workadventure.localhost/_/barra/maps.workadventure.localhost/tests/banco/banco.tmj#3#1791059482532
+back-1  |     at Space.dispatchPrivateEvent (/usr/src/back/src/Model/Space.ts:500:19)
+back-1  |     at WebRTCCommunicationStrategy.sendWebRTCDisconnect (/usr/src/back/src/Model/Strategies/WebRTCCommunicationStrategy.ts:235:21)
+back-1  |     at WebRTCCommunicationStrategy.shutdownConnection (/usr/src/back/src/Model/Strategies/WebRTCCommunicationStrategy.ts:166:18)
+back-1  |     at WebRTCCommunicationStrategy.deleteUserFromNotify (/usr/src/back/src/Model/Strategies/WebRTCCommunicationStrategy.ts:154:18)
+back-1  |     at WebRTCState.handleUserToNotifyDeleted (/usr/src/back/src/Model/States/AbstractCommunicationState.ts:84:31)
+back-1  |     at CommunicationManager.handleUserToNotifyDeleted (/usr/src/back/src/Model/CommunicationManager.ts:175:55)
+back-1  |     at Space.deleteUserToNotify (/usr/src/back/src/Model/Space.ts:404:35)
+back-1  |     at SocketManager.handleDeleteSpaceUserToNotifyMessage (/usr/src/back/src/Services/SocketManager.ts:1814:15)
+back-1  |     at ServerDuplexStreamImpl.<anonymous> (/usr/src/back/src/SpaceManager.ts:99:39)
+back-1  |     at ServerDuplexStreamImpl.emit (node:events:514:28)
+back-1  | User not found in this space https://play.workadventure.localhost/_/barra/maps.workadventure.localhost/tests/banco/banco.tmj_2
+back-1  | User not found in this space https://play.workadventure.localhost/_/barra/maps.workadventure.localhost/tests/banco/banco.tmj_2
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | User not found in this space https://play.workadventure.localhost/_/volver/maps.workadventure.localhost/tests/banco/banco.tmj_3
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | User not found in this space https://play.workadventure.localhost/_/letras/maps.workadventure.localhost/tests/banco/banco.tmj_2
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | User not found in this space https://play.workadventure.localhost/_/letras-sin-hinting/maps.workadventure.localhost/tests/banco/banco.tmj_2
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | User not found in this space https://play.workadventure.localhost/_/sondeos/maps.workadventure.localhost/tests/banco/banco.tmj_2
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
+back-1  | Your map does not seem accessible from the WorkAdventure servers. Is it behind a firewall or a proxy? Your map should be accessible from the WorkAdventure servers. If you use the scripting API in this map, please be aware that server-side checks and variable persistence is disabled.
