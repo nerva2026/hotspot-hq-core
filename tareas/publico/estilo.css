@@ -2304,12 +2304,16 @@ table.lista {
         flex: 0 0 min(290px, 85vw);
         min-width: 0;
     }
+    /* El mes y, debajo, «Sin fecha»: caben los dos en lo que queda de pantalla. El mes se encoge (se desplaza por
+       dentro) para dejarle sitio a la lista, que antes se quedaba debajo del borde de la pantalla sin manera de llegar
+       a ella en un móvil; si ni así caben (un móvil tumbado), se desplaza todo el bloque. */
     .cal-cuerpo {
         flex-direction: column;
+        overflow-y: auto;
     }
     .cal-marco {
-        flex: none;
-        max-height: 70vh;
+        flex: 0 1 auto;
+        min-height: 200px;
     }
     .cal-sinfecha {
         flex: none;
