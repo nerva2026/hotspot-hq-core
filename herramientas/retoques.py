@@ -40,7 +40,7 @@ DESTINOS = [os.path.join(RAIZ, 'archivos/play/public/static/fonts/hotspot'), os.
 # alto. La última fila de cada dibujo se apoya en la línea de base. Las cifras son las de las pantallas de matriz de
 # puntos de toda la vida: cada una con su silueta, sin parecerse a ninguna letra.
 TEXTO = {
-    '0': ['.###.', '#...#', '#...#', '#...#', '#...#', '#...#', '.###.'],
+    '0': ['.##.', '#..#', '#..#', '#..#', '#..#', '#..#', '.##.'],   # más estrecho que la O, para que «O0» no se lea «00»
     '1': ['.#.', '##.', '.#.', '.#.', '.#.', '.#.', '###'],
     '2': ['.###.', '#...#', '....#', '...#.', '..#..', '.#...', '#####'],
     '3': ['#####', '...#.', '..#..', '...#.', '....#', '#...#', '.###.'],
