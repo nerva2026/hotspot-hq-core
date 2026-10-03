@@ -2,7 +2,9 @@
 //   node pruebas/tablon.mjs http://127.0.0.1:3993/tareas <código de alta del registro>
 // Crea dos cuentas (Diego y Víctor) y comprueba que las notas de una tarea no se pisan: quien guarda sobre una versión
 // que ya no es la que hay recibe un 409 con lo que hay ahora, y con la versión buena se guarda. Sin «antes» pasa lo
-// mismo si la tarea ya tiene notas, y el cliente de ahora (publico/app/) siempre lo manda.
+// mismo si la tarea ya tiene notas, y el cliente de ahora (publico/app/) siempre lo manda. Y la lógica de las pantallas
+// que no necesita navegador: la franja «Sin conexión…» (app/conexion.js) y las capas (app/capas.js): el tabulador que da
+// la vuelta dentro de una ventana y el «atrás» que la cierra sin ensuciar el historial.
 
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
@@ -210,4 +212,233 @@ try {
     delete globalThis.document;
 }
 
-console.log("Tablón (notas que no se pisan): bien");
+// ---------- las capas (app/capas.js): ventanas, ficha y menús ----------
+// El tabulador da la vuelta dentro de la capa y «atrás» la cierra sin ensuciar el historial. La lógica, con un
+// historial de mentira (en pantalla se mira con un navegador).
+{
+    const { vueltaDeTab, crearAtras, MARCA } = await import(new URL("capas.js", carpetaApp).href);
+
+    // El tabulador: en los extremos da la vuelta; en medio, lo deja pasar; desde fuera, entra.
+    assert.equal(vueltaDeTab({ total: 4, indice: 3 }), 0, "del último, al primero");
+    assert.equal(vueltaDeTab({ total: 4, indice: 0, atras: true }), 3, "Mayús+Tab en el primero: al último");
+    assert.equal(vueltaDeTab({ total: 4, indice: 1 }), null, "en medio, el navegador sigue");
+    assert.equal(vueltaDeTab({ total: 4, indice: 2, atras: true }), null);
+    assert.equal(vueltaDeTab({ total: 4, indice: -1, dentro: false }), 0, "con el foco detrás, entra por el principio");
+    assert.equal(vueltaDeTab({ total: 4, indice: -1, dentro: false, atras: true }), 3, "…o por el final");
+    assert.equal(vueltaDeTab({ total: 4, indice: -1, dentro: true }), null);
+    assert.equal(vueltaDeTab({ total: 1, indice: 0 }), 0, "con una sola parada, se queda en ella");
+    assert.equal(vueltaDeTab({ total: 1, indice: 0, atras: true }), 0);
+    assert.equal(vueltaDeTab({ total: 0, indice: -1 }), -1, "sin paradas, el foco se queda en la capa");
+
+    // Un historial de mentira: «back()» no se mueve al momento; «llegar()» hace lo que haría el navegador un instante
+    // después (moverse y avisar con «popstate»). «persona(±1)» es el botón de atrás o de adelante.
+    function historialFalso(direccion = "/tareas/?solo=1", estado = null) {
+        const entradas = [{ estado: null, direccion: "/antes/" }, { estado, direccion }];
+        let i = 1;
+        const pendientes = [];
+        const h = {
+            atrases: 0,
+            get state() {
+                return entradas[i].estado;
+            },
+            get length() {
+                return entradas.length;
+            },
+            direccion: () => entradas[i].direccion,
+            pushState(e, _titulo, d) {
+                entradas.splice(i + 1);
+                entradas.push({ estado: e, direccion: d ?? entradas[i].direccion });
+                i++;
+            },
+            replaceState(e, _titulo, d) {
+                entradas[i] = { estado: e, direccion: d ?? entradas[i].direccion };
+            },
+            back() {
+                h.atrases++;
+                pendientes.push(-1);
+            },
+            persona: (paso) => pendientes.push(paso),
+            llegar(alVolver) {
+                while (pendientes.length) {
+                    const paso = pendientes.shift();
+                    if (i + paso < 0 || i + paso >= entradas.length) continue;
+                    i += paso;
+                    alVolver(entradas[i].estado);
+                }
+            },
+            direcciones: () => entradas.map((e, n) => (n === i ? `[${e.direccion}]` : e.direccion)).join(" "),
+        };
+        return h;
+    }
+    function montaje(direccion, estado) {
+        const h = historialFalso(direccion, estado);
+        const capas = [];
+        const cierres = [];
+        const atras = crearAtras({
+            historial: h,
+            capas: () => capas,
+            cerrarArriba: () => {
+                const capa = capas[capas.length - 1];
+                cierres.push(capa.nombre);
+                if (capa.terca) return; // no se deja cerrar (unas notas en conflicto)
+                capas.pop();
+                atras.alCambiar();
+            },
+        });
+        const abrir = (nombre, mas = {}) => {
+            const capa = { nombre, ...mas };
+            capas.push(capa);
+            atras.alCambiar();
+            return capa;
+        };
+        const cerrar = (capa) => {
+            capas.splice(capas.indexOf(capa), 1);
+            atras.alCambiar();
+        };
+        return { h, capas, cierres, atras, abrir, cerrar, llegar: () => h.llegar(atras.alVolver) };
+    }
+
+    // Abrir una ventana apunta UNA entrada (con la misma dirección) y cerrarla con el botón la retira.
+    let m = montaje();
+    let v = m.abrir("nueva tarea");
+    assert.equal(m.h.length, 3);
+    assert.equal(m.h.state[MARCA], true);
+    assert.equal(m.h.direcciones(), "/antes/ /tareas/?solo=1 [/tareas/?solo=1]", "la ventana no cambia la dirección (ni pierde ?solo=1)");
+    m.cerrar(v);
+    assert.equal(m.h.atrases, 1, "cerrar con el botón vuelve atrás una vez");
+    m.llegar();
+    assert.equal(m.h.direcciones(), "/antes/ [/tareas/?solo=1] /tareas/?solo=1");
+    assert.equal(m.h.state, null);
+    assert.deepEqual(m.cierres, [], "nuestro propio «atrás» no cierra nada");
+    assert.deepEqual(m.atras.estado(), { enCentinela: false, retirando: false });
+    // …y diez veces seguidas no llenan el historial: «atrás» sigue llevando a lo de antes.
+    for (let n = 0; n < 10; n++) {
+        v = m.abrir("nueva tarea");
+        m.cerrar(v);
+        m.llegar();
+    }
+    assert.equal(m.h.length, 3, "como mucho queda la entrada de «adelante»");
+    assert.equal(m.h.direcciones().startsWith("/antes/ [/tareas/?solo=1]"), true);
+
+    // «Atrás» con la ficha abierta la cierra (una vez) y no sale del tablón; la ficha pone su dirección.
+    m = montaje();
+    m.abrir("ficha", { direccion: "/tareas/?tarea=abc&solo=1" });
+    assert.equal(m.h.direcciones(), "/antes/ /tareas/?solo=1 [/tareas/?tarea=abc&solo=1]");
+    m.h.persona(-1);
+    m.llegar();
+    assert.deepEqual(m.cierres, ["ficha"]);
+    assert.equal(m.capas.length, 0);
+    assert.equal(m.h.atrases, 0, "no hace falta volver atrás otra vez");
+    assert.equal(m.h.direcciones(), "/antes/ [/tareas/?solo=1] /tareas/?tarea=abc&solo=1");
+    // «adelante» lleva a un centinela viejo sin nada que enseñar: se vuelve solo
+    m.h.persona(1);
+    m.llegar();
+    assert.equal(m.h.atrases, 1);
+    assert.equal(m.h.direcciones(), "/antes/ [/tareas/?solo=1] /tareas/?tarea=abc&solo=1");
+    assert.deepEqual(m.cierres, ["ficha"]);
+
+    // Una capa que no se deja cerrar (notas en conflicto): «atrás» no saca de la pantalla; se queda con su centinela.
+    m = montaje();
+    const terca = m.abrir("ficha", { direccion: "/tareas/?tarea=abc", terca: true });
+    m.h.persona(-1);
+    m.llegar();
+    assert.deepEqual(m.cierres, ["ficha"]);
+    assert.equal(m.capas.length, 1);
+    assert.equal(m.h.state[MARCA], true, "vuelve a haber centinela");
+    assert.equal(m.h.direccion(), "/tareas/?tarea=abc");
+    terca.terca = false;
+    m.h.persona(-1);
+    m.llegar();
+    assert.equal(m.capas.length, 0);
+    assert.equal(m.h.direccion(), "/tareas/?solo=1");
+
+    // Dos capas (la ficha y, encima, una ventana): un solo centinela; cada «atrás» cierra una.
+    m = montaje();
+    m.abrir("ficha", { direccion: "/tareas/?tarea=abc" });
+    m.abrir("ventana");
+    assert.equal(m.h.length, 3, "un centinela para las dos");
+    assert.equal(m.h.direccion(), "/tareas/?tarea=abc");
+    m.h.persona(-1);
+    m.llegar();
+    assert.deepEqual(m.cierres, ["ventana"]);
+    assert.equal(m.h.state[MARCA], true, "queda la ficha, con su centinela");
+    assert.equal(m.h.direccion(), "/tareas/?tarea=abc");
+    m.h.persona(-1);
+    m.llegar();
+    assert.deepEqual(m.cierres, ["ventana", "ficha"]);
+    assert.equal(m.h.direccion(), "/tareas/?solo=1");
+    // …y si se cierra la de abajo con la otra abierta («Crear y abrir» cierra la ventana y deja la ficha), sigue el centinela
+    m = montaje();
+    v = m.abrir("ventana");
+    m.abrir("ficha", { direccion: "/tareas/?tarea=abc" });
+    m.cerrar(v);
+    assert.equal(m.h.atrases, 0);
+    assert.equal(m.h.direccion(), "/tareas/?tarea=abc");
+
+    // Cerrar una y abrir otra en el mismo momento (pulsar otra tarea con la ficha abierta): cuando llega nuestro
+    // «atrás», se pone el centinela de la nueva, con su dirección.
+    m = montaje();
+    let f = m.abrir("ficha", { direccion: "/tareas/?tarea=abc" });
+    m.cerrar(f);
+    f = m.abrir("ficha", { direccion: "/tareas/?tarea=xyz" });
+    assert.equal(m.h.atrases, 1);
+    m.llegar();
+    assert.equal(m.h.direcciones(), "/antes/ /tareas/?solo=1 [/tareas/?tarea=xyz]");
+    assert.deepEqual(m.cierres, []);
+    m.cerrar(f);
+    m.llegar();
+    assert.equal(m.h.direcciones(), "/antes/ [/tareas/?solo=1] /tareas/?tarea=xyz");
+
+    // Lo que ya dijera la entrada se conserva en el centinela (el archivo guarda ahí qué documento está abierto).
+    m = montaje("/tareas/archivo/?doc=d1", { doc: "d1" });
+    v = m.abrir("editar documento");
+    assert.deepEqual(m.h.state, { doc: "d1", [MARCA]: true });
+    m.cerrar(v);
+    m.llegar();
+    assert.deepEqual(m.h.state, { doc: "d1" });
+
+    // Si alguien ha apuntado otra cosa en el historial después (la oficina, que comparte el de la pestaña), cerrar con
+    // el botón NO vuelve atrás: saldría de esa otra cosa. Se queda una entrada sin marca.
+    m = montaje();
+    v = m.abrir("ventana");
+    m.h.pushState({ deOtro: true }, "", "/otra-sala");
+    m.cerrar(v);
+    assert.equal(m.h.atrases, 0, "la entrada de ahora no es la nuestra");
+    m = montaje();
+    v = m.abrir("ventana");
+    const marcada = m.h.state;
+    m.h.pushState({ deOtro: true }, "", "/otra-sala"); // el marco no lo ve: su entrada sigue siendo la suya…
+    m.h.replaceState(marcada, "", "/tareas/?solo=1"); // …pero el historial mide uno más
+    m.cerrar(v);
+    assert.equal(m.h.atrases, 0, "el historial ha crecido por encima");
+    assert.equal(m.h.state, null, "y la entrada se queda sin marca");
+
+    // La página recargada sobre un centinela (se recargó con la ficha abierta): se retira al cargar.
+    m = montaje("/tareas/?tarea=abc", { [MARCA]: true });
+    m.atras.alCargar();
+    assert.equal(m.h.atrases, 1);
+    m.llegar();
+    assert.deepEqual(m.atras.estado(), { enCentinela: false, retirando: false });
+    m = montaje();
+    m.atras.alCargar();
+    assert.equal(m.h.atrases, 0, "sin centinela, al cargar no se toca el historial");
+
+    // Un «atrás» que no es de las capas (el del visor del archivo) no se toca.
+    m = montaje();
+    assert.equal(m.atras.alVolver(null), false);
+    assert.equal(m.atras.alVolver({ doc: "d1" }), false);
+
+    // Y las pantallas lo usan: toda ventana es una capa modal; la ficha, una capa con su dirección (por conSolo);
+    // los menús, capas sin «atrás». Y capas.js no construye direcciones: usa la que hay o la que le da la capa.
+    const fuente = (f) => readFileSync(new URL(f, carpetaApp), "utf8");
+    assert.match(fuente("menus.js"), /capa = abrirCapa\(\{ el: fondo, cerrar, modal: true \}\)/, "las ventanas son capas modales");
+    assert.match(fuente("menus.js"), /abrirCapa\(\{ el, cerrar: cerrarMenu, conAtras: false \}\)/, "los menús son capas");
+    assert.match(fuente("ficha.js"), /abrirCapa\(\{ el: panel, cerrar: \(\) => cerrarFicha\(\), direccion: direccionDeTarea\(id\) \}\)/, "la ficha es una capa con su dirección");
+    assert.match(fuente("ficha.js"), /const direccionDeTarea = \(id\) => conSolo\(/, "la dirección de la ficha conserva el modo solo");
+    assert.ok(!/conSolo|solo=|\?tarea|new URL\(/.test(fuente("capas.js").replace(/^\s*\/\/.*$/gm, "")), "capas.js no construye direcciones");
+    for (const f of readdirSync(carpetaApp).filter((f) => f.endsWith(".js") && f !== "menus.js")) {
+        assert.ok(!/class: "fondo-ventana"|aria-modal/.test(fuente(f)), `${f} hace una ventana por su cuenta: tiene que usar ventana() de menus.js`);
+    }
+}
+
+console.log("Tablón (notas que no se pisan, y ventanas que no dejan salir el foco y se cierran con «atrás»): bien");

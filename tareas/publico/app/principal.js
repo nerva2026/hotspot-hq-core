@@ -3,7 +3,8 @@
 import { h, $, vaciar, normalizar, hoy, plazo, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, pesoPrioridad, guardarLocal, leerLocal, fechaMedia, retrasar, MESES } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion } from "./api.js";
 import { pantallaEntrar, pantallaAlta } from "./acceso.js";
-import { sinSolo } from "./solo.js";
+import { sinSolo, conSolo } from "./solo.js";
+import { BUSQUEDA_AL_CARGAR } from "./capas.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar, chipEtiqueta } from "./menus.js";
 import { hayArrastre } from "./arrastre.js";
 import { interpretar } from "./rapida.js";
@@ -42,6 +43,8 @@ const E = {
 if (!VISTAS.some((v) => v.id === E.vista)) E.vista = enMovil() ? "lista" : "tablero";
 
 const raiz = document.getElementById("app");
+// La tarea que pide la dirección al cargar («?tarea=…»), leída antes de que nadie toque el historial.
+let tareaPedida = new URLSearchParams(BUSQUEDA_AL_CARGAR).get("tarea");
 let dejarDeEscuchar = null;
 let pintura = null;
 let pintarAlSoltarFoco = false;
@@ -1085,8 +1088,14 @@ function empezar(datos) {
     dejarDeEscuchar?.();
     dejarDeEscuchar = escuchar(alRecibir, recargar);
     cargarOficina();
-    const pedida = new URLSearchParams(location.search).get("tarea");
-    if (pedida && E.tareas.has(pedida)) ctx.abrir(pedida);
+    // «?tarea=…»: el enlace a una tarea (o la página recargada con su ficha abierta). La dirección de debajo se queda
+    // limpia y la ficha pone la suya al abrirse (capas.js): así «atrás» la cierra y deja el tablón, sin la tarea.
+    const pedida = tareaPedida;
+    tareaPedida = null; // solo la primera vez (al volver a entrar tras perder la sesión, no)
+    if (pedida) {
+        if (new URLSearchParams(location.search).has("tarea")) history.replaceState(history.state, "", conSolo(location.pathname));
+        if (E.tareas.has(pedida)) ctx.abrir(pedida);
+    }
 }
 
 function sinSesion() {

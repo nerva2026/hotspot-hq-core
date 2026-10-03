@@ -698,6 +698,10 @@ function cerrarDoc() {
 window.addEventListener("popstate", () => {
     if (!E.yo) return;
     const id = new URLSearchParams(location.search).get("doc");
+    // Un «atrás» que solo ha cerrado una ventana (capas.js) deja la dirección como estaba: si ya se ve lo que dice,
+    // no se vuelve a abrir el documento (perdería por dónde iba) ni la lista.
+    const viendoVisor = $("#vista-visor")?.hidden === false;
+    if (id ? viendoVisor && visor?.idAbierto() === id : !viendoVisor) return;
     if (id) abrirDoc(id, { empujar: false });
     else mostrarLista();
 });

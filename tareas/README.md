@@ -72,6 +72,20 @@ cualquier navegador.
   (`colocarAvisos()` en `publico/app/menus.js`). Una ventana nunca es más alta que la pantalla: se desplaza por dentro.
   Un menú mide como mucho 420 px (y se desplaza); en un móvil, lo que necesite hasta el alto de la pantalla, para que
   el menú de la cuenta salga entero.
+- **Las capas** (ventanas, la ficha de una tarea y los menús, en las cinco pantallas; todo en `publico/app/capas.js`):
+  - *El foco no se sale.* El tabulador y Mayús+Tab dan la vuelta dentro de la capa de arriba; Escape la cierra y, al
+    cerrarla, el foco vuelve a lo que la abrió (o, si el tablón se ha repintado, a esa tarea).
+  - *Lo de detrás de una ventana no se puede pulsar ni enfocar* (`inert`). La ficha no es modal: al lado sigue el
+    tablón y pulsar otra tarea la abre.
+  - *«Atrás» cierra lo que hay abierto* (el botón del navegador, el del teléfono o el gesto), en vez de sacar de la
+    pantalla: en un móvil la ficha ocupa toda la pantalla. Mientras hay algo abierto hay UNA entrada de más en el
+    historial; al cerrar con el botón o con Escape se retira sola (`history.back()`), así que abrir y cerrar no ensucia
+    el historial, tampoco dentro del panel de la oficina (si la oficina ha apuntado algo después, no se vuelve atrás).
+    Con la ficha abierta la dirección dice `?tarea=…` (con su `?solo=1`): recargar la vuelve a abrir. Los menús no
+    cuentan para «atrás»: se cierran con lo que tengan debajo.
+  - Una ventana nueva se hace siempre con `ventana()` (`menus.js`), que ya es una capa; algo que se abra encima y no
+    sea una ventana, con `abrirCapa()`. Una pantalla que escuche `popstate` (el visor del archivo) no debe repetir lo
+    que ya se ve: un «atrás» puede haber cerrado solo una ventana.
 - **Cada tarea tiene:** título, estado, prioridad (urgente, alta, media, baja; cada una con su color),
   para quién, pedido por, fecha de inicio y fecha límite, etiquetas, subtareas y notas.
 - **En directo:** lo que cambia uno lo ve el otro al momento (Server-Sent Events).
@@ -104,6 +118,7 @@ Node 22 sin dependencias:
 | `publico/app/musica*.js` | La música en pantalla: la cabina (`musica.js`), el reproductor pequeño (`musica-mini.js`), piezas comunes (`musica-comun.js`) y los estados del reproductor, sin página, para poder probarlos en Node (`musica-seguidor.js`). |
 | `publico/app/cumple.js`, `confeti.js`, `oficina.js`, `cumples.js` | Los cumpleaños (cuentas y textos), el confeti, el puente invisible de la oficina (`/tareas/oficina/`) y el cartel de cumpleaños (`/tareas/cumples/`). |
 | `publico/app/solo.js` | El modo «solo lo suyo» (`?solo=1`): cuándo se pone y cómo se conserva en las direcciones (ver «Solo lo suyo»). |
+| `publico/app/capas.js` | Las capas (ventanas, ficha y menús): el foco que no se sale, lo de detrás inerte y «atrás» que cierra la de arriba (ver «Las capas»). La lógica del historial y del tabulador, sin página, para probarla en Node. |
 | `publico/app/libro-espera.js` | La pantalla «Solo para los socios» del libro, en directo: sigue escuchando y abre el libro cuando a esa persona le dan acceso. Lógica sola, para probarla en Node. |
 | `publico/app/libro-buscar.js` | El buscador del libro: qué se puede buscar de un movimiento (también el importe, la fecha y el tipo) y cuándo coincide. Lógica sola, para probarla en Node. |
 | `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar, una por pantalla y cada una con su servidor y su puerto (tabla en «Las pruebas»). |
@@ -173,8 +188,9 @@ línea, al lado del nombre (con menos de 740 px no caben y bajan a la suya). Sin
   `/tareas/libro/?solo=1`) y al volver de Spotify (`api/musica/conectar?volver=1&solo=1`).
 - **El modo vive en la dirección**, no en el almacenamiento del navegador (lo compartirían todos los paneles de la
   oficina). Las direcciones que una pantalla construye para sí misma pasan por `conSolo()`: abrir y cerrar un
-  documento del archivo, la vuelta de entrar (con Google, con contraseña o con un enlace de alta) y la vuelta de
-  conectar Spotify. Una dirección propia nueva tiene que hacer lo mismo (la prueba lo vigila).
+  documento del archivo, la ficha de una tarea (`?tarea=…`), la vuelta de entrar (con Google, con contraseña o con
+  un enlace de alta) y la vuelta de conectar Spotify. Una dirección propia nueva tiene que hacer lo mismo (la prueba
+  lo vigila). La entrada que apunta una ventana abierta (`capas.js`) no cambia la dirección.
 - **Lo que sale de la oficina va sin el modo:** «Abrir en pestaña nueva ↗» (`sinSolo()`), el enlace de una tarea para
   compartir y la pestaña que se abre para entrar con Google desde un marco. Allí las pestañas y el menú son la única
   manera de moverse.
@@ -495,7 +511,7 @@ sus variables, están en el workflow.
 | Probar el servidor | (con `curl`) | 3999 | Que arranca, sirve el tablón, imprime el enlace de alta y pide sesión (401) a quien no la tiene. |
 | Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. Y «Solo para los socios» en directo: la espera de la pantalla (`publico/app/libro-espera.js`) contra el canal de verdad, al pasar a administrar y al recibir parte en el reparto. Y el buscador (`publico/app/libro-buscar.js`): por importe, por fecha, por tipo y por persona. |
 | Probar la pizarra | `pruebas/pizarra.mjs` | 3997 | Trazos, notas y fotos con dos personas a la vez, vaciar y recuperar, el lápiz en directo y quién la tiene abierta. |
-| Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). |
+| Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). Y las capas (`publico/app/capas.js`) con un historial de mentira: el tabulador da la vuelta dentro, «atrás» cierra la de arriba, cerrar con el botón no deja entradas, y toda ventana pasa por `ventana()`. |
 | Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje, puente `/tareas/oficina/` y cartel `/tareas/cumples/` (la API y lo que sirve; en pantalla se mira con un navegador). |
 | Probar el archivo | `pruebas/archivo.mjs` | 3992 | Subir un documento de cada tipo, enlaces, papelera, búsqueda, lo que no debe entrar, Markdown y Word escapados y el límite total (`ARCHIVO_MAXIMO_MB=40`). |
 | Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify (y entrar en la cabina al conectar, libre u ocupada), lo que suena en directo, cómo le va a cada oyente, el aviso a la oficina y el puente con `hsMusica` (el módulo de verdad con una oficina de mentira); la música «sin configurar»; y las horas con su artículo («desde la 1:08», `laHora()`), sin ninguna escrita a mano en las pantallas. |

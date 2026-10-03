@@ -1184,18 +1184,20 @@ table.lista {
 .celda-nueva::placeholder {
     color: var(--tinta-suave);
 }
+/* «Abrir» sale al pasar el ratón por la fila o al llegar a ella con el teclado. Escondido es transparente, no
+   invisible: así se le puede devolver el foco al cerrar la ficha que abrió (y se ve en cuanto lo tiene). */
 .fila .abrir {
     flex: none;
-    visibility: hidden;
+    opacity: 0;
 }
 .fila:hover .abrir,
 .fila:focus-within .abrir {
-    visibility: visible;
+    opacity: 1;
 }
 /* Donde no hay ratón (un móvil, una tableta) «Abrir» está siempre a la vista. */
 @media (hover: none) {
     .fila .abrir {
-        visibility: visible;
+        opacity: 1;
     }
 }
 /* El título como texto y el resumen de la fila son de la lista estrecha (más abajo): en la ancha no salen. */
@@ -2135,6 +2137,12 @@ table.lista {
 }
 
 /* ---------- ventanas y avisos ---------- */
+/* Las capas (app/capas.js) pueden quedarse con el foco si dentro no hay dónde ponerlo: sin marco alrededor. */
+.fondo-ventana:focus,
+.ficha:focus,
+.menu:focus {
+    outline: none;
+}
 /* La ventana nunca es más alta que la pantalla: si su contenido no cabe, se desplaza por dentro (la cabecera se queda
    arriba). Debajo le queda siempre el hueco de los avisos (.avisos.en-su-sitio), que así no se pintan encima. */
 .fondo-ventana {
@@ -2515,7 +2523,7 @@ table.lista {
         color: var(--tinta-suave);
     }
     .fila .abrir {
-        visibility: visible;
+        opacity: 1;
         margin-top: 4px;
     }
     .fila-resumen {

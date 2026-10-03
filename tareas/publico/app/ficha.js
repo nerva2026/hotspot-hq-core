@@ -2,9 +2,12 @@
 
 import { h, rellenar, retrasar, estadoDe, prioridadDe, plazo, fechaMedia, fechaCorta, fechaLarga, haceCuanto } from "./util.js";
 import { menuEstado, menuPrioridad, menuPersonas, menuPersona, menuFecha, menuEtiquetas, avatar, chipEtiqueta, cerrarMenu, aviso, colocarAvisos } from "./menus.js";
+import { abrirCapa } from "./capas.js";
+import { conSolo } from "./solo.js";
 
 let abierta = null; // id
 let panel = null;
+let capa = null; // la ficha es una capa (capas.js): el tabulador no sale de ella y «atrás» la cierra
 let guardarTitulo = null;
 let guardarNotas = null;
 let notasEnConflicto = false; // otra persona ha cambiado las notas a la vez y quien escribe aún no ha elegido
@@ -34,9 +37,21 @@ export function cerrarFicha({ forzar = false } = {}) {
     const id = abierta;
     abierta = null;
     document.body.classList.remove("con-ficha");
-    document.querySelector(`[data-id="${CSS.escape(id)}"]`)?.focus({ preventScroll: true });
+    // El foco vuelve a lo que la abrió o, si el tablón se ha repintado mientras tanto, a esa tarea.
+    capa?.quitar({
+        alternativa: () => {
+            const suya = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
+            // en el tablero, el calendario y el cronograma es un botón; en la lista, una fila: ahí, su «Abrir»
+            return suya?.matches("button, a[href], [tabindex]") ? suya : suya?.querySelector(".abrir");
+        },
+    });
+    capa = null;
     return true;
 }
+
+// La dirección que enseña la barra del navegador con la ficha abierta: la de esa tarea, con el modo solo de esta página
+// si lo tiene (el enlace para compartir, «Enlace», va siempre sin él: sale de la oficina).
+const direccionDeTarea = (id) => conSolo(`${location.pathname}?tarea=${encodeURIComponent(id)}`);
 
 function crecer(area) {
     area.style.height = "auto";
@@ -218,6 +233,9 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
             pie,
         ),
     );
+    // Una capa, pero no modal: al lado sigue el tablón (pulsar otra tarea la abre). «Atrás» la cierra (en un móvil
+    // ocupa toda la pantalla y el botón de atrás sacaba del tablón entero) y la dirección dice qué tarea es.
+    capa = abrirCapa({ el: panel, cerrar: () => cerrarFicha(), direccion: direccionDeTarea(id) });
     document.body.appendChild(panel);
     document.body.classList.add("con-ficha");
     colocarAvisos(); // los avisos que hubiera a la vista pasan al pie de la ficha, para no taparla

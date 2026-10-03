@@ -236,10 +236,20 @@ assert.match(fuente("libro.js"), /o\.otra && "otra-pantalla"/, "el menú del lib
 assert.match(fuente("acceso.js"), /from "\.\/solo\.js"/);
 
 // Ninguna pantalla cambia su dirección (history.pushState y replaceState) sin conservar el modo: o pasa por conSolo()
-// o deja la búsqueda como está (location.search).
+// o deja la búsqueda como está (location.search). Las ventanas y la ficha de una tarea apuntan una entrada en el
+// historial mientras están abiertas (capas.js, para que «atrás» las cierre): ese módulo no construye direcciones, pone
+// la que hay (con su ?solo=1) o la que le da la capa, y la única capa que da una, la ficha, la saca de conSolo().
 assert.match(fuente("archivo.js"), /const enlaceDoc = \(id\) => conSolo\(/);
+assert.ok(!/conSolo|solo=|\?tarea|new URL\(/.test(fuente("capas.js").replace(/^\s*\/\/.*$/gm, "")), "capas.js no construye direcciones");
+assert.match(fuente("capas.js"), /pushState\(\{[^\n]*\}, "", direccion \?\? base\)/, "el centinela lleva la dirección de la capa o la que había");
+assert.match(fuente("ficha.js"), /const direccionDeTarea = \(id\) => conSolo\(`\$\{location\.pathname\}\?tarea=/, "la dirección de la ficha conserva el modo");
+for (const f of readdirSync(carpetaApp).filter((f) => f.endsWith(".js") && f !== "capas.js")) {
+    for (const linea of fuente(f).split("\n").filter((l) => /abrirCapa\(/.test(l) && /direccion:/.test(l))) {
+        assert.match(linea, /direccion: direccionDeTarea\(id\)/, `${f}: una capa con dirección propia tiene que sacarla de conSolo(): ${linea.trim()}`);
+    }
+}
 let cambios = 0;
-for (const f of readdirSync(carpetaApp).filter((f) => f.endsWith(".js"))) {
+for (const f of readdirSync(carpetaApp).filter((f) => f.endsWith(".js") && f !== "capas.js")) {
     for (const [i, linea] of fuente(f).split("\n").entries()) {
         if (!/history\.(pushState|replaceState)\(/.test(linea)) continue;
         cambios++;
