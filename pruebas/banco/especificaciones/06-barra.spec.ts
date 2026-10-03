@@ -2,6 +2,9 @@
  * Punto 6 · BARRA DE BOTONES EN LLAMADA: el script del mapa quita el botón de invitar y pone cinco botones de icono
  * (el último, con un número). Se mide en el DOM cuáles se ven en la barra (enteros: ni recortados ni en el menú ☰)
  * SIN llamada y EN llamada, a 1280×800, 1024×768 y 1440×900, y se captura la barra en los seis casos.
+ * Y los iconos (parche 15): un botón con el icono en una ruta relativa sale con él, y uno cuyo icono no tiene dirección
+ * que valga sale igual, sin icono y con su `toolTip` de etiqueta. (El mapa de prueba se carga por su `.tmj`: lo que
+ * pasaba en el servidor, mapa por su `.wam` y sala sin `mapUrl`, aquí no se puede dar.)
  */
 import { expect, test, type Page } from "@playwright/test";
 import {
@@ -13,10 +16,12 @@ import {
     enLlamada,
     enScript,
     entrar,
+    erroresDesde,
     espera,
     esperarLlamada,
     estadoDeLlamada,
     guardarDiagnostico,
+    MAPAS,
     mensajeDe,
     quitarAvisoDelMicrofono,
     salir,
@@ -232,6 +237,90 @@ test("6 · la barra de botones, sin llamada y en llamada", async ({ browser }) =
             return {
                 estado: bien ? "bien" : "mal",
                 dato: { ordenAntes: antes.orden, ordenDespues: despues.orden, ordenAlVolver: alFinal.orden, imagenNueva: despues.botones.find((x) => x.nombre === "Botón 2 (cambiado)")?.imagen, pulsados },
+                capturas: [captura1],
+            };
+        });
+
+        // ---- los iconos de los botones (parche 15) ----
+        // Se pone un botón más, se mira y se quita: la barra queda con los cinco de siempre para las medidas de después.
+        const quitarBoton = (id: string): Promise<void> =>
+            enScript(
+                alicia,
+                (cual) => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (window as any).WA.ui.actionBar.removeButton(cual);
+                },
+                id,
+            );
+        /** Los botones del mapa que hay en la barra (se vean o estén escondidos por falta de sitio), con su icono. */
+        const botonesDelMapa = (): Promise<{ nombre: string; etiqueta: string; icono: string | null; cargado: boolean }[]> =>
+            alicia.evaluate(() =>
+                Array.from(document.querySelectorAll('#action-wrapper [class*="visibilitychecker"]'))
+                    .filter((e) => e.classList.contains("visible") || e.classList.contains("invisible"))
+                    .map((e) => {
+                        const imagen = e.querySelector("img");
+                        const boton = e.querySelector("button");
+                        return {
+                            nombre: imagen?.getAttribute("alt") || (boton?.textContent ?? "").replace(/\s+/g, " ").trim(),
+                            etiqueta: (boton?.textContent ?? "").replace(/\s+/g, " ").trim(),
+                            icono: imagen ? imagen.src : null,
+                            cargado: !!imagen && imagen.complete && imagen.naturalWidth > 0,
+                        };
+                    }),
+            );
+
+        await comprobar(P, "boton-con-icono-relativo", "Un botón con el icono en una ruta relativa sale con su icono, que se pide junto al mapa", [alicia], async () => {
+            const antes = await medir(alicia);
+            await enScript(alicia, () => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (window as any).banco.ponerBoton({ id: "banco-relativo", toolTip: "Relativo (prueba)", imageSrc: "./iconos/rombo.png" });
+            });
+            // hasta que el botón está y su imagen ha llegado (si no llega, se apunta lo que haya)
+            await expect.poll(async () => (await botonesDelMapa()).find((x) => x.nombre === "Relativo (prueba)")?.cargado ?? false, { timeout: 8_000 }).toBe(true).catch(() => undefined);
+            const botones = await botonesDelMapa();
+            const nuevo = botones.find((x) => x.nombre === "Relativo (prueba)");
+            const captura1 = await captura(alicia, "6-boton-con-icono-relativo", { x: 0, y: 0, width: 1280, height: 110 });
+            await quitarBoton("banco-relativo");
+            await espera(1200);
+            const alFinal = await medir(alicia);
+            const esperado = MAPAS + "iconos/rombo.png";
+            const bien = !!nuevo && nuevo.icono === esperado && nuevo.cargado && JSON.stringify(alFinal.orden) === JSON.stringify(antes.orden);
+            return {
+                estado: bien ? "bien" : "mal",
+                dato: {
+                    nota: "El mapa de prueba se carga por la dirección de su .tmj (la sala tiene `mapUrl`): el caso del servidor (mapa por su .wam, sin `mapUrl`) NO se prueba aquí.",
+                    boton: nuevo ?? "no ha salido",
+                    iconoEsperado: esperado,
+                    losDeSiempre: botones.filter((x) => x.nombre.startsWith("Botón ")).map((x) => ({ nombre: x.nombre, icono: x.icono, cargado: x.cargado })),
+                    ordenAntes: antes.orden,
+                    ordenAlQuitarlo: alFinal.orden,
+                },
+                capturas: [captura1],
+            };
+        });
+
+        await comprobar(P, "boton-con-icono-imposible", "Un botón cuyo icono no tiene dirección que valga sale igual: sin icono, con su `toolTip` de etiqueta, y los demás siguen (parche 15)", [alicia], async () => {
+            const antes = await medir(alicia);
+            const consolaAntes = a ? a.consola.length : 0;
+            await enScript(alicia, () => {
+                // «https://» no es una dirección: `new URL()` falla con cualquier base, como fallaba en la v0.4.0 con una ruta relativa y sin `mapUrl`
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (window as any).banco.ponerBoton({ id: "banco-imposible", toolTip: "Imposible (prueba)", imageSrc: "https://" });
+            });
+            await espera(1500);
+            const botones = await botonesDelMapa();
+            const nuevo = botones.find((x) => x.etiqueta === "Imposible (prueba)");
+            const captura1 = await captura(alicia, "6-boton-con-icono-imposible", { x: 0, y: 0, width: 1280, height: 110 });
+            const deSiempre = botones.filter((x) => x.nombre.startsWith("Botón ")).length;
+            const avisos = a ? a.consola.slice(consolaAntes).filter((l) => l.includes("[HOT SPOT]")) : [];
+            const excepciones = a ? erroresDesde(a, consolaAntes).filter((l) => /Invalid URL/i.test(l)) : [];
+            await quitarBoton("banco-imposible");
+            await espera(1200);
+            const alFinal = await medir(alicia);
+            const bien = !!nuevo && nuevo.icono === null && deSiempre === 5 && avisos.length > 0 && excepciones.length === 0 && JSON.stringify(alFinal.orden) === JSON.stringify(antes.orden);
+            return {
+                estado: bien ? "bien" : "mal",
+                dato: { boton: nuevo ?? "no ha salido", botonesDeSiempreEnLaBarra: deSiempre, avisoEnLaConsola: avisos, excepcionesDeDireccion: excepciones, ordenAntes: antes.orden, ordenAlQuitarlo: alFinal.orden },
                 capturas: [captura1],
             };
         });
