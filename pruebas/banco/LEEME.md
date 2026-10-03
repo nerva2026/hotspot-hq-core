@@ -25,7 +25,8 @@ El flujo es `.github/workflows/hotspot-banco.yml`. Hace esto:
 4. Arranca `docker-compose.prod.yaml` + `tests/docker-compose.test.yaml` (los dos, de WorkAdventure) +
    `docker-compose.banco.yaml` (el nuestro: solo cambia la imagen de `play`). Las demás imágenes (`back`, `map-storage`…)
    son las oficiales de la misma versión.
-5. Pasa las pruebas con Chromium (cámara y micrófono de mentira, navegador en castellano, 1280×800) contra
+5. Pasa las pruebas con Chromium (cámara y micrófono de mentira, navegador en castellano, 1280×800, y las letras
+   ajustadas a la rejilla: `--font-render-hinting=full`, que es como las pinta un Chromium de Linux) contra
    `https://play.workadventure.localhost` (certificado autofirmado de Traefik).
 6. Escribe el informe y lo deja, con las capturas, en la rama **`banco-resultados`**.
 
@@ -80,14 +81,14 @@ El job termina en rojo si hay algo «mal» o si una prueba revienta; los «no se
 | 5 | `05-llamada.spec.ts` | En llamada, guardar `accion` o `lleva` no corta la conversación ni mueve a nadie (5 s mirando cada segundo). De paso: escribir en el chat y la captura de un mensaje con su hora. |
 | 6 | `06-barra.spec.ts` | Los cinco botones de icono del mapa, sin llamada y en llamada, a 1280×800, 1024×768 y 1440×900: cuáles se ven enteros, cuáles van al menú ☰; que «Invitar» no está; que el `callback` salta; que `addButton` con el mismo `id` sustituye en su sitio. |
 | 7 | `07-volver-a-hablar.spec.ts` | Parche 12: al dejar un estado que no deja hablar, sin moverse nadie, la llamada vuelve sola. |
-| 8 | `08-letras.spec.ts` | Capturas de «decir», «pensar», el nombre y los avisos de zona, con la letra que usa de verdad el navegador; que los retoques `hs-retoques-*.woff` se cargan y que el 5 ya no es igual que la S. |
+| 8 | `08-letras.spec.ts` (y `letras.ts`) | Capturas de «decir», «pensar», el nombre y los avisos de zona, con la letra que usa de verdad el navegador; que los retoques `hs-retoques-*.woff` se cargan y que el 5 ya no es igual que la S. La hora del chat (11 px, en `05-llamada`) y la franja de avisos (16 px), a tamaños de la rejilla de la letra. Y **los huecos entre letras**: en las burbujas de decir y de pensar, a 1280×800, 1440×900 y 1920×1080, cada letra retocada deja detrás el mismo hueco (un punto de la letra) y avanza lo mismo que una normal de su ancho; y, en una muestra aparte, cada retoque avanza lo que dice su dibujo. Se mide letra a letra en el DOM (`Range.getClientRects()`) y dos veces: con el navegador del banco («hinting» completo) y con otro que la prueba arranca sin ajuste (`--font-render-hinting=none`, como en un Mac). Las tablas de avances quedan en `diagnostico/8-huecos-….md` y `8-avances-de-los-retoques….md`. |
 | 9 | `09-sondeos.spec.ts` | El resultado exacto de la API que usan los mapas: `moveTo`, `proximityMeeting`, `ui.website`, `banner`, `sound`, capas, `setTiles`, `room.website`, zona con panel y zona silenciosa. |
 
 ## Qué hay en esta carpeta
 
 | Ruta | Qué es |
 | --- | --- |
-| `especificaciones/` | Las pruebas de Playwright y `util.ts` (entrar en el mapa, ejecutar dentro del script del mapa, capturas, comparar capturas, apuntar resultados). |
+| `especificaciones/` | Las pruebas de Playwright, `util.ts` (entrar en el mapa, ejecutar dentro del script del mapa, capturas, comparar capturas, apuntar resultados) y `letras.ts` (medir lo que avanza cada letra y el hueco que deja; no importa nada, para poder probarlo fuera del banco contra una página suelta). |
 | `banco.config.ts` | La configuración de Playwright. |
 | `docker-compose.banco.yaml` | Cambia el servicio `play` por nuestra imagen. |
 | `mapa/` | El mapa de prueba (`banco.tmj`), su tileset, los iconos de los botones, un sonido, dos páginas y el script del mapa (`banco.js`). |
