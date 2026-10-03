@@ -62,6 +62,8 @@ export const api = {
     anadirCrew: (datos) => llamar("POST", "crew", datos),
     cambiarCrew: (id, datos) => llamar("PATCH", `crew/${id}`, datos),
     cambiarYo: (datos) => llamar("PATCH", "yo", datos),
+    // lo propio de quien pregunta ({ yo: { …, libro } }): ¿puede ver el libro de cuentas ahora? (libro-pestana.js)
+    yo: () => llamar("GET", "yo"),
     // la oficina: qué día es hoy allí y de quién es el cumple (hoy, los próximos 30 días y todos los del crew), y el mío
     oficina: () => llamar("GET", "oficina"),
     // la música: el estado de la cabina (el puente de la oficina mira «configurado», quién pincha y «suena»)

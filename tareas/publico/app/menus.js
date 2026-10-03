@@ -1,6 +1,7 @@
 // Menús desplegables (estado, prioridad, personas, fechas, etiquetas), avisos y ventanas.
 
 import { h, rellenar, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, hoy, sumarDias, lunesDe, fechaMedia, colorEtiqueta, normalizar, inicial } from "./util.js";
+import { abrirCapa } from "./capas.js";
 
 let abierto = null;
 
@@ -13,7 +14,8 @@ export function cerrarMenu() {
     document.removeEventListener("keydown", m.tecla, true);
     window.removeEventListener("resize", m.recolocar);
     m.alCerrar?.();
-    if (m.ancla?.isConnected && m.devolverFoco) m.ancla.focus({ preventScroll: true });
+    // Si el foco estaba en el menú, vuelve a lo que lo abrió (capas.js); si ya está en otra cosa, no se toca.
+    m.capa.quitar({ alternativa: () => (m.ancla?.isConnected ? m.ancla : null) });
 }
 
 export const hayMenu = () => abierto !== null;
@@ -33,15 +35,17 @@ export function abrirMenu(ancla, contenido, { clase = "", alCerrar, ancho } = {}
     const tecla = (e) => {
         if (e.key === "Escape") {
             e.stopPropagation();
-            abierto.devolverFoco = true;
             cerrarMenu();
         }
     };
     document.addEventListener("pointerdown", fuera, true);
     document.addEventListener("keydown", tecla, true);
     window.addEventListener("resize", recolocar);
-    abierto = { el, ancla, fuera, tecla, recolocar, alCerrar };
-    const primero = el.querySelector("input:not([type=checkbox]), button.opcion, [autofocus]");
+    // Una capa más (capas.js): el tabulador da la vuelta dentro del menú y, al cerrarlo, el foco vuelve a su botón.
+    // «Atrás» no cuenta para un menú: se cierra con lo que tenga debajo.
+    const capa = abrirCapa({ el, cerrar: cerrarMenu, conAtras: false });
+    abierto = { el, ancla, fuera, tecla, recolocar, alCerrar, capa };
+    const primero = el.querySelector("input:not([type=checkbox]), button.opcion, a.opcion, [autofocus]");
     primero?.focus({ preventScroll: true });
     return el;
 }
@@ -439,12 +443,15 @@ export function aviso(texto, { accion, alAccion, duracion = 5000, tipo = "" } = 
 
 // ---------- ventana modal sencilla ----------
 
+// Es una capa modal (capas.js), igual en las cinco pantallas: el tabulador da la vuelta DENTRO de la ventana, lo de
+// detrás no se puede pulsar ni enfocar, Escape y «atrás» (el del navegador o el del teléfono) la cierran y, al
+// cerrarla, el foco vuelve a donde estaba.
 export function ventana(titulo, contenido, { ancho = 420, alCerrar } = {}) {
     cerrarMenu();
     const fondo = h("div", { class: "fondo-ventana" });
     const caja = h(
         "div",
-        { class: "ventana", role: "dialog", "aria-modal": "true", style: { maxWidth: `${ancho}px` } },
+        { class: "ventana", role: "dialog", "aria-modal": "true", "aria-label": typeof titulo === "string" ? titulo : null, style: { maxWidth: `${ancho}px` } },
         h("header", null, h("h2", null, titulo), h("button", { type: "button", class: "cerrar", title: "Cerrar (Esc)", onclick: () => cerrar() }, "×")),
         h("div", { class: "cuerpo-ventana" }, contenido),
     );
@@ -455,18 +462,26 @@ export function ventana(titulo, contenido, { ancho = 420, alCerrar } = {}) {
             cerrar();
         }
     };
+    let capa = null;
+    let cerrada = false;
     function cerrar() {
+        if (cerrada) return;
+        cerrada = true;
+        cerrarMenu(); // uno abierto desde la ventana (el de editar a alguien del crew)
         fondo.remove();
         document.removeEventListener("keydown", tecla, true);
         colocarAvisos();
+        capa.quitar();
         alCerrar?.();
     }
     fondo.addEventListener("pointerdown", (e) => {
         if (e.target === fondo) cerrar();
     });
     document.addEventListener("keydown", tecla, true);
+    // el foco de ahora (el botón que la abre) se apunta antes de moverlo, para devolvérselo al cerrar
+    capa = abrirCapa({ el: fondo, cerrar, modal: true });
     document.body.appendChild(fondo);
     colocarAvisos(); // los avisos que hubiera a la vista pasan a su hueco, debajo de la ventana
-    caja.querySelector("input, textarea, button:not(.cerrar)")?.focus();
+    (caja.querySelector("input, textarea, select, button:not(.cerrar)") || caja.querySelector(".cerrar"))?.focus();
     return { cerrar, caja };
 }

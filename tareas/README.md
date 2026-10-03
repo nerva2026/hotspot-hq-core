@@ -42,7 +42,9 @@ cualquier navegador.
   calendario y cronograma.
 - **Pantallas pequeñas:** con 600 px o menos la cabecera cabe en una línea (las vistas, en un solo botón con el nombre de
   la de ahora y, encima y en pequeño, «Tareas»; los filtros, con la búsqueda, plegados detrás de «Filtros») y, si no hay
-  una vista guardada, se abre la lista (por fecha) en vez del tablero. En el panel de la oficina, de 930 px o más caben
+  una vista guardada, se abre la lista (por fecha) en vez del tablero. En un móvil estrecho la cabecera se aprieta
+  para caber con la vista de nombre más largo («Cronograma»): con menos de 390 px, sin las flechas de «Filtros» y de
+  la cuenta; con menos de 360, «+ Nueva» se queda en «+». Ninguna pantalla se desplaza de lado desde 320 px. En el panel de la oficina, de 930 px o más caben
   las cuatro columnas (miden entre 215 y 300 px, sin tocar la letra); en uno de 721 a 929 px «Hecho» se pliega en una
   etiqueta con su número, que se despliega al pulsarla. En un móvil la oficina abre el tablón casi a pantalla completa
   (`src/hq.js` del repositorio de mapas).
@@ -50,10 +52,19 @@ cualquier navegador.
   tres líneas) y, debajo, estado, prioridad, para quién y fecha; «Abrir» está siempre a la vista y un toque en la fila
   (fuera de la casilla) abre la tarea, que es donde se cambia lo demás. Más ancha es la tabla de siempre, que se edita
   en el sitio; donde no hay ratón (`hover: none`) «Abrir» tampoco se esconde.
+- **La lista de 721 a 1114 px** (el panel de la oficina, una ventana sin maximizar): la tabla cabe siempre a lo ancho,
+  sin cortar ninguna columna por la mitad. Las columnas que no caben se esconden por orden, de la menos importante a la
+  más: «Pedido por» (por debajo de 1115 px de ventana), «Etiquetas» (1003), «Empieza» (893) y «Prioridad» (809), que
+  sigue viéndose en la franja de color de la fila. Título, estado, para quién y para cuándo están siempre; lo demás, en
+  la ficha («Abrir»). Los cortes se miden en la caja de la lista (reglas `@container lista` de `publico/estilo.css`):
+  cada columna tiene un mínimo y lo que lleva dentro no la ensancha (un nombre largo acaba en «…»), y los cortes dejan
+  17 px para la barra de desplazar de un ordenador. Si aun así la
+  tabla no cupiera (un navegador sin `@container`), una sombra marca el lado por el que sigue, como en el calendario.
 - **Calendario y cronograma:** el calendario se abre desplazado hasta hoy (en un móvil solo caben tres o cuatro días) y
   marca con una sombra el lado por el que sigue; en los dos, el título de una barra que empieza antes del borde visible
-  se corre hasta lo que se ve. Con 720 px o menos, el mes se encoge (se desplaza por dentro) para que la lista «Sin
-  fecha» quepa debajo, dentro de la pantalla. En el cronograma, el rótulo del mes va pegado al borde de la columna de
+  se corre hasta lo que se ve. Desde 600 px de ancho el mes se ve siempre entero, de lunes a domingo (los días se
+  estrechan hasta 82 px antes que salirse); «Sin fecha» va al lado solo si caben los dos (desde 871 px) y, si no,
+  debajo, dentro de la pantalla: el mes se encoge (se desplaza por dentro) para dejarle sitio. En el cronograma, el rótulo del mes va pegado al borde de la columna de
   nombres mientras ese mes esté a la vista y solo sale si cabe entero (donde no cabe se acorta: «sep 2026», «sep»; en un
   móvil, sin el año si es el de ahora); el selector «Nada · Estado · Persona» lleva siempre su etiqueta «Agrupar»; y el
   título que va al lado de una barra corta se coloca detrás de lo que la barra mide de verdad.
@@ -62,6 +73,20 @@ cualquier navegador.
   (`colocarAvisos()` en `publico/app/menus.js`). Una ventana nunca es más alta que la pantalla: se desplaza por dentro.
   Un menú mide como mucho 420 px (y se desplaza); en un móvil, lo que necesite hasta el alto de la pantalla, para que
   el menú de la cuenta salga entero.
+- **Las capas** (ventanas, la ficha de una tarea y los menús, en las cinco pantallas; todo en `publico/app/capas.js`):
+  - *El foco no se sale.* El tabulador y Mayús+Tab dan la vuelta dentro de la capa de arriba; Escape la cierra y, al
+    cerrarla, el foco vuelve a lo que la abrió (o, si el tablón se ha repintado, a esa tarea).
+  - *Lo de detrás de una ventana no se puede pulsar ni enfocar* (`inert`). La ficha no es modal: al lado sigue el
+    tablón y pulsar otra tarea la abre.
+  - *«Atrás» cierra lo que hay abierto* (el botón del navegador, el del teléfono o el gesto), en vez de sacar de la
+    pantalla: en un móvil la ficha ocupa toda la pantalla. Mientras hay algo abierto hay UNA entrada de más en el
+    historial; al cerrar con el botón o con Escape se retira sola (`history.back()`), así que abrir y cerrar no ensucia
+    el historial, tampoco dentro del panel de la oficina (si la oficina ha apuntado algo después, no se vuelve atrás).
+    Con la ficha abierta la dirección dice `?tarea=…` (con su `?solo=1`): recargar la vuelve a abrir. Los menús no
+    cuentan para «atrás»: se cierran con lo que tengan debajo.
+  - Una ventana nueva se hace siempre con `ventana()` (`menus.js`), que ya es una capa; algo que se abra encima y no
+    sea una ventana, con `abrirCapa()`. Una pantalla que escuche `popstate` (el visor del archivo) no debe repetir lo
+    que ya se ve: un «atrás» puede haber cerrado solo una ventana.
 - **Cada tarea tiene:** título, estado, prioridad (urgente, alta, media, baja; cada una con su color),
   para quién, pedido por, fecha de inicio y fecha límite, etiquetas, subtareas y notas.
 - **En directo:** lo que cambia uno lo ve el otro al momento (Server-Sent Events).
@@ -94,7 +119,10 @@ Node 22 sin dependencias:
 | `publico/app/musica*.js` | La música en pantalla: la cabina (`musica.js`), el reproductor pequeño (`musica-mini.js`), piezas comunes (`musica-comun.js`) y los estados del reproductor, sin página, para poder probarlos en Node (`musica-seguidor.js`). |
 | `publico/app/cumple.js`, `confeti.js`, `oficina.js`, `cumples.js` | Los cumpleaños (cuentas y textos), el confeti, el puente invisible de la oficina (`/tareas/oficina/`) y el cartel de cumpleaños (`/tareas/cumples/`). |
 | `publico/app/solo.js` | El modo «solo lo suyo» (`?solo=1`): cuándo se pone y cómo se conserva en las direcciones (ver «Solo lo suyo»). |
+| `publico/app/capas.js` | Las capas (ventanas, ficha y menús): el foco que no se sale, lo de detrás inerte y «atrás» que cierra la de arriba (ver «Las capas»). La lógica del historial y del tabulador, sin página, para probarla en Node. |
 | `publico/app/libro-espera.js` | La pantalla «Solo para los socios» del libro, en directo: sigue escuchando y abre el libro cuando a esa persona le dan acceso. Lógica sola, para probarla en Node. |
+| `publico/app/libro-pestana.js` | La pestaña «Cuentas» de las otras cuatro pantallas, en directo: con los avisos «libro» y «usuarios» del canal pregunta por lo suyo (`GET /api/yo`) y la pone o la quita. Lógica sola, para probarla en Node. |
+| `publico/app/libro-buscar.js` | El buscador del libro: qué se puede buscar de un movimiento (también el importe, la fecha y el tipo) y cuándo coincide. Lógica sola, para probarla en Node. |
 | `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar, una por pantalla y cada una con su servidor y su puerto (tabla en «Las pruebas»). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
 
@@ -114,7 +142,9 @@ mano delante de una hora (lo vigila `pruebas/musica.mjs`). Hoy la única es la d
 
 **Cómo se llega de una pantalla a otra:** el menú de la cuenta (arriba a la derecha) de cada pantalla y las pestañas
 de arriba llevan a las demás con los mismos nombres: «Tablón de tareas», «Libro de cuentas» (en las pestañas,
-«Tareas» y «Cuentas»; esta, solo a quien tiene parte en el reparto), «Pizarra», «Archivo» y «Música». Las cinco
+«Tareas» y «Cuentas»; esta, solo a quien tiene parte en el reparto o administra, y en directo: aparece o desaparece
+sin recargar cuando cambia el reparto o quién administra, igual que «Libro de cuentas» en el menú;
+`publico/app/libro-pestana.js`), «Pizarra», «Archivo» y «Música». Las cinco
 pantallas llevan las mismas cinco pestañas, en ese orden y con la suya marcada; en el tablón, que además tiene sus
 vistas (Tablero, Lista, Calendario y Cronograma), las vistas bajan a una segunda línea de la cabecera. Al añadir una
 pantalla nueva hay que añadirla en todas (en `principal.js`, `libro.js`, `pizarra.js`, `archivo.js` y `musica.js`, de
@@ -162,8 +192,9 @@ línea, al lado del nombre (con menos de 740 px no caben y bajan a la suya). Sin
   `/tareas/libro/?solo=1`) y al volver de Spotify (`api/musica/conectar?volver=1&solo=1`).
 - **El modo vive en la dirección**, no en el almacenamiento del navegador (lo compartirían todos los paneles de la
   oficina). Las direcciones que una pantalla construye para sí misma pasan por `conSolo()`: abrir y cerrar un
-  documento del archivo, la vuelta de entrar (con Google, con contraseña o con un enlace de alta) y la vuelta de
-  conectar Spotify. Una dirección propia nueva tiene que hacer lo mismo (la prueba lo vigila).
+  documento del archivo, la ficha de una tarea (`?tarea=…`), la vuelta de entrar (con Google, con contraseña o con
+  un enlace de alta) y la vuelta de conectar Spotify. Una dirección propia nueva tiene que hacer lo mismo (la prueba
+  lo vigila). La entrada que apunta una ventana abierta (`capas.js`) no cambia la dirección.
 - **Lo que sale de la oficina va sin el modo:** «Abrir en pestaña nueva ↗» (`sinSolo()`), el enlace de una tarea para
   compartir y la pestaña que se abre para entrar con Google desde un marco. Allí las pestañas y el menú son la única
   manera de moverse.
@@ -178,10 +209,19 @@ misma sesión que el tablón.
 - **Quién lo ve:** los administradores y quien tiene parte en el reparto. A los demás, la API les contesta 403 y la
   pantalla dice «Solo para los socios». Va en directo en los dos sentidos: a quien le quitan la parte se le cierra el
   libro al momento, y la pantalla «Solo para los socios» sigue escuchando el canal y abre el libro sola en cuanto a esa
-  persona le dan parte o pasa a administrar (`publico/app/libro-espera.js`), sin cerrar ni recargar.
+  persona le dan parte o pasa a administrar (`publico/app/libro-espera.js`), sin cerrar ni recargar. En las otras
+  cuatro pantallas, la pestaña «Cuentas» y «Libro de cuentas» del menú aparecen y desaparecen también en directo
+  (`publico/app/libro-pestana.js`, que pregunta `GET /api/yo`: `{ yo: { …, libro } }`).
 - **Apuntar:** gasto, ingreso o pago entre socios, con categoría, notas y la foto del tique (o un PDF).
 - **Quién debe a quién:** cada gasto e ingreso se reparte según las partes. Las partes se fijan con el primer
   movimiento, a partes iguales entre los administradores, y se cambian en «Reparto».
+- **Buscar:** el buscador de los movimientos encuentra por concepto, notas, categoría y persona y, además, por
+  **importe** (como se ve y como se escribe: «345,90», «345.90», «345», «12.845,50», «-345,90 €»), por **fecha**
+  («1/10», «01/10/2026», «1 oct», «octubre») y por **tipo** («gasto», «ingreso», «pago», «tique»). Todas las palabras,
+  en cualquier orden; un número se busca desde su principio («40» no saca 240,00 €). La lógica está aparte, en
+  `publico/app/libro-buscar.js`, y se prueba en `pruebas/libro.mjs`.
+- **En el móvil** (480 px o menos) las marcas «Tique» y «Nota» de cada movimiento son dos dibujos pequeños debajo de
+  la fecha (con más ancho, la palabra).
 - **Excel y CSV:** descarga del libro entero, e importación de la hoja de cuentas de Drive.
 - Los importes se guardan en céntimos. Lo borrado pasa 30 días en la papelera.
 
@@ -195,6 +235,8 @@ misma sesión que el tablón.
   pizarra respecto a sus 1920 × 1200: entera en un móvil es un 19 %, no un 100 %).
 - **En el móvil (menos de 600 px):** las herramientas ocupan dos filas. El color y el grosor están plegados detrás de un
   botón que enseña los de ahora (se pliegan solos al empezar a pintar) y «¿Cómo funciona?» queda en el menú de la cuenta.
+  Con menos de 372 px los botones van más juntos y, con menos de 340 (un móvil de 320), «Descargar» se queda solo en el
+  menú de la cuenta: las dos filas caben sin cortar ningún botón.
 - **En directo:** cada uno ve el lápiz de los demás y lo que pintan mientras lo pintan, y quién tiene la
   pizarra abierta.
 - **Vaciar:** quita todo para todos; se puede recuperar durante 30 días.
@@ -473,9 +515,9 @@ sus variables, están en el workflow.
 | Paso | Prueba | Puerto | Qué comprueba |
 | --- | --- | --- | --- |
 | Probar el servidor | (con `curl`) | 3999 | Que arranca, sirve el tablón, imprime el enlace de alta y pide sesión (401) a quien no la tiene. |
-| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. Y «Solo para los socios» en directo: la espera de la pantalla (`publico/app/libro-espera.js`) contra el canal de verdad, al pasar a administrar y al recibir parte en el reparto. |
+| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. Y «Solo para los socios» en directo: la espera de la pantalla (`publico/app/libro-espera.js`) contra el canal de verdad, al pasar a administrar y al recibir parte en el reparto. La pestaña «Cuentas» de las otras pantallas en directo (`publico/app/libro-pestana.js` y `GET /api/yo`), también contra el canal de verdad. Y el buscador (`publico/app/libro-buscar.js`): por importe, por fecha, por tipo y por persona. |
 | Probar la pizarra | `pruebas/pizarra.mjs` | 3997 | Trazos, notas y fotos con dos personas a la vez, vaciar y recuperar, el lápiz en directo y quién la tiene abierta. |
-| Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). |
+| Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). Y las capas (`publico/app/capas.js`) con un historial de mentira: el tabulador da la vuelta dentro, «atrás» cierra la de arriba, cerrar con el botón no deja entradas, y toda ventana pasa por `ventana()`. |
 | Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje, puente `/tareas/oficina/` y cartel `/tareas/cumples/` (la API y lo que sirve; en pantalla se mira con un navegador). |
 | Probar el archivo | `pruebas/archivo.mjs` | 3992 | Subir un documento de cada tipo, enlaces, papelera, búsqueda, lo que no debe entrar, Markdown y Word escapados y el límite total (`ARCHIVO_MAXIMO_MB=40`). |
 | Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify (y entrar en la cabina al conectar, libre u ocupada), lo que suena en directo, cómo le va a cada oyente, el aviso a la oficina y el puente con `hsMusica` (el módulo de verdad con una oficina de mentira); la música «sin configurar»; y las horas con su artículo («desde la 1:08», `laHora()`), sin ninguna escrita a mano en las pantallas. |

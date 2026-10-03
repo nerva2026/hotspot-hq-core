@@ -3,12 +3,16 @@
 //   node pruebas/libro.mjs http://127.0.0.1:3991/tareas <código de alta del registro>
 // Crea dos cuentas (Diego y Víctor), apunta gastos, ingresos y pagos, y comprueba el balance, el CSV, el Excel,
 // la importación de la hoja de Drive y los tiques. Y que la pantalla «Solo para los socios» se entera en directo cuando
-// a esa persona le dan acceso (publico/app/libro-espera.js, contra el canal de verdad del servidor).
+// a esa persona le dan acceso (publico/app/libro-espera.js, contra el canal de verdad del servidor), que la pestaña
+// «Cuentas» de las otras pantallas aparece y desaparece en directo (publico/app/libro-pestana.js, también con el canal
+// de verdad), y el buscador de la pantalla (publico/app/libro-buscar.js): por importe, por fecha, por tipo y por persona.
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { crearExcel, leerExcel } from "../servidor/excel.js";
 import { esperarAcceso, AVISOS_QUE_ABREN } from "../publico/app/libro-espera.js";
+import { coincide, prepararConsulta, formasDeImporte, formasDeFecha } from "../publico/app/libro-buscar.js";
+import { seguirAccesoAlLibro, AVISOS_QUE_CAMBIAN } from "../publico/app/libro-pestana.js";
 
 const [base, codigoAlta] = process.argv.slice(2);
 if (!base || !codigoAlta) {
@@ -284,6 +288,111 @@ assert.match(sinAcceso, /esperarAcceso\(\{ escuchar, pedir: api\.libro, alEntrar
 
 r = await victor("GET", "libro");
 assert.equal(r.estado, 200, "con parte sí");
+
+// ---------- la pestaña «Cuentas» de las otras cuatro pantallas, en directo (publico/app/libro-pestana.js) ----------
+// A quien le dan o le quitan el libro con el tablón, la pizarra, el archivo o la música abiertos le aparece o le
+// desaparece la pestaña (y «Libro de cuentas» en el menú) sin recargar: con el aviso del canal, pregunta por lo suyo.
+{
+    // GET api/yo: lo propio de quien pregunta, con «libro»
+    assert.equal((await fetch(`${base}/api/yo`)).status, 401, "sin sesión no dice nada");
+    r = await victor("GET", "yo");
+    assert.equal(r.estado, 200);
+    assert.deepEqual([r.datos.yo.id, r.datos.yo.libro], [idVictor, true]);
+    assert.equal(r.datos.yo.clave, undefined, "sin nada que no deba salir");
+    r = await diego("GET", "yo");
+    assert.equal(r.datos.yo.libro, true);
+
+    // Una «pantalla» de Víctor (el tablón, por ejemplo) con el canal de verdad: lo que cree y lo que pinta
+    const otra = { canal: canalDe(victor), yo: { id: idVictor, libro: true }, pintadas: [], pedidos: 0 };
+    const seguidor = seguirAccesoAlLibro({
+        pedir: async () => {
+            otra.pedidos++;
+            return (await victor("GET", "yo")).datos.yo.libro;
+        },
+        tiene: () => otra.yo.libro,
+        alCambiar: (puede) => {
+            otra.yo.libro = puede;
+            otra.pintadas.push(puede);
+        },
+        calma: 20,
+    });
+    const dejar = otra.canal.escuchar(seguidor.alRecibir);
+    await hasta(() => otra.canal.abierto, "abrir el canal de Víctor en la otra pantalla");
+    // un movimiento del libro no le cambia nada: pregunta y no pinta
+    r = await diego("POST", "libro/movimientos", { tipo: "gasto", fecha: "2026-10-02", concepto: "Pegatinas", persona: idDiego, importe: 500 });
+    assert.equal(r.estado, 201);
+    const pegatinas = r.datos.id;
+    await hasta(() => otra.pedidos === 1, "preguntar al llegar un aviso «libro»");
+    await pausa(120);
+    assert.deepEqual(otra.pintadas, [], "si no cambia, no se pinta nada");
+    // le quitan la parte: la pestaña desaparece
+    r = await diego("PATCH", "libro/ajustes", { partes: { [idDiego]: 100 } });
+    assert.equal(r.estado, 200);
+    await hasta(() => otra.pintadas.length === 1, "quitar la pestaña al perder la parte, sin recargar");
+    assert.deepEqual(otra.pintadas, [false]);
+    // se la devuelven: aparece
+    r = await diego("PATCH", "libro/ajustes", { partes: { [idDiego]: 50, [idVictor]: 50 } });
+    assert.equal(r.estado, 200);
+    await hasta(() => otra.pintadas.length === 2, "poner la pestaña al recibir parte, sin recargar");
+    assert.deepEqual(otra.pintadas, [false, true]);
+    // y por administrar (aviso «usuarios»), con el reparto solo para Diego
+    r = await diego("PATCH", "libro/ajustes", { partes: { [idDiego]: 100 } });
+    await hasta(() => otra.pintadas.length === 3, "quitarla otra vez");
+    r = await diego("PATCH", `crew/${idVictor}`, { admin: true });
+    assert.equal(r.estado, 200);
+    await hasta(() => otra.pintadas.length === 4, "ponerla al pasar a administrar");
+    assert.deepEqual(otra.pintadas, [false, true, false, true]);
+    assert.ok(otra.canal.avisos.includes("usuarios") && otra.canal.avisos.includes("libro"));
+    assert.deepEqual(AVISOS_QUE_CAMBIAN, ["libro", "usuarios"]);
+    // parado, ya no pregunta
+    const pedidos = otra.pedidos;
+    seguidor.parar();
+    r = await diego("PATCH", "libro/ajustes", { partes: { [idDiego]: 50, [idVictor]: 50 } });
+    await pausa(150);
+    assert.equal(otra.pedidos, pedidos, "parado, no pregunta más");
+    dejar();
+    r = await diego("DELETE", `libro/movimientos/${pegatinas}`);
+    assert.equal(r.estado, 200);
+
+    // varios avisos seguidos preguntan una vez; un fallo (sin conexión) no pinta nada y se reintenta con el siguiente
+    let preguntas = 0;
+    let respuesta = true;
+    const pintadas = [];
+    const yo = { libro: false };
+    const s2 = seguirAccesoAlLibro({ pedir: async () => (preguntas++, respuesta instanceof Error ? Promise.reject(respuesta) : respuesta), tiene: () => yo.libro, alCambiar: (p) => ((yo.libro = p), pintadas.push(p)), calma: 20 });
+    for (const tipo of ["libro", "libro", "usuarios", "tarea", "archivo"]) s2.alRecibir({ tipo });
+    await pausa(80);
+    assert.deepEqual([preguntas, pintadas], [1, [true]], "varios avisos seguidos, una pregunta");
+    s2.alRecibir({ tipo: "tarea" });
+    await pausa(60);
+    assert.equal(preguntas, 1, "los avisos que no son del libro ni del crew no preguntan");
+    respuesta = Object.assign(new Error("No hay conexión"), { estado: 0 });
+    s2.alRecibir({ tipo: "libro" });
+    await pausa(60);
+    assert.deepEqual([preguntas, pintadas], [2, [true]], "si falla la pregunta, se queda como estaba");
+    respuesta = false;
+    await s2.comprobar();
+    assert.deepEqual([preguntas, pintadas], [3, [true, false]], "«comprobar» pregunta en el momento (al reconectar)");
+
+    // Y las cuatro pantallas lo usan (el libro no: su pestaña es la suya y se cierra sola con libro-espera.js).
+    const fuente = (f) => readFileSync(new URL(`../publico/app/${f}`, import.meta.url), "utf8");
+    for (const [f, href, recibe] of [
+        ["principal.js", "libro/", "function alRecibir(ev) {"],
+        ["pizarra.js", "../libro/", "function alRecibir(ev) {"],
+        ["archivo.js", "../libro/", "function alRecibir(ev) {"],
+        ["musica.js", "../libro/", "function alEvento(ev) {"],
+    ]) {
+        const codigo = fuente(f);
+        assert.ok(codigo.includes(`const pestanaCuentas = pestanaEnDirecto({ pedir: api.yo, estado: E, href: "${href}" });`), `${f} sigue el acceso al libro en directo`);
+        const cuerpo = codigo.slice(codigo.indexOf(recibe), codigo.indexOf(recibe) + 160);
+        assert.ok(cuerpo.includes("pestanaCuentas.alRecibir(ev);"), `${f} le pasa los avisos del canal`);
+        assert.ok(codigo.includes("pestanaCuentas.repintar();"), `${f} la repinta al volver a pedir los datos`);
+        assert.ok(codigo.includes(`E.yo.libro ? h("a", { class: "pestana otra-pantalla", href: "${href}" }, "Cuentas") : null`), `${f}: la pestaña «Cuentas», con la dirección que busca libro-pestana.js`);
+    }
+    assert.match(fuente("libro-pestana.js"), /pestana\.className = "pestana otra-pantalla";/, "la pestaña que se pone en directo es igual que las demás (con ?solo=1 no sale)");
+    assert.match(fuente("api.js"), /yo: \(\) => llamar\("GET", "yo"\)/);
+}
+
 r = await diego("PATCH", `crew/${idVictor}`, { admin: true });
 assert.equal(r.estado, 200);
 
@@ -345,12 +454,84 @@ assert.equal(altavoces.importe, 123450);
 assert.equal(altavoces.persona, idVictor);
 assert.ok(r.datos.categorias.includes("Material"), "la categoría importada se añade a la lista");
 
+// ---------- el buscador (publico/app/libro-buscar.js): también por importe, por fecha y por tipo ----------
+// Con unos movimientos hechos a mano para los casos difíciles y, al final, con los que sirve el servidor.
+{
+    const nombres = new Map(r.datos.usuarios.map((u) => [u.id, u.nombre]));
+    const ayudas = { nombre: (id) => nombres.get(id) || "Alguien" };
+    const mov = (tipo, fecha, concepto, importe, mas = {}) => ({ tipo, fecha, concepto, importe, persona: idDiego, para: null, categoria: "", notas: "", tique: null, ...mas });
+    const lista = [
+        mov("gasto", "2026-10-01", "Cartelería: 250 carteles A3", 34590),
+        mov("ingreso", "2026-10-01", "Entradas anticipadas (48)", 57600, { persona: idVictor }),
+        mov("gasto", "2026-10-21", "Señal de la sala", 1284550, { notas: "Transferencia del día 21.\nFalta la factura." }),
+        mov("gasto", "2026-10-02", "Cable XLR (3 m)", 4000, { categoria: "Material", tique: { nombre: "tique-cable.png" } }),
+        mov("gasto", "2026-11-11", "Hielo", 24000),
+        mov("gasto", "2027-01-10", "Taxi", 184000),
+        mov("pago", "2026-09-30", "", 100000, { persona: idVictor, para: idDiego }),
+    ];
+    const buscar = (texto) => lista.filter((m) => coincide(m, texto, ayudas)).map((m) => m.concepto || `pago de ${m.importe}`);
+    const solo = (texto, ...conceptos) => assert.deepEqual(buscar(texto).sort(), conceptos.sort(), `buscar «${texto}»`);
+
+    // por importe: como se ve y como se escribe
+    for (const texto of ["345,90", "345.90", "345,9", "345", "345,90 €", "345,90€", "−345,90 €", "-345,90", "-345"]) solo(texto, "Cartelería: 250 carteles A3");
+    for (const texto of ["576", "576,00", "576.00", "+576", "576 €"]) solo(texto, "Entradas anticipadas (48)");
+    for (const texto of ["12.845,50", "12845,50", "12845.5", "12,845.50", "12845"]) solo(texto, "Señal de la sala");
+    solo("40", "Cable XLR (3 m)"); // 40,00 €; ni 240,00 € ni 1840,00 €
+    solo("-576"); // un ingreso no es un gasto
+    solo("+345,90");
+    solo("1000", "pago de 100000");
+    solo("1.000,00", "pago de 100000");
+    // por fecha
+    solo("1/10", "Cartelería: 250 carteles A3", "Entradas anticipadas (48)"); // el 1, no el 21 ni el 11 de noviembre
+    solo("01/10/2026", "Cartelería: 250 carteles A3", "Entradas anticipadas (48)");
+    solo("2026-10-21", "Señal de la sala");
+    solo("21/10", "Señal de la sala");
+    solo("1 oct", "Cartelería: 250 carteles A3", "Entradas anticipadas (48)");
+    solo("1 de octubre", "Cartelería: 250 carteles A3", "Entradas anticipadas (48)");
+    solo("21 OCTUBRE", "Señal de la sala");
+    solo("noviembre", "Hielo");
+    solo("enero 2027", "Taxi");
+    assert.ok(!buscar("10").includes("Señal de la sala"), "«10» no saca todo octubre");
+    assert.ok(buscar("10").includes("Taxi"), "«10» sí encuentra el día 10");
+    // por tipo, por persona y por lo que lleva
+    solo("pago", "pago de 100000");
+    solo("gasto", "Cartelería: 250 carteles A3", "Señal de la sala", "Cable XLR (3 m)", "Hielo", "Taxi");
+    assert.ok(buscar("victor").includes("Entradas anticipadas (48)") && buscar("VÍCTOR").includes("pago de 100000"));
+    solo("victor 576", "Entradas anticipadas (48)"); // todas las palabras, en cualquier orden
+    solo("576 víctor", "Entradas anticipadas (48)");
+    solo("tique", "Cable XLR (3 m)");
+    // lo de siempre sigue: concepto, notas y categoría, sin tildes ni mayúsculas
+    solo("carteleria", "Cartelería: 250 carteles A3");
+    solo("250 carteles", "Cartelería: 250 carteles A3");
+    solo("falta la factura", "Señal de la sala");
+    solo("material", "Cable XLR (3 m)");
+    assert.equal(buscar("").length, lista.length, "con el buscador vacío salen todos");
+    assert.equal(buscar("  € ").length, lista.length);
+    solo("no-hay-nada-asi");
+    // los movimientos del servidor, tal como los sirve: por su importe como se ve, por su fecha y por quién
+    assert.ok(r.datos.movimientos.length >= 4);
+    for (const m of r.datos.movimientos) {
+        assert.ok(coincide(m, m.fecha, ayudas) && coincide(m, ayudas.nombre(m.persona), ayudas) && coincide(m, m.tipo, ayudas), m.concepto);
+        const visto = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(m.importe / 100);
+        assert.ok(coincide(m, visto, ayudas), `«${visto}» encuentra «${m.concepto}»`);
+        assert.ok(coincide(m, `${visto} €`, ayudas));
+    }
+    assert.deepEqual(formasDeImporte(1284550), ["12845.50", "12845,50", "12.845,50", "12,845.50"]);
+    assert.deepEqual(formasDeImporte(4000), ["40.00", "40,00"]);
+    assert.ok(formasDeFecha("2026-10-01").includes("1/10/2026") && formasDeFecha("2026-10-01").includes("1·oct"));
+    assert.deepEqual(prepararConsulta("  1 de Octubre  345,90 € "), ["1·oct", "345,90"]);
+    assert.deepEqual(prepararConsulta("2 marcos"), ["2", "marcos"], "«2 marcos» no es el 2 de marzo");
+    // y la pantalla lo usa
+    assert.match(codigoLibro, /import \{ coincide, prepararConsulta \} from "\.\/libro-buscar\.js"/);
+    assert.match(codigoLibro, /coincide\(m, palabras, \{ nombre \}\)/, "el buscador del libro tiene que buscar también por importe");
+}
+
 // La página del libro
 const pagina = await fetch(`${base}/libro/`);
 assert.equal(pagina.status, 200);
 assert.match(await pagina.text(), /Cuentas · HOT SPOT S\.L\./);
 assert.match(pagina.headers.get("content-security-policy") || "", /frame-ancestors 'self'/);
-for (const modulo of ["app/libro.js", "app/libro-espera.js"]) {
+for (const modulo of ["app/libro.js", "app/libro-espera.js", "app/libro-buscar.js", "app/libro-pestana.js"]) {
     const servido = await fetch(`${base}/${modulo}`);
     assert.equal(servido.status, 200, modulo);
     assert.match(servido.headers.get("content-type") || "", /^text\/javascript/, modulo);

@@ -252,6 +252,12 @@ textarea {
        cambio, un punto más entre palabras. */
     letter-spacing: -0.027em;
     word-spacing: 0.093em;
+    /* Esa cuenta solo sale si cada letra avanza lo que dice su dibujo (6,29 px a 10,75 px). Donde el navegador ajusta
+       las letras a la rejilla («hinting»: Chromium y Firefox en Linux) cada avance se redondea antes a píxeles enteros,
+       y al quitarle los 0,027 em los huecos salían de 1 y de 2 px. Con `geometricPrecision` se le piden los avances
+       exactos, sin ajustar: las burbujas salen igual que en un Mac, con o sin «hinting». (Los retoques de las letras
+       llevan además sus tablas de «sin ajuste»: herramientas/retoques.py.) */
+    text-rendering: geometricPrecision;
     color: var(--hs-tinta) !important;
     text-align: center;
     overflow-wrap: anywhere;
@@ -347,6 +353,8 @@ textarea {
     line-height: 14px !important;
     letter-spacing: -0.027em !important;
     word-spacing: 0.093em;
+    /* Como en las burbujas: avances exactos, para que el hueco entre letras sea el mismo con y sin «hinting». */
+    text-rendering: geometricPrecision;
     color: var(--hs-crema) !important;
     background: rgba(28, 23, 21, 0.94) !important;
     border: 1px solid var(--hs-borde) !important;
@@ -368,15 +376,18 @@ textarea {
 
 /* ---------- el mensaje: chat, avisos y el campo de escribir ---------- */
 /* El texto que se lee de corrido va un punto más grande y con más aire entre líneas; la hora del chat usaba otra
-   letra (Roboto Condensed) y ahora va con la de la casa. */
+   letra (Roboto Condensed) y ahora va con la de la casa.
+   Los tamaños, siempre de la rejilla de Pixelify Sans (11, 16 o 21–22 px): a cualquier otro (los 13 y 18 px que trae
+   WorkAdventure) sus puntos caen entre dos píxeles y la letra sale gris y emborronada. */
 .message-bubble {
     font-size: 16px;
     line-height: 22px;
     letter-spacing: 0.01em;
 }
+/* El mensaje citado dentro de una respuesta: lo menudo, a 11 px. */
 .message-bubble.text-xs {
-    font-size: 13px;
-    line-height: 1.35;
+    font-size: 11px;
+    line-height: 14px;
 }
 .message-input,
 .message-input::placeholder {
@@ -384,9 +395,22 @@ textarea {
     font-size: 16px;
     letter-spacing: 0.01em;
 }
+/* La hora de cada mensaje, la fecha que separa los días del chat y el estado de cada persona en la lista
+   (`text-xs font-condensed` en WorkAdventure: 13 px): lo menudo, a 11 px. La hora es una cifra y va al lado del
+   mensaje, que está a 16 px: a 13 px se veía borrosa. La interlínea no se toca (no mueve nada de su sitio). */
 .font-condensed {
     font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+    font-size: 11px;
     letter-spacing: 0.02em;
+}
+
+/* ---------- la franja de avisos (WA.ui.banner: el cumpleaños, quién pincha) ---------- */
+/* WorkAdventure escribe el texto a 18 px (`text-lg`), fuera de la rejilla: a 16 px, como el botón de «¡Entendido!»,
+   y los dos con la misma interlínea (el alto de la franja no cambia: lo marca el botón). */
+.warningMain .text-lg,
+.warningMain .btn {
+    font-size: 16px;
+    line-height: 24px;
 }
 /* Los botones del sistema de diseño de WorkAdventure (.btn: «Abrir» en el aviso de una zona, «Cerrar», los de los
    ajustes…) traen su propia letra (Roboto Condensed): con la de la casa, como todo lo demás. */

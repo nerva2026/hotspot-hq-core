@@ -3,11 +3,12 @@
 // Pensado para quien no usa Excel: se apunta con un formulario, el reparto y quién debe a quién salen solos, y
 // si hace falta se descarga en Excel o en CSV. Los importes van en céntimos, como en el servidor (servidor/libro.js).
 
-import { h, $, vaciar, normalizar, hoy, sumarDias, fechaCorta, fechaLarga, MESES, MESES_CORTOS, haceCuanto, retrasar } from "./util.js";
+import { h, $, vaciar, hoy, sumarDias, fechaCorta, fechaLarga, MESES, MESES_CORTOS, haceCuanto, retrasar } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion, direccionApi } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
 import { sinSolo } from "./solo.js";
 import { esperarAcceso } from "./libro-espera.js";
+import { coincide, prepararConsulta } from "./libro-buscar.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, colocarAvisos, ventana, avatar } from "./menus.js";
 
 aplicacion("CUENTAS", "El libro de cuentas es de los socios de HOT SPOT S.L. Entra con tu cuenta de Google.");
@@ -62,7 +63,8 @@ let espera = null; // quien ve «Solo para los socios» sigue escuchando por si 
 
 const formato = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const euros = (c) => `${formato.format((c || 0) / 100)} €`;
-const porcentaje = (n) => `${String(Math.round(n * 100) / 100).replace(".", ",")} %`;
+// con un espacio que no se parte: «(50 %)» no se queda con el «%)» solo en la línea de abajo
+const porcentaje = (n) => `${String(Math.round(n * 100) / 100).replace(".", ",")}\u00a0%`;
 // Las cifras van con la letra de los títulos: en la del texto el 5 parece una S y el € un 0.
 const cifra = (texto) => h("span", { class: "cifra-pixel" }, texto);
 const sumar = (lista) => lista.reduce((s, m) => s + m.importe, 0);
@@ -379,13 +381,14 @@ function tarjetaPersona(p) {
 
 function filtrados() {
     const f = E.filtros;
-    const texto = normalizar(f.texto);
+    // El buscador encuentra también por importe, por fecha y por tipo (libro-buscar.js).
+    const palabras = prepararConsulta(f.texto);
     return E.movimientos.filter((m) => {
         if (f.tipo !== "todos" && m.tipo !== f.tipo) return false;
         if (f.persona !== "todas" && m.persona !== f.persona && m.para !== f.persona) return false;
         if (f.categoria !== null && (m.categoria || "") !== f.categoria) return false;
         if (f.mes && m.fecha.slice(0, 7) !== f.mes) return false;
-        if (texto && !normalizar(`${m.concepto} ${m.categoria} ${m.notas} ${nombre(m.persona)} ${m.para ? nombre(m.para) : ""}`).includes(texto)) return false;
+        if (palabras.length && !coincide(m, palabras, { nombre })) return false;
         return true;
     });
 }
@@ -477,8 +480,15 @@ function filaMovimiento(m) {
             h("span", { class: "mov-fecha" }, fechaCorta(m.fecha)),
             h("span", { class: "mov-tipo" }, t.nombre),
             h("span", { class: "mov-texto" }, h("strong", null, titulo), h("small", null, detalle)),
-            m.tique ? h("span", { class: "chip mov-tique", title: m.tique.nombre || "Tiene tique" }, "Tique") : null,
-            m.notas ? h("span", { class: "chip mov-nota", title: m.notas }, "Nota") : null,
+            // Las marcas de «lleva tique» y «lleva nota»: con sitio, la palabra; en un móvil, su dibujo debajo de la fecha (libro.css).
+            m.tique || m.notas
+                ? h(
+                      "span",
+                      { class: "mov-marcas" },
+                      m.tique ? h("span", { class: "chip mov-tique", title: m.tique.nombre || "Tiene tique" }, "Tique") : null,
+                      m.notas ? h("span", { class: "chip mov-nota", title: m.notas }, "Nota") : null,
+                  )
+                : null,
             h("span", { class: "mov-importe" }, `${signo}${euros(m.importe)}`),
         ),
     );

@@ -3,7 +3,9 @@
 import { h, $, vaciar, normalizar, hoy, plazo, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, pesoPrioridad, guardarLocal, leerLocal, fechaMedia, retrasar, MESES } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion } from "./api.js";
 import { pantallaEntrar, pantallaAlta } from "./acceso.js";
-import { sinSolo } from "./solo.js";
+import { sinSolo, conSolo } from "./solo.js";
+import { BUSQUEDA_AL_CARGAR } from "./capas.js";
+import { pestanaEnDirecto } from "./libro-pestana.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar, chipEtiqueta } from "./menus.js";
 import { hayArrastre } from "./arrastre.js";
 import { interpretar } from "./rapida.js";
@@ -42,6 +44,10 @@ const E = {
 if (!VISTAS.some((v) => v.id === E.vista)) E.vista = enMovil() ? "lista" : "tablero";
 
 const raiz = document.getElementById("app");
+// La pestaña «Cuentas» aparece o desaparece sola cuando a esa persona le dan o le quitan el libro (libro-pestana.js).
+const pestanaCuentas = pestanaEnDirecto({ pedir: api.yo, estado: E, href: "libro/" }); // la pone marcada, con «otra-pantalla»
+// La tarea que pide la dirección al cargar («?tarea=…»), leída antes de que nadie toque el historial.
+let tareaPedida = new URLSearchParams(BUSQUEDA_AL_CARGAR).get("tarea");
 let dejarDeEscuchar = null;
 let pintura = null;
 let pintarAlSoltarFoco = false;
@@ -274,7 +280,13 @@ function montar() {
             // Solo en el móvil (≤ 600 px): las vistas en un botón y los filtros plegados detrás de otro, para que la cabecera quepa en una línea.
             h("button", { type: "button", class: "boton-vista", id: "boton-vista", "aria-haspopup": "menu", title: "Vistas", onclick: (e) => menuVistas(e.currentTarget) }),
             h("button", { type: "button", class: "filtro boton-filtros", id: "boton-filtros", "aria-controls": "filtros", "aria-expanded": "false", onclick: () => alternarFiltros() }, "Filtros", h("span", { class: "flecha" }, "▾")),
-            h("div", { class: "barra-derecha" }, h("button", { type: "button", class: "btn primario", id: "boton-nueva", title: "Nueva tarea (N)", onclick: () => nuevaTarea() }, "+ Nueva"), h("button", { type: "button", class: "boton-yo", id: "boton-yo", onclick: (e) => menuYo(e.currentTarget) })),
+            h(
+                "div",
+                { class: "barra-derecha" },
+                // «+ Nueva»: en un móvil de menos de 360 px no cabe entero y se queda en «+» (estilo.css); qué es lo dice «aria-label».
+                h("button", { type: "button", class: "btn primario", id: "boton-nueva", title: "Nueva tarea (N)", "aria-label": "Nueva tarea", onclick: () => nuevaTarea() }, h("span", { "aria-hidden": "true" }, "+"), h("span", { class: "texto-nueva" }, "Nueva")),
+                h("button", { type: "button", class: "boton-yo", id: "boton-yo", onclick: (e) => menuYo(e.currentTarget) }),
+            ),
         ),
         h("div", { id: "cumple-aviso", class: "cumple-zona", hidden: true }),
         h(
@@ -1028,6 +1040,7 @@ function actualizarUsuario(u) {
 }
 
 function alRecibir(ev) {
+    pestanaCuentas.alRecibir(ev);
     if (ev.tipo === "tarea") {
         E.tareas.set(ev.tarea.id, ev.tarea);
         pintar();
@@ -1056,6 +1069,7 @@ async function recargar() {
         /* sin conexión: ya se avisará */
         return;
     }
+    pestanaCuentas.repintar();
     cargarOficina();
 }
 
@@ -1079,8 +1093,14 @@ function empezar(datos) {
     dejarDeEscuchar?.();
     dejarDeEscuchar = escuchar(alRecibir, recargar);
     cargarOficina();
-    const pedida = new URLSearchParams(location.search).get("tarea");
-    if (pedida && E.tareas.has(pedida)) ctx.abrir(pedida);
+    // «?tarea=…»: el enlace a una tarea (o la página recargada con su ficha abierta). La dirección de debajo se queda
+    // limpia y la ficha pone la suya al abrirse (capas.js): así «atrás» la cierra y deja el tablón, sin la tarea.
+    const pedida = tareaPedida;
+    tareaPedida = null; // solo la primera vez (al volver a entrar tras perder la sesión, no)
+    if (pedida) {
+        if (new URLSearchParams(location.search).has("tarea")) history.replaceState(history.state, "", conSolo(location.pathname));
+        if (E.tareas.has(pedida)) ctx.abrir(pedida);
+    }
 }
 
 function sinSesion() {

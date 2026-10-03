@@ -152,21 +152,39 @@ export function pintarLista(cont, ctx, ev) {
         cuerpo.appendChild(filaNueva(g.base, ctx, `nueva-${ev.agrupar}-${g.clave}`));
     }
 
-    cont.append(
-        barra,
-        h(
-            "div",
-            { class: "lista-envoltura", "data-desplazar": "lista" },
-            h("table", { class: "lista" }, h("thead", null, cabecera), cuerpo),
-            tareas.length ? null : h("p", { class: "nota centro vacio-vista" }, ctx.E.tareas.size ? "Ninguna tarea cumple los filtros." : "Todavía no hay tareas. Pulsa «+ Nueva» o escribe en «+ Nueva tarea»."),
-        ),
+    // La tabla va en un marco que marca con una sombra el lado por el que sigue si no cabe a lo ancho (como el mes del
+    // calendario). Las columnas se esconden por orden para que quepa (estilo.css, «la lista en un panel estrecho»): la
+    // sombra es el aviso que queda para un navegador que no sepa esconderlas.
+    const tabla = h("table", { class: "lista" }, h("thead", null, cabecera), cuerpo);
+    const envoltura = h(
+        "div",
+        { class: "lista-envoltura", "data-desplazar": "lista" },
+        tabla,
+        tareas.length ? null : h("p", { class: "nota centro vacio-vista" }, ctx.E.tareas.size ? "Ninguna tarea cumple los filtros." : "Todavía no hay tareas. Pulsa «+ Nueva» o escribe en «+ Nueva tarea»."),
     );
+    const marco = h("div", { class: "lista-marco" }, envoltura);
+    const marcarBordes = () => {
+        marco.classList.toggle("sigue-izquierda", envoltura.scrollLeft > 2);
+        marco.classList.toggle("sigue-derecha", envoltura.scrollLeft + envoltura.clientWidth < envoltura.scrollWidth - 2);
+    };
+    envoltura.addEventListener("scroll", marcarBordes, { passive: true });
+    if (typeof ResizeObserver === "function") {
+        // cambia lo que mide la caja (la ventana) o lo que mide la tabla (las letras, al terminar de cargarse)
+        const observador = new ResizeObserver(marcarBordes);
+        observador.observe(envoltura);
+        observador.observe(tabla);
+    }
+    cont.append(barra, marco);
+    marcarBordes();
 }
 
 // En una pantalla estrecha (≤ 720 px, el mismo corte que estilo.css) cada fila es una ficha pequeña: el título y,
 // debajo, lo esencial. Ahí, y donde no hay ratón, un toque en la fila abre la tarea.
 const filaEstrecha = () => window.matchMedia("(max-width: 720px)").matches;
 const sinRaton = () => window.matchMedia("(hover: none)").matches;
+
+// Una persona en su celda: el avatar y el nombre, que si no cabe en la columna acaba en «…» (entero, al pasar el ratón).
+const persona = (u) => h("span", { class: "persona", title: u.nombre }, avatar(u), h("span", { class: "texto" }, u.nombre));
 
 function celda(clase, contenido, alPulsar, titulo) {
     return h("td", { class: clase }, h("button", { type: "button", class: "celda", title: titulo, onclick: (e) => alPulsar(e.currentTarget) }, contenido));
@@ -260,13 +278,13 @@ function fila(t, ctx) {
         ),
         celda(
             "col-responsables",
-            responsables.length ? (responsables.length === 1 ? h("span", { class: "persona" }, avatar(responsables[0]), responsables[0].nombre) : h("span", { class: "avatares" }, responsables.map((u) => avatar(u)))) : h("span", { class: "tenue" }, "—"),
+            responsables.length ? (responsables.length === 1 ? persona(responsables[0]) : h("span", { class: "avatares" }, responsables.map((u) => avatar(u)))) : h("span", { class: "tenue" }, "—"),
             (a) => menuPersonas(a, ctx.activos(), t.responsables, (v) => ctx.cambiar(t.id, { responsables: v })),
         ),
         celda("col-fin", p ? h("span", { class: ["chip", "plazo", p.clase] }, p.texto) : h("span", { class: "tenue" }, "—"), (a) => menuFecha(a, t.fin, (v) => ctx.cambiar(t.id, { fin: v })), t.fin || ""),
         celda("col-inicio", t.inicio ? fechaCorta(t.inicio) : h("span", { class: "tenue" }, "—"), (a) => menuFecha(a, t.inicio, (v) => ctx.cambiar(t.id, { inicio: v }), { titulo: "Empieza el" })),
         celda("col-etiquetas", t.etiquetas.length ? t.etiquetas.map((e) => chipEtiqueta(e)) : h("span", { class: "tenue" }, "—"), (a) => menuEtiquetas(a, t.etiquetas, ctx.todasEtiquetas(), (v) => ctx.cambiar(t.id, { etiquetas: v }))),
-        celda("col-pedidoPor", pedido ? h("span", { class: "persona" }, avatar(pedido), pedido.nombre) : h("span", { class: "tenue" }, "—"), (a) => menuPersona(a, ctx.activos(), t.pedidoPor, (v) => ctx.cambiar(t.id, { pedidoPor: v }))),
+        celda("col-pedidoPor", pedido ? persona(pedido) : h("span", { class: "tenue" }, "—"), (a) => menuPersona(a, ctx.activos(), t.pedidoPor, (v) => ctx.cambiar(t.id, { pedidoPor: v }))),
     );
 }
 

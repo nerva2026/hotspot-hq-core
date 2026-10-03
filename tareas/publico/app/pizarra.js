@@ -11,6 +11,7 @@ import { api, escuchar, cuandoSePierdaLaSesion, direccionApi } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
 import { sinSolo } from "./solo.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar } from "./menus.js";
+import { pestanaEnDirecto } from "./libro-pestana.js";
 
 aplicacion("PIZARRA", "La pizarra es del crew de HOT SPOT S.L. Entra con tu cuenta de Google.");
 
@@ -1254,7 +1255,7 @@ function montar() {
                 h("span", { class: "separador-herramientas" }),
                 botonIcono("deshacer", "Deshacer (Ctrl+Z)", deshacer),
                 botonIcono("rehacer", "Rehacer (Ctrl+Mayús+Z)", rehacer),
-                botonIcono("descargar", "Descargar como imagen", descargar),
+                botonIcono("descargar", "Descargar como imagen", descargar, "boton-descargar"), // en un móvil de 320 px no cabe: queda en el menú de la cuenta
                 botonIcono("vaciar", "Vaciar la pizarra", vaciarPizarra, "peligro"),
                 h("button", { type: "button", class: "boton-icono texto boton-ayuda", title: "¿Cómo funciona?", "aria-label": "¿Cómo funciona?", onclick: ayuda }, "?"),
             ),
@@ -1395,7 +1396,11 @@ async function salir() {
 
 // ---------- tiempo real ----------
 
+// La pestaña «Cuentas» aparece o desaparece sola cuando a esa persona le dan o le quitan el libro (libro-pestana.js).
+const pestanaCuentas = pestanaEnDirecto({ pedir: api.yo, estado: E, href: "../libro/" }); // la pone marcada, con «otra-pantalla»
+
 function alRecibir(ev) {
+    pestanaCuentas.alRecibir(ev);
     if (ev.tipo === "usuarios") {
         E.usuarios = ev.usuarios;
         pintarCabecera();
@@ -1488,6 +1493,7 @@ function cargar(datos) {
 async function recargar() {
     try {
         cargar(await api.pizarra(ID));
+        pestanaCuentas.repintar();
         pintarTodo();
     } catch {
         /* sin conexión: ya se avisará */

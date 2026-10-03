@@ -8,6 +8,7 @@ import { api, escuchar, cuandoSePierdaLaSesion, subirDocumento } from "./api.js"
 import { pantallaEntrar, aplicacion } from "./acceso.js";
 import { conSolo, sinSolo } from "./solo.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar } from "./menus.js";
+import { pestanaEnDirecto } from "./libro-pestana.js";
 import { tipoDe, tamano, insignia, terminosDe, resaltar } from "./archivo-comun.js";
 import { crearVisor, direccionArchivo, direccionAparte, direccionDescarga } from "./archivo-visor.js";
 
@@ -698,6 +699,10 @@ function cerrarDoc() {
 window.addEventListener("popstate", () => {
     if (!E.yo) return;
     const id = new URLSearchParams(location.search).get("doc");
+    // Un «atrás» que solo ha cerrado una ventana (capas.js) deja la dirección como estaba: si ya se ve lo que dice,
+    // no se vuelve a abrir el documento (perdería por dónde iba) ni la lista.
+    const viendoVisor = $("#vista-visor")?.hidden === false;
+    if (id ? viendoVisor && visor?.idAbierto() === id : !viendoVisor) return;
     if (id) abrirDoc(id, { empujar: false });
     else mostrarLista();
 });
@@ -824,7 +829,11 @@ function montar() {
     pintarSubidas();
 }
 
+// La pestaña «Cuentas» aparece o desaparece sola cuando a esa persona le dan o le quitan el libro (libro-pestana.js).
+const pestanaCuentas = pestanaEnDirecto({ pedir: api.yo, estado: E, href: "../libro/" }); // la pone marcada, con «otra-pantalla»
+
 function alRecibir(ev) {
+    pestanaCuentas.alRecibir(ev);
     if (ev.tipo === "archivo") recargarLuego();
     else if (ev.tipo === "usuarios") {
         E.usuarios = ev.usuarios || E.usuarios;
@@ -838,6 +847,7 @@ async function recargar() {
     } catch {
         return; // sin conexión (o sin sesión: ya se ha avisado): se queda como está
     }
+    pestanaCuentas.repintar();
     pintar();
     if (buscando()) lanzarBusqueda();
     if (E.docId) {

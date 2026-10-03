@@ -406,6 +406,13 @@ dt .cifra-pixel,
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+/* «Tique» y «Nota»: las marcas de lo que lleva cada movimiento */
+.mov-marcas {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 .mov .chip {
     flex: none;
     font: 400 12px/1 var(--titulo);
@@ -780,15 +787,45 @@ dt .cifra-pixel,
         justify-content: space-between;
         align-items: center;
     }
+    /* La fila, en el móvil: la fecha, el texto y el importe. Las marcas «Tique» y «Nota» no caben con su palabra (le
+       quitarían el sitio al concepto): quedan como dos dibujos pequeños DEBAJO de la fecha, donde la fila tiene hueco. */
     .mov {
+        display: grid;
+        grid-template-columns: 54px minmax(0, 1fr) auto;
+        column-gap: 8px;
+        row-gap: 3px;
         padding: 8px 10px;
-        gap: 8px;
-    }
-    .mov .chip {
-        display: none;
     }
     .mov-fecha {
+        grid-area: 1 / 1;
         width: 54px;
+    }
+    .mov-marcas {
+        grid-area: 2 / 1;
+        gap: 4px;
+    }
+    .mov-texto {
+        grid-area: 1 / 2 / 3 / 3;
+    }
+    .mov-importe {
+        grid-area: 1 / 3 / 3 / 4;
+    }
+    .mov .chip {
+        width: 18px;
+        height: 14px;
+        padding: 0;
+        font-size: 0; /* la palabra sigue ahí para quien no ve la pantalla, y en el título */
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 12px 12px;
+        image-rendering: pixelated;
+    }
+    /* un tique (el papel con su borde de sierra) y una nota (tres renglones) */
+    .mov .mov-tique {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='%231c1715' d='M2 0h8v1H2zM2 1h1v10H2zM9 1h1v10H9zM4 3h4v1H4zM4 5h4v1H4zM4 7h2v1H4zM3 10h1v1H3zM5 10h2v1H5zM8 10h1v1H8zM4 11h1v1H4zM7 11h1v1H7z'/%3E%3C/svg%3E");
+    }
+    .mov .mov-nota {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' shape-rendering='crispEdges'%3E%3Cpath fill='%231c1715' d='M1 2h10v1H1zM1 5h10v1H1zM1 8h6v1H1z'/%3E%3C/svg%3E");
     }
     .descargas .nota {
         display: none;
