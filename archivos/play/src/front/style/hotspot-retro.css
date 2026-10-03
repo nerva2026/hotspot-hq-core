@@ -374,6 +374,30 @@ textarea {
     font-weight: 700 !important;
 }
 
+/* ---------- la tecla de los avisos («Pulsa ESPACIO para…») ---------- */
+/* La palabra ESPACIO de un aviso va en un <span class="hs-tecla"> (parche 14; Components/Hotspot/teclas.ts) y se dibuja
+   como las teclas de la pastilla de ayuda del mapa: amarilla, con la letra en tinta, el canto de abajo más oscuro
+   (#c4461f, el acento) y sin esquinas redondas.
+   Hereda la letra del aviso, con su tamaño, su `letter-spacing` y su `text-rendering`: aquí no hay ningún `font-size`.
+   Es una caja en línea con interlínea 1: mide de alto lo mismo que la letra (menos que la línea en la que va) y el
+   canto es una sombra, que no ocupa. Así ni cambia el alto de la línea ni mueve el aviso; solo lo ensancha lo que
+   miden sus dos márgenes de dentro. */
+.hs-tecla {
+    display: inline-block;
+    line-height: 1;
+    padding: 0 5px;
+    background: var(--hs-amarillo);
+    color: var(--hs-tinta);
+    border-radius: 0;
+    box-shadow: 0 2px 0 #c4461f;
+    white-space: nowrap;
+}
+/* En el aviso junto al muñeco la letra es de 11 px (y se amplía con el juego): todo un punto más fino. */
+.characterTriggerAction .hs-tecla {
+    padding: 0 3px;
+    box-shadow: 0 1px 0 #c4461f;
+}
+
 /* ---------- el mensaje: chat, avisos y el campo de escribir ---------- */
 /* El texto que se lee de corrido va un punto más grande y con más aire entre líneas; la hora del chat usaba otra
    letra (Roboto Condensed) y ahora va con la de la casa.
