@@ -247,7 +247,11 @@ textarea {
 .thinking-cloud .thinking-text {
     font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace !important;
     font-weight: 500 !important;
-    letter-spacing: 0.02em;
+    /* La letra deja 1,29 puntos suyos entre letra y letra: con medio punto de más o de menos, los huecos salían unos
+       de un píxel y otros de dos («¿B a ila mos»). Quitándole 0,027 em el hueco es un punto justo, siempre igual; y a
+       cambio, un punto más entre palabras. */
+    letter-spacing: -0.027em;
+    word-spacing: 0.093em;
     color: var(--hs-tinta) !important;
     text-align: center;
     overflow-wrap: anywhere;
@@ -341,7 +345,8 @@ textarea {
     font-size: 11px !important;
     font-weight: 500 !important;
     line-height: 14px !important;
-    letter-spacing: 0.02em !important;
+    letter-spacing: -0.027em !important;
+    word-spacing: 0.093em;
     color: var(--hs-crema) !important;
     background: rgba(28, 23, 21, 0.94) !important;
     border: 1px solid var(--hs-borde) !important;
