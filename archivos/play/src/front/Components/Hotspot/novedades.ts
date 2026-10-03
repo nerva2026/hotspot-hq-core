@@ -15,9 +15,9 @@
 /** Una línea del aviso: el texto solo, o el texto con lo que tiene que estar listo en el servidor para enseñarla. */
 export type Novedad = string | { texto: string; requiere: "musica" };
 
-export const VERSION = "v0.3.1-alpha";
+export const VERSION = "v0.4.0";
 
-export const TITULO = "¡Bienvenido a la v0.3.1!";
+export const TITULO = "¡Bienvenido a la v0.4.0!";
 
 // Textos PROVISIONAL-v0.3.1: los repasa el equipo antes de publicar.
 export const NOVEDADES: Novedad[] = [
