@@ -113,12 +113,29 @@ en la pizarra, el nombre de esa pizarra): con 600 px o menos no hay pestañas (q
 nombre sigue ahí. El cartel de cumpleaños (`cumples/`) es la excepción: se abre desde el mapa, como el puente, y ni
 enlaza ni se enlaza.
 
+**La cabecera con pestañas, por anchos** (sin `?solo=1`; reglas al principio de «barra superior» en `publico/estilo.css`).
+La fila de pestañas está en el mismo sitio en las cinco pantallas, el nombre de la pantalla no se corta, ningún botón
+se queda solo en una fila y la cabecera no pasa de dos filas:
+
+| Ancho | Cómo va | Dónde empiezan las pestañas |
+| --- | --- | --- |
+| 860 px o más | Una fila: logo, nombre, pestañas y, a la derecha, el botón de la pantalla y la cuenta. El nombre ocupa lo mismo en las cinco (`--ancho-nombre-app`, 136 px); uno largo va en dos líneas («PIZARRA DE / REUNIONES»). El tablón añade debajo su línea de vistas. | x = 208 px |
+| de 601 a 859 px | Dos filas en las cinco. Arriba, lo de toda la oficina: logo, pestañas y la cuenta. Debajo, lo de esa pantalla: su nombre entero, las vistas del tablón y su botón («+ Nueva», «+ Apuntar») o quién más está (pizarra y música). | x = 52 px |
+| 600 px o menos | Una fila sin pestañas (el móvil). | — |
+
+El nombre de la cuenta, al lado del avatar, solo sale con 960 px o más (y nunca mide más de 120 px hasta los 1200), y
+los avatares de quién más está en la pizarra o escucha la música no pasan de 124 px, sin su rótulo, hasta los 1100:
+así ni un nombre largo ni mucha gente le quitan el sitio a las pestañas. Una pizarra con un nombre que no quepa en dos
+líneas de 136 px («Pizarra ideas-para-la-fiesta») lo lleva cortado con «…» a partir de 860 px (entero, al pasar el
+ratón y de 601 a 859 px). Al tocar la cabecera hay que volver a medirla con un navegador, de 600 a 1100 px de 20 en 20,
+en las cinco pantallas, con y sin `?solo=1`: `pruebas/solo.mjs` solo vigila que las reglas sigan ahí.
+
 ### Solo lo suyo (`?solo=1`)
 
 Cada personaje u objeto de la oficina enseña solo su pantalla: el mapa la abre con `?solo=1` y esa pantalla esconde
 la fila de pestañas entera (tampoco queda la suya: el nombre ya está en la cabecera) y los enlaces a otras pantallas
 del menú de la cuenta (lo demás del menú se queda). En el tablón, sin pestañas, las vistas se quedan en la primera
-línea, al lado del nombre. Sin el parámetro todo sigue igual.
+línea, al lado del nombre (con menos de 740 px no caben y bajan a la suya). Sin el parámetro todo sigue igual.
 
 | Pantalla | Dirección para el mapa |
 | --- | --- |
@@ -449,7 +466,7 @@ sus variables, están en el workflow.
 | Probar el archivo | `pruebas/archivo.mjs` | 3992 | Subir un documento de cada tipo, enlaces, papelera, búsqueda, lo que no debe entrar, Markdown y Word escapados y el límite total (`ARCHIVO_MAXIMO_MB=40`). |
 | Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify (y entrar en la cabina al conectar, libre u ocupada), lo que suena en directo, cómo le va a cada oyente, el aviso a la oficina y el puente con `hsMusica` (el módulo de verdad con una oficina de mentira); y la música «sin configurar». |
 | Probar el reproductor de la música | `pruebas/reproductor.mjs` | ninguno (sin servidor ni navegador) | Los estados del reproductor (`publico/app/musica-seguidor.js`) con un Embed y un reloj de mentira: suena entera, la muestra de 30 s y su final, no arranca solo, no carga, y el cambio de canción. |
-| Probar el modo solo | `pruebas/solo.mjs` | 3990 | `?solo=1` sin navegador: lo que sirve el servidor (las cinco pantallas, `app/solo.js`, la regla de `estilo.css`, la vuelta de entrar), la lógica del módulo y que las pantallas marcan sus enlaces a las demás y no pierden el modo al cambiar de dirección. También las pestañas: las mismas cinco en las cinco pantallas, la fila entera marcada y el nombre de la pantalla en la cabecera. |
+| Probar el modo solo | `pruebas/solo.mjs` | 3990 | `?solo=1` sin navegador: lo que sirve el servidor (las cinco pantallas, `app/solo.js`, la regla de `estilo.css`, la vuelta de entrar), la lógica del módulo y que las pantallas marcan sus enlaces a las demás y no pierden el modo al cambiar de dirección. También las pestañas: las mismas cinco en las cinco pantallas, la fila entera marcada, el nombre de la pantalla en la cabecera y las reglas que dejan las pestañas en el mismo sitio en las cinco (lo que miden se mira con un navegador). |
 | Probar el acceso de la oficina | `pruebas/oficina-oidc.mjs` y `pruebas/google-falso.mjs` | 3998 y 8412 (el Google de mentira) | Entrar por `/cuentas` con `openid-client` 5 (la librería de WorkAdventure): PKCE, `userinfo` y revocar. Es el único paso que instala un paquete (`npm install`). |
 
 El paso «Comprobar el código» pasa antes `node --check` a todo el JavaScript (`servidor/`, `publico/app/`, `portada/`

@@ -210,6 +210,22 @@ assert.match(fuente("pizarra.js"), /h\("h1", \{ class: "nombre-app", id: "titulo
 assert.match(fuente("principal.js"), /\{ class: "pestanas vistas", "aria-label": "Vistas" \}/);
 assert.match(fuente("principal.js"), /querySelectorAll\("\.vistas \.pestana"\)/, "la vista marcada se busca solo entre las vistas");
 assert.match(estilo, /html:not\(\.solo\) \.barra-tablon \.vistas \{/, "sin modo solo, las vistas del tablón van en su propia línea");
+// La fila de pestañas está en el mismo sitio en las cinco pantallas y el nombre de ninguna se corta. Eso se mide con un
+// navegador (de 600 a 1100 px); aquí se vigila que sigan las reglas que lo consiguen: con 860 px o más el nombre ocupa
+// lo mismo en todas (--ancho-nombre-app) y de 601 a 859 px la cabecera va en dos filas, con las pestañas arriba, detrás
+// del logo, y el nombre entero debajo. Sin tocar el modo solo (todas las reglas llevan html:not(.solo)).
+assert.match(estilo, /--ancho-nombre-app: \d+px;/);
+const bloque = (consulta) => new RegExp(`@media ${escapar(consulta)} \\{[\\s\\S]*?\\n\\}`).exec(estilo)?.[0] || "";
+const cabeceraAncha = bloque("(min-width: 860px)");
+assert.match(cabeceraAncha, /html:not\(\.solo\) \.marca \{\s*flex: none;/, "con pestañas, el nombre no se encoge");
+assert.match(cabeceraAncha, /html:not\(\.solo\) \.nombre-app \{\s*width: var\(--ancho-nombre-app\);/, "y ocupa lo mismo en las cinco pantallas");
+const cabeceraMedia = bloque("(min-width: 600.02px) and (max-width: 859.98px)");
+assert.match(cabeceraMedia, /html:not\(\.solo\) \.barra \{\s*display: grid;/);
+assert.match(cabeceraMedia, /html:not\(\.solo\) \.pantallas \{\s*grid-area: 1 \/ 2 /, "las pestañas, en la primera fila, detrás del logo");
+assert.match(cabeceraMedia, /html:not\(\.solo\) \.nombre-app \{\s*grid-area: 2 \/ 1 /, "el nombre, entero, en la segunda");
+for (const linea of `${cabeceraAncha}\n${cabeceraMedia}`.split("\n").filter((l) => /[{,]\s*$/.test(l) && !l.startsWith("@media"))) {
+    assert.match(linea, /^\s*html:not\(\.solo\) /, `la cabecera con pestañas no toca el modo solo: ${linea.trim()}`);
+}
 // En el móvil se esconden las pestañas y el logo, pero no el nombre (en el tablón va dentro del botón de las vistas).
 assert.ok(!/\.marca,\s*\.pestanas \{\s*display: none;/.test(estilo), "el nombre de la pantalla no se esconde en el móvil");
 assert.match(estilo, /\.pestanas,\s*\.marca \.logo,\s*\.barra-tablon \.marca \{\s*display: none;/);

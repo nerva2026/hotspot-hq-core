@@ -78,6 +78,9 @@ de tareas», «Libro de cuentas», «Pizarra», «Archivo» y «Música»), marc
 la clase `otra-pantalla`: con `?solo=1` (como las abre el mapa desde un personaje o un objeto) no salen. El nombre de
 la pantalla va siempre en la cabecera (`.nombre-app`). Detalles en `tareas/README.md` («Solo lo suyo»); lo vigila
 `pruebas/solo.mjs`.
+La fila de pestañas va en el mismo sitio en las cinco pantallas y el nombre no se corta: con 860 px o más, una fila con
+el nombre a ancho fijo; de 601 a 859 px, dos filas (pestañas arriba, nombre debajo). Quien toque la cabecera la vuelve a
+medir con un navegador de 600 a 1100 px, con y sin `?solo=1` (`tareas/README.md`, «La cabecera con pestañas, por anchos»).
 El cartel de cumpleaños (`/tareas/cumples/`) y el puente (`/tareas/oficina/`) no se enlazan: solo los abre el mapa.
 
 ## El servidor (VPS en Hostinger)
