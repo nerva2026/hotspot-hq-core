@@ -42,7 +42,7 @@ El servidor usa esa imagen en lugar de la oficial para el servicio `play`. El re
 - `play/public/static/fonts/hotspot/`: letras Silkscreen y Pixelify Sans (licencia OFL, incluida).
   Los archivos `hs-retoques-*.woff` son **los retoques de las letras**: unas cifras claras para las dos letras (el 5 de
   Pixelify Sans era igual que la S y el 4 de Silkscreen parecía otra letra) y, en Pixelify Sans, la B, la C, la G, la
-  «a», la «c» (se cerraba como una «o»), la «j», la Z (era el dibujo de un 2), la E (redonda, casi un €), la «f» y la «t» (dejaban un hueco detrás), la «í» (su tilde parecía el punto de la «i»), los paréntesis y el €, que se confundían. Los dibuja `herramientas/retoques.py` (Python 3 con fontTools) y los deja aquí y en
+  «a», la «c» (se cerraba como una «o»), la «e» (con la barra a medias y cerrada por la derecha, parecía una «a» o un 8; con ella, la «é» y la «è»), la «j», la Z (era el dibujo de un 2), la E (redonda, casi un €), la «f» y la «t» (dejaban un hueco detrás), la «í» (su tilde parecía el punto de la «i»), los paréntesis y el €, que se confundían. Los dibuja `herramientas/retoques.py` (Python 3 con fontTools) y los deja aquí y en
   `tareas/publico/fuentes/`; el CSS los declara con el mismo nombre de familia que la letra a la que acompañan y
   `unicode-range` (ver el principio de `hotspot-retro.css`).
 - `play/public/static/images/hotspot/`: marca provisional (mientras llega el logo) y fachada de la calle.
