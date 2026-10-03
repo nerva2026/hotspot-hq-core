@@ -88,6 +88,7 @@ Node 22 sin dependencias:
 | `publico/app/musica*.js` | La música en pantalla: la cabina (`musica.js`), el reproductor pequeño (`musica-mini.js`), piezas comunes (`musica-comun.js`) y los estados del reproductor, sin página, para poder probarlos en Node (`musica-seguidor.js`). |
 | `publico/app/cumple.js`, `confeti.js`, `oficina.js`, `cumples.js` | Los cumpleaños (cuentas y textos), el confeti, el puente invisible de la oficina (`/tareas/oficina/`) y el cartel de cumpleaños (`/tareas/cumples/`). |
 | `publico/app/solo.js` | El modo «solo lo suyo» (`?solo=1`): cuándo se pone y cómo se conserva en las direcciones (ver «Solo lo suyo»). |
+| `publico/app/libro-espera.js` | La pantalla «Solo para los socios» del libro, en directo: sigue escuchando y abre el libro cuando a esa persona le dan acceso. Lógica sola, para probarla en Node. |
 | `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar, una por pantalla y cada una con su servidor y su puerto (tabla en «Las pruebas»). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
 
@@ -164,7 +165,10 @@ línea, al lado del nombre (con menos de 740 px no caben y bajan a la suya). Sin
 Una pantalla propia para las cuentas, sin tener que manejar una hoja de cálculo. Usa las mismas cuentas y la
 misma sesión que el tablón.
 
-- **Quién lo ve:** los administradores y quien tiene parte en el reparto. A los demás, la API les contesta 403.
+- **Quién lo ve:** los administradores y quien tiene parte en el reparto. A los demás, la API les contesta 403 y la
+  pantalla dice «Solo para los socios». Va en directo en los dos sentidos: a quien le quitan la parte se le cierra el
+  libro al momento, y la pantalla «Solo para los socios» sigue escuchando el canal y abre el libro sola en cuanto a esa
+  persona le dan parte o pasa a administrar (`publico/app/libro-espera.js`), sin cerrar ni recargar.
 - **Apuntar:** gasto, ingreso o pago entre socios, con categoría, notas y la foto del tique (o un PDF).
 - **Quién debe a quién:** cada gasto e ingreso se reparte según las partes. Las partes se fijan con el primer
   movimiento, a partes iguales entre los administradores, y se cambian en «Reparto».
@@ -459,7 +463,7 @@ sus variables, están en el workflow.
 | Paso | Prueba | Puerto | Qué comprueba |
 | --- | --- | --- | --- |
 | Probar el servidor | (con `curl`) | 3999 | Que arranca, sirve el tablón, imprime el enlace de alta y pide sesión (401) a quien no la tiene. |
-| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. |
+| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. Y «Solo para los socios» en directo: la espera de la pantalla (`publico/app/libro-espera.js`) contra el canal de verdad, al pasar a administrar y al recibir parte en el reparto. |
 | Probar la pizarra | `pruebas/pizarra.mjs` | 3997 | Trazos, notas y fotos con dos personas a la vez, vaciar y recuperar, el lápiz en directo y quién la tiene abierta. |
 | Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). |
 | Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje, puente `/tareas/oficina/` y cartel `/tareas/cumples/` (la API y lo que sirve; en pantalla se mira con un navegador). |
