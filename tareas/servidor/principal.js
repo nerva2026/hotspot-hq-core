@@ -618,6 +618,9 @@ function excelLibro() {
                     { titulo: "Importe (€)", ancho: 14, tipo: "euros" },
                     { titulo: "Notas", ancho: 40, tipo: "largo" },
                     { titulo: "Tique", ancho: 8 },
+                    // Escondida: con ella, al importar esta misma descarga cada fila se reconoce como su movimiento
+                    // (aunque después se haya cambiado en el libro) y no se apunta dos veces (libro.importar).
+                    { titulo: "Id", ancho: 14, oculta: true },
                 ],
                 filas: libro.ordenar(l.movimientos.filter((m) => !m.borrado)).map((m) => [
                     m.fecha,
@@ -629,6 +632,7 @@ function excelLibro() {
                     e(m.importe),
                     m.notas,
                     m.tique ? "Sí" : "",
+                    m.id,
                 ]),
             },
             {
@@ -1155,7 +1159,7 @@ async function api(req, res, ruta) {
         const r = libro.importar(hojas, usuario, datos(), cuentas.normalizar, fechaDeCelda);
         almacen.guardar();
         if (r.importados) emitir({ tipo: "libro", autor: usuario.id }, origen);
-        return json(res, 200, { importados: r.importados, repetidos: r.repetidos, sinPersona: r.sinPersona, hoja: r.hoja });
+        return json(res, 200, { importados: r.importados, repetidos: r.repetidos, borrados: r.borrados, sinPersona: r.sinPersona, sinLeer: r.sinLeer, hoja: r.hoja });
     }
 
     // --- pizarras ---

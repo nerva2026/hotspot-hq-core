@@ -177,7 +177,8 @@ export function pintarCronograma(cont, ctx, ev) {
     if (ev.agrupar === "estado") grupos = ESTADOS.map((e) => ({ nombre: e.nombre, color: e.color, tareas: conFechas.filter((t) => t.estado === e.id) }));
     else if (ev.agrupar === "persona")
         grupos = [
-            ...ctx.activos().map((u) => ({ nombre: u.nombre, color: u.color, tareas: conFechas.filter((t) => t.responsables.includes(u.id)) })),
+            // también quien ha salido del crew y sigue en alguna tarea: sin su grupo, esa tarea no salía en ninguno
+            ...ctx.conTareas(conFechas).map((u) => ({ nombre: u.nombre, fuera: Boolean(u.baja), color: u.color, tareas: conFechas.filter((t) => t.responsables.includes(u.id)) })),
             { nombre: "Sin asignar", color: "#d8cabb", tareas: conFechas.filter((t) => !t.responsables.length) },
         ];
     else grupos = [{ nombre: null, tareas: conFechas }];
@@ -199,7 +200,7 @@ export function pintarCronograma(cont, ctx, ev) {
                 h(
                     "div",
                     { class: "crono-grupo" },
-                    h("div", { class: "crono-grupo-nombre" }, h("span", { class: "punto-estado", style: { background: g.color } }), g.nombre, h("span", { class: "cuenta" }, g.tareas.length), g.ayuda ? h("span", { class: "tenue ayuda" }, g.ayuda) : null),
+                    h("div", { class: "crono-grupo-nombre" }, h("span", { class: "punto-estado", style: { background: g.color } }), g.nombre, g.fuera ? h("span", { class: "fuera-del-crew" }, "fuera del crew") : null, h("span", { class: "cuenta" }, g.tareas.length), g.ayuda ? h("span", { class: "tenue ayuda" }, g.ayuda) : null),
                 ),
             );
         }

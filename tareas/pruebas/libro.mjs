@@ -9,7 +9,7 @@
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { crearExcel, leerExcel } from "../servidor/excel.js";
+import { crearExcel, leerExcel, fechaDeCelda } from "../servidor/excel.js";
 import { esperarAcceso, AVISOS_QUE_ABREN } from "../publico/app/libro-espera.js";
 import { coincide, prepararConsulta, formasDeImporte, formasDeFecha } from "../publico/app/libro-buscar.js";
 import { seguirAccesoAlLibro, AVISOS_QUE_CAMBIAN } from "../publico/app/libro-pestana.js";
@@ -447,7 +447,7 @@ const drive = crearExcel({
 });
 r = await diego("POST", "libro/importar", new Uint8Array(drive));
 assert.equal(r.estado, 200, JSON.stringify(r.datos));
-assert.deepEqual(r.datos, { importados: 1, repetidos: 1, sinPersona: 1, hoja: "Gastos" });
+assert.deepEqual(r.datos, { importados: 1, repetidos: 1, borrados: 0, sinPersona: 1, sinLeer: 0, hoja: "Gastos" });
 r = await diego("GET", "libro");
 const altavoces = r.datos.movimientos.find((m) => m.concepto === "Altavoces");
 assert.equal(altavoces.importe, 123450);
@@ -524,6 +524,212 @@ assert.ok(r.datos.categorias.includes("Material"), "la categoría importada se a
     // y la pantalla lo usa
     assert.match(codigoLibro, /import \{ coincide, prepararConsulta \} from "\.\/libro-buscar\.js"/);
     assert.match(codigoLibro, /coincide\(m, palabras, \{ nombre \}\)/, "el buscador del libro tiene que buscar también por importe");
+}
+
+// ---------- ida y vuelta: importar una descarga del propio libro no cambia NADA ----------
+// Antes, la descarga escribía «Pago» como concepto de los pagos (que no tienen) y al importarla no los reconocía: los
+// apuntaba otra vez y las cuentas cambiaban. Aquí: gastos, ingresos y pagos, con y sin notas, con tique y sin él, con
+// importes de cuatro y de cinco cifras y con textos difíciles; también tras cambiar o borrar un movimiento; con una
+// descarga antigua (sin la columna «Id»); y con hojas raras (vacías, sin columnas, con fechas e importes escritos de
+// otras maneras).
+{
+    const importar = async (bytes) => (await diego("POST", "libro/importar", new Uint8Array(bytes))).datos;
+    const descargar = async () => Buffer.from(await (await diego("GET", "libro/excel", undefined, { crudo: true })).arrayBuffer());
+    // lo que no puede cambiar: los movimientos (enteros, con su id y sus fechas de cambio), las cuentas y el reparto
+    const foto = async () => {
+        const { datos } = await diego("GET", "libro");
+        return { movimientos: datos.movimientos, resumen: datos.resumen, partes: datos.partes, categorias: datos.categorias };
+    };
+    const apuntar = async (m) => {
+        const x = await diego("POST", "libro/movimientos", m);
+        assert.equal(x.estado, 201, JSON.stringify(x.datos));
+        return x.datos;
+    };
+    r = await diego("PATCH", "libro/ajustes", { partes: { [idDiego]: 50, [idVictor]: 50 } });
+    assert.equal(r.estado, 200, JSON.stringify(r.datos));
+    await apuntar({ tipo: "gasto", fecha: "2026-09-15", concepto: "Señal de la sala", persona: idDiego, importe: 1284550, notas: "Factura 2026/034.\nFalta el justificante.", categoria: "Eventos" });
+    await apuntar({ tipo: "gasto", fecha: "2026-09-22", concepto: "Equipo de sonido", persona: idVictor, importe: 123456 });
+    await apuntar({ tipo: "ingreso", fecha: "2026-09-20", concepto: "Patrocinio", persona: idDiego, importe: 2500000, notas: "Primer plazo" });
+    await apuntar({ tipo: "ingreso", fecha: "2026-10-01", concepto: "Entradas anticipadas (48)", persona: idVictor, importe: 57600 });
+    await apuntar({ tipo: "pago", fecha: "2026-09-30", persona: idVictor, para: idDiego, importe: 59279 }); // sin concepto: la descarga escribe «Pago»
+    await apuntar({ tipo: "pago", fecha: "2026-10-01", concepto: "Bizum de la cena", persona: idDiego, para: idVictor, importe: 1500 });
+    await apuntar({ tipo: "pago", fecha: "2026-10-01", concepto: "Pago", persona: idDiego, para: idVictor, importe: 700 }); // alguien escribió «Pago» a mano
+    // dos gastos iguales salvo lo que va entre paréntesis: son dos, no uno repetido
+    await apuntar({ tipo: "gasto", fecha: "2026-10-02", concepto: "Taxi (ida)", persona: idVictor, importe: 835 });
+    await apuntar({ tipo: "gasto", fecha: "2026-10-02", concepto: "Taxi (vuelta)", persona: idVictor, importe: 835 });
+    // el mismo concepto, fecha, importe y persona en un gasto y en un ingreso: son dos movimientos distintos
+    await apuntar({ tipo: "gasto", fecha: "2026-10-02", concepto: "Fianza", persona: idDiego, importe: 30000 });
+    await apuntar({ tipo: "ingreso", fecha: "2026-10-02", concepto: "Fianza", persona: idDiego, importe: 30000 });
+    await apuntar({ tipo: "gasto", fecha: "2028-02-29", concepto: 'Comillas "dobles" y \'simples\' <script>alert(1)</script> & 🎉 ¿qué?: 50 €', persona: idDiego, importe: 5, notas: "  con espacios  \n\ny emojis 🎧" });
+    const conTique = (await foto()).movimientos.filter((m) => m.tique).length;
+    assert.ok(conTique >= 1, "hay al menos un movimiento con tique");
+
+    const antes = await foto();
+    const total = antes.movimientos.length;
+    const descarga = await descargar();
+    const hojaDescargada = leerExcel(descarga)[0];
+    assert.deepEqual(hojaDescargada.filas[0], ["Fecha", "Tipo", "Concepto", "Categoría", "Quién", "Para quién", "Importe (€)", "Notas", "Tique", "Id"]);
+    assert.equal(hojaDescargada.filas.length, total + 1);
+    assert.ok(antes.movimientos.every((m) => hojaDescargada.filas.some((f) => f[9] === m.id)), "cada fila lleva el Id de su movimiento");
+    // 1) descargar → importar: nada
+    r = await importar(descarga);
+    assert.deepEqual(r, { importados: 0, repetidos: total, borrados: 0, sinPersona: 0, sinLeer: 0, hoja: "Movimientos" }, "importar la propia descarga no apunta nada");
+    assert.deepEqual(await foto(), antes, "ni cambia un movimiento, ni las cuentas, ni el reparto");
+    r = await importar(descarga); // y otra vez
+    assert.equal(r.importados, 0);
+    assert.deepEqual(await foto(), antes);
+
+    // 2) una descarga antigua, sin la columna «Id» (las de antes de este arreglo): se reconoce por lo que dice cada fila,
+    //    también los pagos, que llevan «Pago» donde el libro no guarda nada
+    const sinId = (bytes) => {
+        const [hoja] = leerExcel(bytes);
+        return crearExcel({ hojas: [{ nombre: hoja.nombre, columnas: hoja.filas[0].slice(0, 9).map((titulo) => ({ titulo, tipo: titulo === "Fecha" ? "fecha" : titulo.startsWith("Importe") ? "euros" : undefined })), filas: hoja.filas.slice(1).map((f) => [fechaDeCelda(f[0]), ...f.slice(1, 9)]) }] });
+    };
+    const antigua = sinId(descarga);
+    assert.equal(leerExcel(antigua)[0].filas[0].includes("Id"), false);
+    assert.ok(leerExcel(antigua)[0].filas.some((f) => f[1] === "Pago" && f[2] === "Pago"), "la descarga escribe «Pago» como concepto de un pago sin concepto");
+    r = await importar(antigua);
+    assert.deepEqual(r, { importados: 0, repetidos: total, borrados: 0, sinPersona: 0, sinLeer: 0, hoja: "Movimientos" }, "una descarga antigua tampoco duplica nada (ni los pagos)");
+    assert.deepEqual(await foto(), antes);
+
+    // 3) tras CAMBIAR un movimiento: con la descarga de antes, su fila sigue siendo ese movimiento (no se duplica con
+    //    los datos viejos) y el cambio hecho en el libro se queda
+    const sonido = antes.movimientos.find((m) => m.concepto === "Equipo de sonido");
+    const pagoSinConcepto = antes.movimientos.find((m) => m.tipo === "pago" && !m.concepto && m.importe === 59279);
+    r = await diego("PATCH", `libro/movimientos/${sonido.id}`, { concepto: "Equipo de sonido y luces", importe: 838900, fecha: "2026-09-23" });
+    assert.equal(r.estado, 200);
+    r = await diego("PATCH", `libro/movimientos/${pagoSinConcepto.id}`, { importe: 60000 });
+    assert.equal(r.estado, 200);
+    const cambiado = await foto();
+    r = await importar(descarga);
+    assert.deepEqual(r, { importados: 0, repetidos: total, borrados: 0, sinPersona: 0, sinLeer: 0, hoja: "Movimientos" }, "lo cambiado después de descargar se reconoce por su Id");
+    assert.deepEqual(await foto(), cambiado, "y se queda como está en el libro");
+    r = await importar(await descargar());
+    assert.equal(r.importados, 0);
+    assert.deepEqual(await foto(), cambiado);
+
+    // 4) tras BORRAR un movimiento: con la descarga de antes, lo borrado no vuelve; con una nueva, no cambia nada
+    const fianza = cambiado.movimientos.find((m) => m.concepto === "Fianza" && m.tipo === "gasto");
+    r = await diego("DELETE", `libro/movimientos/${fianza.id}`);
+    assert.equal(r.estado, 200);
+    r = await diego("DELETE", `libro/movimientos/${pagoSinConcepto.id}`);
+    assert.equal(r.estado, 200);
+    const borrado = await foto();
+    assert.equal(borrado.movimientos.length, total - 2);
+    r = await importar(descarga);
+    assert.deepEqual(r, { importados: 0, repetidos: total - 2, borrados: 2, sinPersona: 0, sinLeer: 0, hoja: "Movimientos" }, "lo borrado después de descargar no se vuelve a apuntar");
+    assert.deepEqual(await foto(), borrado);
+    r = await importar(await descargar());
+    assert.deepEqual(r, { importados: 0, repetidos: total - 2, borrados: 0, sinPersona: 0, sinLeer: 0, hoja: "Movimientos" });
+    assert.deepEqual(await foto(), borrado, "el ingreso «Fianza» que queda no se toma por el gasto borrado, ni al revés");
+    // …y lo borrado no vuelve como duplicado de otro: una descarga antigua (sin Id) hecha ahora tampoco cambia nada
+    r = await importar(sinId(await descargar()));
+    assert.deepEqual(r, { importados: 0, repetidos: total - 2, borrados: 0, sinPersona: 0, sinLeer: 0, hoja: "Movimientos" });
+    assert.deepEqual(await foto(), borrado);
+    // Sin Id no hay manera de saber que una fila es un movimiento que se cambió o se borró después: es una fila que no
+    // está, y se apunta (lo de siempre: «las que ya estaban» son las que dicen lo mismo). Con la descarga antigua de
+    // ANTES de los cambios vuelven los dos borrados y el gasto con sus datos viejos.
+    r = await importar(antigua);
+    assert.deepEqual(r, { importados: 3, repetidos: total - 3, borrados: 0, sinPersona: 0, sinLeer: 0, hoja: "Movimientos" });
+    const trasAntigua = await foto();
+    assert.equal(trasAntigua.movimientos.length, total + 1);
+    r = await importar(antigua);
+    assert.equal(r.importados, 0, "y a la segunda ya están");
+
+    // 5) una fila copiada en Excel (el mismo Id dos veces) para apuntar otra cosa: la copia es una fila nueva
+    {
+        const [hoja] = leerExcel(await descargar());
+        const filas = hoja.filas.slice(1).map((f) => [fechaDeCelda(f[0]), ...f.slice(1)]);
+        const copia = [...filas.find((f) => f[2] === "Taxi (ida)")];
+        copia[2] = "Taxi (aeropuerto)";
+        copia[6] = 4250;
+        const conCopia = crearExcel({ hojas: [{ nombre: "Movimientos", columnas: hoja.filas[0].map((titulo) => ({ titulo, tipo: titulo === "Fecha" ? "fecha" : titulo.startsWith("Importe") ? "euros" : undefined })), filas: [...filas, copia] }] });
+        r = await importar(conCopia);
+        assert.deepEqual([r.importados, r.repetidos], [1, filas.length]);
+        const nuevo = (await foto()).movimientos.find((m) => m.concepto === "Taxi (aeropuerto)");
+        assert.equal(nuevo.importe, 425000);
+        assert.equal(nuevo.persona, idVictor);
+    }
+
+    // 6) hojas raras
+    // (las columnas «Importe…» y «Fecha» son de número y de fecha: lo que no lo sea se escribe como texto)
+    const hojaDe = (nombre, titulos, filas) => crearExcel({ hojas: [{ nombre, columnas: titulos.map((titulo) => ({ titulo, tipo: titulo.startsWith("Importe") ? "euros" : titulo === "Fecha" ? "fecha" : undefined })), filas }] });
+    r = await diego("POST", "libro/importar", new Uint8Array(Buffer.from("esto no es un Excel")));
+    assert.equal(r.estado, 400);
+    assert.match(r.datos.error, /No he podido leer ese Excel/);
+    r = await diego("POST", "libro/importar", new Uint8Array(Buffer.from("Fecha;Tipo;Concepto\r\n01/10/2026;Gasto;Algo\r\n"))); // un CSV
+    assert.equal(r.estado, 400);
+    r = await diego("POST", "libro/importar", new Uint8Array(hojaDe("Vacía", [], [])));
+    assert.equal(r.estado, 400);
+    assert.match(r.datos.error, /«Concepto» e «Importe»/);
+    r = await diego("POST", "libro/importar", new Uint8Array(hojaDe("Gastos", ["Fecha", "Cosa", "Cuánto"], [["01/10/2026", "Algo", "12"]])));
+    assert.equal(r.estado, 400, "sin columnas «Concepto» e «Importe» no se importa nada");
+    const antesDeRaras = (await foto()).movimientos.length;
+    // solo la cabecera
+    r = await importar(hojaDe("Gastos", ["Fecha", "Concepto", "Pagado por", "Importe (€)"], []));
+    assert.deepEqual(r, { importados: 0, repetidos: 0, borrados: 0, sinPersona: 0, sinLeer: 0, hoja: "Gastos" });
+    // columnas de más, desordenadas y con otros nombres; fechas e importes escritos de varias maneras
+    r = await importar(
+        hojaDe(
+            "Gastos",
+            ["Nº", "Importe", "Algo más", "Concepto", "Cobrado por", "Fecha", "Tipo", "Para quién", "Notas"],
+            [
+                [1, "1.234", "x", "Raro: miles con punto", "Diego", "1 oct 2026", "", "", ""],
+                [2, "12,5", "x", "Raro: coma decimal", "Diego", "2026/10/01", "Gasto", "", ""],
+                [3, "1,234.56", "x", "Raro: a la inglesa", "víctor", "1 de octubre de 2026", "gasto", "", ""],
+                [4, "12.845,50 €", "x", "Raro: como se ve en el libro", "DIEGO", "01-10-26", "Ingreso", "", "una nota"],
+                [5, 99.999, "x", "Raro: número con decimales de más", "Diego", "2026-10-01", "Gasto", "", ""], // celdas de número y de fecha
+                [6, "-40,00", "x", "Raro: negativo", "Diego", "01/10/2026", "Gasto", "", ""],
+                [7, "doce euros", "x", "Raro: importe con letras", "Diego", "01/10/2026", "Gasto", "", ""],
+                [8, "25", "x", "Raro: fecha imposible", "Diego", "31/02/2026", "Gasto", "", ""],
+                [9, "25", "x", "Raro: sin persona", "", "01/10/2026", "Gasto", "", ""],
+                [10, "30", "x", "", "Diego", "01/10/2026", "Pago", "Víctor", ""],
+                [11, "30", "x", "Raro: pago sin destinatario", "Diego", "01/10/2026", "Pago", "", ""],
+                [12, "30", "x", "Raro: pago a uno mismo", "Diego", "01/10/2026", "Pago", "Diego", ""],
+                [13, "", "x", "Raro: sin importe", "Diego", "01/10/2026", "Gasto", "", ""],
+                [14, "7", "x", "", "Diego", "01/10/2026", "Gasto", "", ""],
+                [],
+                [15, "9,99", "x", "Raro: 29 de febrero", "Diego", "29/02/2028", "Gasto", "", ""],
+                [16, "9,99", "x", "Raro: fin de año", "Diego", "31/12/2026", "Gasto", "", ""],
+            ],
+        ),
+    );
+    assert.deepEqual(r, { importados: 9, repetidos: 0, borrados: 0, sinPersona: 2, sinLeer: 4, hoja: "Gastos" }, JSON.stringify(r));
+    const raros = Object.fromEntries((await foto()).movimientos.filter((m) => m.concepto.startsWith("Raro") || (m.tipo === "pago" && m.importe === 3000)).map((m) => [m.concepto || "pago", m]));
+    assert.equal(raros["Raro: miles con punto"].importe, 123400, "«1.234» son 1234 €, no 1,23 €");
+    assert.equal(raros["Raro: miles con punto"].fecha, "2026-10-01");
+    assert.equal(raros["Raro: coma decimal"].importe, 1250);
+    assert.equal(raros["Raro: coma decimal"].fecha, "2026-10-01");
+    assert.equal(raros["Raro: a la inglesa"].importe, 123456);
+    assert.equal(raros["Raro: a la inglesa"].persona, idVictor);
+    assert.equal(raros["Raro: a la inglesa"].fecha, "2026-10-01");
+    assert.equal(raros["Raro: como se ve en el libro"].importe, 1284550);
+    assert.equal(raros["Raro: como se ve en el libro"].tipo, "ingreso");
+    assert.equal(raros["Raro: como se ve en el libro"].notas, "una nota");
+    assert.equal(raros["Raro: como se ve en el libro"].fecha, "2026-10-01");
+    assert.equal(raros["Raro: número con decimales de más"].importe, 10000);
+    assert.equal(raros["Raro: número con decimales de más"].fecha, "2026-10-01");
+    assert.equal(raros["Raro: fecha imposible"].fecha, new Date().toISOString().slice(0, 10), "una fecha que no existe: la de hoy");
+    assert.equal(raros["Raro: 29 de febrero"].fecha, "2028-02-29");
+    assert.equal(raros["Raro: fin de año"].fecha, "2026-12-31");
+    assert.equal(raros.pago.para, idVictor);
+    assert.equal(raros.pago.concepto, "");
+    assert.equal((await foto()).movimientos.length, antesDeRaras + 9);
+    // una hoja grande (3000 filas) entra de una vez y, a la segunda, ya estaban todas
+    const muchas = Array.from({ length: 3000 }, (_, i) => ["01/10/2026", `Grande ${i}`, "Diego", (i % 500) + 1]);
+    const grande = hojaDe("Gastos", ["Fecha", "Concepto", "Pagado por", "Importe (€)"], muchas);
+    const t0 = Date.now();
+    r = await importar(grande);
+    assert.equal(r.importados, 3000);
+    r = await importar(grande);
+    assert.deepEqual([r.importados, r.repetidos], [0, 3000]);
+    assert.ok(Date.now() - t0 < 15000, `importar 3000 filas dos veces ha tardado ${Date.now() - t0} ms`);
+    r = await diego("GET", "libro");
+    assert.equal(r.datos.resumen.personas.reduce((s, p) => s + p.balance, 0), 0, "los balances siguen sumando cero");
+    // y el texto de la pantalla lo cuenta todo
+    assert.match(codigoLibro, /r\.repetidos \? `\$\{r\.repetidos\} ya estaban`/);
+    assert.match(codigoLibro, /r\.borrados \?/);
+    assert.match(codigoLibro, /r\.sinLeer \?/);
 }
 
 // La página del libro

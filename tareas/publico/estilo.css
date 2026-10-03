@@ -462,6 +462,11 @@ kbd {
 .avatares .avatar + .avatar {
     margin-left: -5px;
 }
+/* Los pequeños (las barras del calendario y los nombres del cronograma) no se montan: con 16 px de lado, el de detrás
+   le tapaba media letra al de delante. */
+.avatares .avatar.mini + .avatar.mini {
+    margin-left: 1px;
+}
 .persona {
     display: inline-flex;
     align-items: center;
@@ -1150,6 +1155,7 @@ table.lista {
     }
 }
 .titulo-celda {
+    position: relative; /* para «Abrir» mientras no se ve (más abajo) */
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1187,19 +1193,28 @@ table.lista {
     color: var(--tinta-suave);
 }
 /* «Abrir» sale al pasar el ratón por la fila o al llegar a ella con el teclado. Escondido es transparente, no
-   invisible: así se le puede devolver el foco al cerrar la ficha que abrió (y se ve en cuanto lo tiene). */
+   invisible: así se le puede devolver el foco al cerrar la ficha que abrió (y se ve en cuanto lo tiene). Y mientras no
+   se ve NO ocupa sitio (va fuera de la fila de la celda): el título usa todo el ancho de su columna, en vez de cortarse
+   con «…» al lado de un hueco vacío; al salir, el título le hace sitio. */
 .fila .abrir {
     flex: none;
+    position: absolute;
+    right: 6px;
     opacity: 0;
+    pointer-events: none;
 }
 .fila:hover .abrir,
 .fila:focus-within .abrir {
+    position: static;
     opacity: 1;
+    pointer-events: auto;
 }
 /* Donde no hay ratón (un móvil, una tableta) «Abrir» está siempre a la vista. */
 @media (hover: none) {
     .fila .abrir {
+        position: static;
         opacity: 1;
+        pointer-events: auto;
     }
 }
 /* El título como texto y el resumen de la fila son de la lista estrecha (más abajo): en la ancha no salen. */
@@ -1488,7 +1503,10 @@ table.lista {
     text-decoration: underline;
 }
 .cal-sinfecha {
+    /* Su ancho es fijo (240 px; 190 en un panel estrecho): min-width 0 para que un título largo no lo ensanche (con el
+       «auto» de fábrica medía lo que el título más largo en una línea y dejaba al mes sin sitio, o en 0 px). */
     flex: 0 0 240px;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -1527,8 +1545,20 @@ table.lista {
     -webkit-user-select: none;
     -webkit-touch-callout: none;
 }
+.cal-suelta {
+    min-width: 0; /* en la rejilla de 601 a 870 px, un título largo tampoco ensancha su columna */
+}
+/* El título de una tarea sin fecha: hasta dos líneas y, si no cabe, «…» (entero, al pasar el ratón). Una palabra más
+   larga que la caja se parte. */
 .cal-suelta .texto {
     flex: 1;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
 }
 .fantasma-mini {
     position: fixed;
@@ -2112,6 +2142,20 @@ table.lista {
     flex: none;
     font-weight: 700;
 }
+/* Quien ya ha salido del crew y sigue puesto en una tarea: sale en sus menús (para poder quitarlo) y en los grupos «por
+   persona», con esta marca detrás del nombre. */
+.fuera-del-crew {
+    flex: none;
+    font: 13px/1 var(--texto);
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--tinta-suave);
+    white-space: nowrap;
+}
+.opcion .nombre-en-menu {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
 .pie-menu {
     border-top: 2px dashed var(--crema-osc);
     margin-top: 4px;
@@ -2315,7 +2359,12 @@ table.lista {
     font-size: 14px;
     animation: entrar-aviso 0.15s steps(3) both;
 }
+.aviso > span {
+    min-width: 0;
+    overflow-wrap: anywhere; /* una palabra larguísima (un título sin espacios) no saca el aviso de la pantalla */
+}
 .aviso .enlace {
+    flex: none;
     color: var(--amarillo);
 }
 .aviso.malo {
@@ -2528,7 +2577,9 @@ table.lista {
         color: var(--tinta-suave);
     }
     .fila .abrir {
+        position: static;
         opacity: 1;
+        pointer-events: auto;
         margin-top: 4px;
     }
     .fila-resumen {
@@ -2904,6 +2955,14 @@ table.lista {
         height: auto;
         place-items: start center;
         padding-top: 8px;
+    }
+    /* …y como va ENCIMA del punto, el nombre y el número, con el ratón encima no puede llevar fondo (los tapaba y la
+       etiqueta se quedaba en blanco): el fondo de «encima» lo pone la cabecera, que está debajo, y el botón, solo su marco. */
+    .columna.plegable:not(.abierta) .plegar-hecho:hover {
+        background: transparent;
+    }
+    .columna.plegable:not(.abierta) .columna-cabecera:hover {
+        background: #fff;
     }
 }
 

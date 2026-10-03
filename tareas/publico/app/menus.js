@@ -2,10 +2,13 @@
 
 import { h, rellenar, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, hoy, sumarDias, lunesDe, fechaMedia, colorEtiqueta, normalizar, inicial } from "./util.js";
 import { abrirCapa } from "./capas.js";
+import { botonTodos } from "./personas.js";
 
 let abierto = null;
 
-export function cerrarMenu() {
+// «motivo»: "fuera" si se cierra por pulsar fuera de él y "escape" si es con Escape (lo demás, sin motivo: se ha
+// elegido algo, o lo cierra quien lo abrió). Se le pasa a «alCerrar».
+export function cerrarMenu(motivo) {
     if (!abierto) return;
     const m = abierto;
     abierto = null;
@@ -13,7 +16,7 @@ export function cerrarMenu() {
     document.removeEventListener("pointerdown", m.fuera, true);
     document.removeEventListener("keydown", m.tecla, true);
     window.removeEventListener("resize", m.recolocar);
-    m.alCerrar?.();
+    m.alCerrar?.(typeof motivo === "string" ? motivo : undefined);
     // Si el foco estaba en el menú, vuelve a lo que lo abrió (capas.js); si ya está en otra cosa, no se toca.
     m.capa.quitar({ alternativa: () => (m.ancla?.isConnected ? m.ancla : null) });
 }
@@ -30,12 +33,12 @@ export function abrirMenu(ancla, contenido, { clase = "", alCerrar, ancho } = {}
     const recolocar = () => colocar(el, ancla);
     recolocar();
     const fuera = (e) => {
-        if (!el.contains(e.target) && !(ancla?.contains && ancla.contains(e.target))) cerrarMenu();
+        if (!el.contains(e.target) && !(ancla?.contains && ancla.contains(e.target))) cerrarMenu("fuera");
     };
     const tecla = (e) => {
         if (e.key === "Escape") {
             e.stopPropagation();
-            cerrarMenu();
+            cerrarMenu("escape");
         }
     };
     document.addEventListener("pointerdown", fuera, true);
@@ -155,16 +158,24 @@ export function avatar(u, { tam = "" } = {}) {
     return h("span", { class: ["avatar", tam], style: estilo, title: u.nombre }, inicial(u.nombre));
 }
 
-// Selección de varias personas (responsables).
+// Una persona en un menú: su avatar, su nombre y, si ya ha salido del crew, la marca «fuera del crew» (sale solo
+// en las tareas en las que sigue puesta, para poder quitarla).
+export function personaEnMenu(u) {
+    return [avatar(u), h("span", { class: "nombre-en-menu" }, u.nombre), u.baja ? h("span", { class: "fuera-del-crew" }, "fuera del crew") : null];
+}
+
+// Selección de varias personas (responsables). «usuarios» es el crew de ahora y, si acaso, quien ya está en la tarea
+// aunque haya salido (u.baja): «Todos» son todos los de ahora; a quien ha salido solo se le puede quitar.
 export function menuPersonas(ancla, usuarios, seleccion, alCambiar) {
     let elegidos = new Set(seleccion);
     const pintar = (lista) => {
+        const todos = botonTodos(usuarios, elegidos);
         rellenar(
             lista,
             ...usuarios.map((u) =>
                 opcion({
                     marcado: elegidos.has(u.id),
-                    contenido: [avatar(u), u.nombre],
+                    contenido: personaEnMenu(u),
                     alElegir: () => {
                         if (elegidos.has(u.id)) elegidos.delete(u.id);
                         else elegidos.add(u.id);
@@ -174,7 +185,7 @@ export function menuPersonas(ancla, usuarios, seleccion, alCambiar) {
                     },
                 }),
             ),
-            usuarios.length > 1
+            todos
                 ? h(
                       "div",
                       { class: "pie-menu" },
@@ -184,12 +195,12 @@ export function menuPersonas(ancla, usuarios, seleccion, alCambiar) {
                               type: "button",
                               class: "enlace",
                               onclick: () => {
-                                  elegidos = new Set(elegidos.size === usuarios.length ? [] : usuarios.map((u) => u.id));
+                                  elegidos = new Set(todos.alPulsar());
                                   alCambiar([...elegidos]);
                                   pintar(lista);
                               },
                           },
-                          elegidos.size === usuarios.length ? "Nadie" : usuarios.length === 2 ? "Los dos" : "Todos",
+                          todos.texto,
                       ),
                   )
                 : null,
@@ -212,7 +223,7 @@ export function menuPersona(ancla, usuarios, actual, alElegir) {
                 [...usuarios, null].map((u) =>
                     opcion({
                         marcado: (u?.id || null) === (actual || null),
-                        contenido: u ? [avatar(u), u.nombre] : [avatar(null), "Nadie"],
+                        contenido: u ? personaEnMenu(u) : [avatar(null), "Nadie"],
                         alElegir: () => {
                             cerrarMenu();
                             alElegir(u?.id || null);
@@ -224,8 +235,24 @@ export function menuPersona(ancla, usuarios, actual, alElegir) {
     );
 }
 
+// ¿Es una fecha entera y de las que admite el tablón (de 2000 a 2100)? Mientras se teclea el año en un campo de
+// fecha, el navegador va dando fechas «completas» que no lo son: 0002-10-03, 0020-10-03, 0202-10-03…
+export const fechaTecleadaVale = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v || "") && v >= "2000-01-01" && v <= "2100-12-31";
+
 // Fecha: calendario del navegador y atajos.
+// Con el ratón (o el calendario del móvil), elegir un día lo pone y cierra. Con el TECLADO no: el navegador avisa de un
+// «cambio» con cada cifra en cuanto día, mes y año tienen algo, y el menú se cerraba con la primera cifra del año
+// (guardando el año 0002: «Fecha no válida»). Lo tecleado se pone con Intro o al pulsar fuera del menú (si es una fecha
+// entera); Escape lo deja como estaba.
 export function menuFecha(ancla, actual, alElegir, { titulo = "Para cuándo" } = {}) {
+    let tecleando = false;
+    let elegido = false;
+    let entrada = null;
+    const elegir = (v) => {
+        elegido = true;
+        cerrarMenu();
+        alElegir(v);
+    };
     const h0 = hoy();
     const viernes = sumarDias(lunesDe(h0), 4);
     const atajos = [
@@ -238,21 +265,22 @@ export function menuFecha(ancla, actual, alElegir, { titulo = "Para cuándo" } =
     abrirMenu(
         ancla,
         () => {
-            const entrada = h("input", {
+            entrada = h("input", {
                 type: "date",
                 class: "campo",
                 value: actual || "",
+                min: "2000-01-01",
+                max: "2100-12-31",
                 onchange: (e) => {
-                    if (e.target.value) {
-                        cerrarMenu();
-                        alElegir(e.target.value);
-                    }
+                    if (!tecleando && e.target.value) elegir(e.target.value);
+                },
+                onpointerdown: () => {
+                    tecleando = false; // se va a elegir en el calendario del navegador
                 },
                 onkeydown: (e) => {
-                    if (e.key === "Enter" && e.target.value) {
-                        cerrarMenu();
-                        alElegir(e.target.value);
-                    }
+                    if (e.key === "Enter") {
+                        if (e.target.value) elegir(e.target.value);
+                    } else if (/^\d$/.test(e.key) || ["Backspace", "Delete", "ArrowUp", "ArrowDown"].includes(e.key)) tecleando = true;
                 },
             });
             return h(
@@ -268,27 +296,27 @@ export function menuFecha(ancla, actual, alElegir, { titulo = "Para cuándo" } =
                             opcion({
                                 marcado: iso === actual,
                                 contenido: [h("span", { class: "crece" }, nombre), h("span", { class: "tenue" }, fechaMedia(iso))],
-                                alElegir: () => {
-                                    cerrarMenu();
-                                    alElegir(iso);
-                                },
+                                alElegir: () => elegir(iso),
                             }),
                         ),
                         actual
                             ? opcion({
                                   marcado: false,
                                   contenido: [h("span", { class: "crece" }, "Quitar fecha")],
-                                  alElegir: () => {
-                                      cerrarMenu();
-                                      alElegir(null);
-                                  },
+                                  alElegir: () => elegir(null),
                               })
                             : null,
                     ),
                 ),
             );
         },
-        { ancho: 290 },
+        {
+            ancho: 290,
+            // se ha tecleado una fecha entera y se pulsa fuera: se pone (como al salir de cualquier otro campo de la ficha)
+            alCerrar: (motivo) => {
+                if (!elegido && tecleando && motivo === "fuera" && fechaTecleadaVale(entrada?.value) && entrada.value !== (actual || "")) alElegir(entrada.value);
+            },
+        },
     );
 }
 

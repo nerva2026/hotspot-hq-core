@@ -20,7 +20,9 @@ Aplicación propia (Node, sin dependencias) con estas partes:
 - Solo entran con Google los correos del **crew**: las personas del tablón con correo. Se gestionan en el
   tablón, menú de la cuenta → «Crew» (solo administradores). Si no se pone nombre, se usa el de Google.
 - Quien sale del crew pierde al momento la oficina y el tablón (se le cierran sesiones y accesos); sus
-  tareas se quedan.
+  tareas se quedan. En esas tareas sigue saliendo en «Para quién» y «Pedido por» (marcado «fuera del crew»), para
+  poder quitarlo; en las demás no se le puede elegir. Y al agrupar por persona (lista y cronograma) o filtrar, tiene
+  su grupo mientras le quede alguna (`publico/app/personas.js`).
 - La oficina (WorkAdventure) inicia sesión en `/cuentas` como si fuera un proveedor OpenID Connect
   (`OPENID_CLIENT_ISSUER=http://tareas:3000/cuentas`). Nosotros hablamos con Google y comprobamos la lista.
 - Con el parche 07, la oficina y la terraza exigen haber entrado; los invitados se quedan en la calle
@@ -55,7 +57,9 @@ cualquier navegador.
 - **La lista de 721 a 1114 px** (el panel de la oficina, una ventana sin maximizar): la tabla cabe siempre a lo ancho,
   sin cortar ninguna columna por la mitad. Las columnas que no caben se esconden por orden, de la menos importante a la
   más: «Pedido por» (por debajo de 1115 px de ventana), «Etiquetas» (1003), «Empieza» (893) y «Prioridad» (809), que
-  sigue viéndose en la franja de color de la fila. Título, estado, para quién y para cuándo están siempre; lo demás, en
+  sigue viéndose en la franja de color de la fila. El título usa todo el ancho de su columna: «Abrir» no ocupa sitio
+  mientras no se ve (sale al pasar el ratón por la fila o al llegar con el teclado, y entonces el título le hace
+  hueco), y un título que no cabe se lee entero al pasar el ratón. Título, estado, para quién y para cuándo están siempre; lo demás, en
   la ficha («Abrir»). Los cortes se miden en la caja de la lista (reglas `@container lista` de `publico/estilo.css`):
   cada columna tiene un mínimo y lo que lleva dentro no la ensancha (un nombre largo acaba en «…»), y los cortes dejan
   17 px para la barra de desplazar de un ordenador. Si aun así la
@@ -64,7 +68,10 @@ cualquier navegador.
   marca con una sombra el lado por el que sigue; en los dos, el título de una barra que empieza antes del borde visible
   se corre hasta lo que se ve. Desde 600 px de ancho el mes se ve siempre entero, de lunes a domingo (los días se
   estrechan hasta 82 px antes que salirse); «Sin fecha» va al lado solo si caben los dos (desde 871 px) y, si no,
-  debajo, dentro de la pantalla: el mes se encoge (se desplaza por dentro) para dejarle sitio. En el cronograma, el rótulo del mes va pegado al borde de la columna de
+  debajo, dentro de la pantalla: el mes se encoge (se desplaza por dentro) para dejarle sitio. Al lado, «Sin fecha»
+  mide siempre lo mismo (240 px; 190 hasta los 900): un título largo no lo ensancha, va en dos líneas y acaba en «…»
+  (entero, al pasar el ratón), y el mes tiene siempre su sitio. En las barras del calendario y en los nombres del
+  cronograma, los avatares pequeños van uno al lado del otro, sin montarse. En el cronograma, el rótulo del mes va pegado al borde de la columna de
   nombres mientras ese mes esté a la vista y solo sale si cabe entero (donde no cabe se acorta: «sep 2026», «sep»; en un
   móvil, sin el año si es el de ahora); el selector «Nada · Estado · Persona» lleva siempre su etiqueta «Agrupar»; y el
   título que va al lado de una barra corta se coloca detrás de lo que la barra mide de verdad.
@@ -89,7 +96,28 @@ cualquier navegador.
     que ya se ve: un «atrás» puede haber cerrado solo una ventana.
 - **Cada tarea tiene:** título, estado, prioridad (urgente, alta, media, baja; cada una con su color),
   para quién, pedido por, fecha de inicio y fecha límite, etiquetas, subtareas y notas.
+- **Buscar:** el buscador encuentra lo que el tablón enseña, como lo enseña: el título, las notas y las subtareas; las
+  etiquetas, con y sin almohadilla («bolos», «#bolos»); las personas (para quién y quién la pidió), con y sin arroba
+  y sin tildes («víctor», «@victor»; «sin asignar»); la prioridad («urgente», «!alta», «sin prioridad») y el estado
+  («en marcha», «hecho»). Todas las palabras, en cualquier orden. La lógica está aparte, en
+  `publico/app/tablon-buscar.js`, y se prueba en `pruebas/tablon.mjs`.
 - **En directo:** lo que cambia uno lo ve el otro al momento (Server-Sent Events).
+- **Lo que se escribe no se pierde:** las notas y el título de la ficha se guardan un rato después de la última
+  letra, al salir del campo, al cerrar la ficha y también **al cerrar o recargar la página** (o al cambiar de
+  aplicación en el móvil): `publico/app/guardado.js` manda lo pendiente con un envío que sobrevive a la página
+  (`keepalive`), una sola vez. Sin conexión, lo escrito se queda en la ficha («Sin guardar») y se vuelve a intentar
+  solo cuando vuelve el servidor (sin un aviso rojo cada segundo); lo que se había cambiado en pantalla y no se pudo
+  guardar (una tarea marcada como hecha) vuelve a como estaba; y el texto de una tarea nueva que no se ha podido crear
+  vuelve a su campo. Un texto nuevo que se guarde con retraso tiene que pasar por ese módulo.
+- **Las fechas se pueden escribir con el teclado:** en el menú de fecha, elegir un día en el calendario del navegador
+  (o un atajo) lo pone y cierra; lo tecleado se pone con Intro o al pulsar fuera, no con la primera cifra del año (el
+  navegador avisa de un «cambio» con cada cifra, y antes el menú se cerraba guardando el año 0002).
+- **Dos personas en la misma tarea:** las notas no se pisan (ver «Las pruebas»); y cada cambio en las subtareas se hace
+  sobre la lista de ese momento y sobre esa subtarea (por su id), no sobre la que se pintó: quien termina de escribir
+  una no deshace lo que el otro haya marcado o añadido mientras tanto. Escape con una subtarea a medio escribir vacía
+  el campo (o lo deja como estaba); el segundo Escape cierra la ficha.
+- **Formularios:** un mensaje de error se quita solo en cuanto se corrige su campo (`quitarErrorAlCorregir()` y
+  `ponerError()` en `publico/app/util.js`), en las cinco pantallas.
 - **Excel:** descarga del tablón entero en `.xlsx`, e importación de la hoja «Pendiente» de Drive o de
   una descarga anterior. Las filas que empiezan por «EJEMPLO» y las tareas que ya existen se saltan.
 - **Cuentas:** con Google (crew). Las contraseñas antiguas siguen valiendo como plan B («Entrar con
@@ -123,6 +151,9 @@ Node 22 sin dependencias:
 | `publico/app/libro-espera.js` | La pantalla «Solo para los socios» del libro, en directo: sigue escuchando y abre el libro cuando a esa persona le dan acceso. Lógica sola, para probarla en Node. |
 | `publico/app/libro-pestana.js` | La pestaña «Cuentas» de las otras cuatro pantallas, en directo: con los avisos «libro» y «usuarios» del canal pregunta por lo suyo (`GET /api/yo`) y la pone o la quita. Lógica sola, para probarla en Node. |
 | `publico/app/libro-buscar.js` | El buscador del libro: qué se puede buscar de un movimiento (también el importe, la fecha y el tipo) y cuándo coincide. Lógica sola, para probarla en Node. |
+| `publico/app/tablon-buscar.js` | El buscador del tablón: qué se puede buscar de una tarea (también la etiqueta con «#», la persona con «@», la prioridad y el estado). Lógica sola, para probarla en Node. |
+| `publico/app/guardado.js` | El guardado retrasado de lo que se escribe (las notas de una tarea, el texto de una nota de la pizarra): un rato después de la última letra y también al cerrar o recargar la página, sin repetir envíos. Lógica sola, para probarla en Node. |
+| `publico/app/personas.js` | Quién se puede elegir en una tarea: el crew de ahora y quien ha salido pero sigue puesto en ella. Lógica sola, para probarla en Node. |
 | `pruebas/` | Las pruebas que se pasan en GitHub antes de publicar, una por pantalla y cada una con su servidor y su puerto (tabla en «Las pruebas»). |
 | `portada/` | La portada (CREW / INVITADO) y el estilo de las pantallas de acceso. |
 
@@ -223,6 +254,17 @@ misma sesión que el tablón.
 - **En el móvil** (480 px o menos) las marcas «Tique» y «Nota» de cada movimiento son dos dibujos pequeños debajo de
   la fecha (con más ancho, la palabra).
 - **Excel y CSV:** descarga del libro entero, e importación de la hoja de cuentas de Drive.
+- **Importar una descarga del propio libro no cambia nada.** La hoja «Movimientos» de la descarga lleva una columna
+  escondida, «Id», con la que cada fila se reconoce como su movimiento: ya estaba, aunque después se haya cambiado en
+  el libro (manda el libro), y si se borró después de descargar, no vuelve (el aviso los cuenta aparte). Una fila sin
+  «Id» (la hoja de Drive, una descarga antigua) ya estaba si coincide con un movimiento en tipo, fecha, concepto,
+  importe y persona (y, en un pago, a quién); el «Pago» que la descarga escribe como concepto de los pagos, que no
+  lo tienen, cuenta como ninguno. Lo vigila la prueba de ida y vuelta de `pruebas/libro.mjs`.
+- **Lo que entiende al importar:** fechas como número de Excel o escritas («1/10/2026», «01-10-26», «2026/10/01»,
+  «1/10», «1 oct 2026», «1 de octubre de 2026»; una que no existe o no se entiende se queda en la de hoy) e importes
+  con coma o con punto («12,5», «1.234,56», «1,234.56», «1.234» son 1234 €). Las filas que no se apuntan se cuentan
+  en el aviso: las que ya estaban, las borradas después de la descarga, las que no tienen una persona del crew y las
+  que no se han podido leer (sin importe, con un importe negativo o con letras).
 - Los importes se guardan en céntimos. Lo borrado pasa 30 días en la papelera.
 
 ## Pizarra
@@ -237,6 +279,12 @@ misma sesión que el tablón.
   botón que enseña los de ahora (se pliegan solos al empezar a pintar) y «¿Cómo funciona?» queda en el menú de la cuenta.
   Con menos de 372 px los botones van más juntos y, con menos de 340 (un móvil de 320), «Descargar» se queda solo en el
   menú de la cuenta: las dos filas caben sin cortar ningún botón.
+- **Escribir una nota en una pantalla pequeña:** la letra de las notas mide 26 px de la pizarra; con la pizarra entera
+  en un móvil (19 %) son 5 px. Al ponerse a escribir, si la letra mediría menos de 11 px, la pizarra se acerca a esa
+  nota (hasta 16 px de letra, con la nota arriba, por encima del teclado) y, al terminar, vuelve a como estaba; quien
+  cambia el tamaño a mano mientras escribe se queda con el suyo.
+- **El texto de una nota** se guarda un rato después de la última letra, al salir de ella y al cerrar o recargar la
+  página (`publico/app/guardado.js`).
 - **En directo:** cada uno ve el lápiz de los demás y lo que pintan mientras lo pintan, y quién tiene la
   pizarra abierta.
 - **Vaciar:** quita todo para todos; se puede recuperar durante 30 días.
@@ -249,7 +297,9 @@ el crew (sin sesión, la API contesta 401 y la página enseña la misma pantalla
 Se llega desde las estanterías de la sala, desde las pestañas de la barra y desde el menú de la cuenta del tablón.
 
 - **Qué se sube:** Markdown (`.md`), PDF, fotos (PNG, JPG, WebP o GIF), textos (`.txt`) y Word (`.docx`), con el
-  botón o arrastrando, varios a la vez y con el progreso. Hasta 25 MB cada uno (5 MB los textos y Markdown) y,
+  botón o arrastrando, varios a la vez y con el progreso. En el panel de subidas, lo que no se ha podido subir va lo
+  primero; y con el panel a la vista los avisos de abajo no se pintan encima (van a su izquierda o, en un móvil,
+  encima de él). Hasta 25 MB cada uno (5 MB los textos y Markdown) y,
   entre todos, lo que diga `ARCHIVO_MAXIMO_MB` (1024 por defecto). También **enlaces** https con título: los de
   Google Docs, Hojas, Presentaciones y Drive se ven dentro con su vista previa (`/preview`); los demás se abren
   en una pestaña nueva.
@@ -515,9 +565,9 @@ sus variables, están en el workflow.
 | Paso | Prueba | Puerto | Qué comprueba |
 | --- | --- | --- | --- |
 | Probar el servidor | (con `curl`) | 3999 | Que arranca, sirve el tablón, imprime el enlace de alta y pide sesión (401) a quien no la tiene. |
-| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. Y «Solo para los socios» en directo: la espera de la pantalla (`publico/app/libro-espera.js`) contra el canal de verdad, al pasar a administrar y al recibir parte en el reparto. La pestaña «Cuentas» de las otras pantallas en directo (`publico/app/libro-pestana.js` y `GET /api/yo`), también contra el canal de verdad. Y el buscador (`publico/app/libro-buscar.js`): por importe, por fecha, por tipo y por persona. |
+| Probar el libro de cuentas | `pruebas/libro.mjs` | 3991 | Gastos, ingresos y pagos, balance, CSV, Excel, importación de la hoja de Drive y tiques. La ida y vuelta de la descarga (descargar → importar → nada cambia: ni movimientos, ni cuentas, ni reparto; también tras cambiar o borrar un movimiento y con una descarga antigua sin «Id») y hojas raras (vacías, sin columnas, con fechas e importes escritos de otras maneras, de 3000 filas). Y «Solo para los socios» en directo: la espera de la pantalla (`publico/app/libro-espera.js`) contra el canal de verdad, al pasar a administrar y al recibir parte en el reparto. La pestaña «Cuentas» de las otras pantallas en directo (`publico/app/libro-pestana.js` y `GET /api/yo`), también contra el canal de verdad. Y el buscador (`publico/app/libro-buscar.js`): por importe, por fecha, por tipo y por persona. |
 | Probar la pizarra | `pruebas/pizarra.mjs` | 3997 | Trazos, notas y fotos con dos personas a la vez, vaciar y recuperar, el lápiz en directo y quién la tiene abierta. |
-| Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). Y las capas (`publico/app/capas.js`) con un historial de mentira: el tabulador da la vuelta dentro, «atrás» cierra la de arriba, cerrar con el botón no deja entradas, y toda ventana pasa por `ventana()`. |
+| Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). El buscador (`tablon-buscar.js`), quien sale del crew y sigue en una tarea (`personas.js`, con el servidor), el guardado al cerrar o recargar la página (`guardado.js` con un reloj de mentira, `keepalive` en `api.js` y contra el servidor), las subtareas por su id y los errores de formulario que se quitan al corregir. Y las capas (`publico/app/capas.js`) con un historial de mentira: el tabulador da la vuelta dentro, «atrás» cierra la de arriba, cerrar con el botón no deja entradas, y toda ventana pasa por `ventana()`. |
 | Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje, puente `/tareas/oficina/` y cartel `/tareas/cumples/` (la API y lo que sirve; en pantalla se mira con un navegador). |
 | Probar el archivo | `pruebas/archivo.mjs` | 3992 | Subir un documento de cada tipo, enlaces, papelera, búsqueda, lo que no debe entrar, Markdown y Word escapados y el límite total (`ARCHIVO_MAXIMO_MB=40`). |
 | Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify (y entrar en la cabina al conectar, libre u ocupada), lo que suena en directo, cómo le va a cada oyente, el aviso a la oficina y el puente con `hsMusica` (el módulo de verdad con una oficina de mentira); la música «sin configurar»; y las horas con su artículo («desde la 1:08», `laHora()`), sin ninguna escrita a mano en las pantallas. |

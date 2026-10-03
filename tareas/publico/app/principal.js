@@ -1,12 +1,14 @@
 // Tablón de tareas de HOT SPOT S.L. · arranque, estado compartido, barra superior y filtros.
 
-import { h, $, vaciar, normalizar, hoy, plazo, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, pesoPrioridad, guardarLocal, leerLocal, fechaMedia, retrasar, MESES } from "./util.js";
+import { h, $, vaciar, quitarErrorAlCorregir, hoy, plazo, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, pesoPrioridad, guardarLocal, leerLocal, fechaMedia, retrasar, MESES } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion } from "./api.js";
 import { pantallaEntrar, pantallaAlta } from "./acceso.js";
 import { sinSolo, conSolo } from "./solo.js";
 import { BUSQUEDA_AL_CARGAR } from "./capas.js";
 import { pestanaEnDirecto } from "./libro-pestana.js";
-import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar, chipEtiqueta } from "./menus.js";
+import { coincide, prepararBusqueda } from "./tablon-buscar.js";
+import { paraElegir, conTareas } from "./personas.js";
+import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar, chipEtiqueta, personaEnMenu } from "./menus.js";
 import { hayArrastre } from "./arrastre.js";
 import { interpretar } from "./rapida.js";
 import { pintarTablero } from "./tablero.js";
@@ -59,6 +61,12 @@ const ctx = {
     usuario: (id) => E.usuarios.find((u) => u.id === id) || null,
     // Las personas que siguen en el crew (las que se fueron siguen saliendo en sus tareas antiguas).
     activos: () => E.usuarios.filter((u) => !u.baja),
+    // Para los menús «Para quién» y «Pedido por» de una tarea: el crew de ahora y, además, quien ya está puesto en ella
+    // aunque haya salido del crew (el menú lo marca «fuera del crew»): si no saliera, no habría manera de quitarlo.
+    paraElegir: (...ids) => paraElegir(E.usuarios, ...ids),
+    // El crew de ahora y quien ha salido pero sigue siendo responsable de alguna de esas tareas: para agrupar o filtrar
+    // por persona sin que esas tareas se queden sin sitio.
+    conTareas: (tareas) => conTareas(E.usuarios, tareas),
     todasEtiquetas() {
         const cuenta = new Map();
         for (const t of E.tareas.values()) for (const e of t.etiquetas) cuenta.set(e, (cuenta.get(e) || 0) + 1);
@@ -67,7 +75,9 @@ const ctx = {
     // Tareas que pasan los filtros. «incluirHechas» ignora el filtro de ocultar hechas.
     visibles({ incluirHechas = false } = {}) {
         const f = E.filtros;
-        const q = normalizar(f.texto);
+        // El buscador encuentra también por etiqueta («#bolos»), por persona («@víctor»), por prioridad y por estado (tablon-buscar.js).
+        const palabras = prepararBusqueda(f.texto);
+        const ayudas = { nombre: (id) => ctx.usuario(id)?.nombre || "" };
         return [...E.tareas.values()].filter((t) => {
             if (f.ocultarHechas && !incluirHechas && t.estado === "hecho") return false;
             if (f.persona === "yo" && !t.responsables.includes(E.yo.id)) return false;
@@ -75,11 +85,7 @@ const ctx = {
             if (!["todos", "yo", "nadie"].includes(f.persona) && !t.responsables.includes(f.persona)) return false;
             if (f.prioridades.length && !f.prioridades.includes(t.prioridad || "ninguna")) return false;
             if (f.etiqueta && !t.etiquetas.includes(f.etiqueta)) return false;
-            if (q) {
-                const donde = normalizar(`${t.titulo} ${t.notas} ${t.etiquetas.join(" ")} ${t.subtareas.map((s) => s.texto).join(" ")}`);
-                if (!q.split(/\s+/).every((p) => donde.includes(p))) return false;
-            }
-            return true;
+            return coincide(t, palabras, ayudas);
         });
     },
     abrir: (id, opciones) => abrirFicha(id, ctx, opciones),
@@ -120,7 +126,7 @@ const ctx = {
         pintar();
         actualizarFicha(ctx);
         try {
-            const nueva = await api.cambiar(id, c, opciones.antes);
+            const nueva = await api.cambiar(id, c, opciones.antes, { alSalir: opciones.alSalir });
             // Solo se copian los campos que se han pedido: si mientras tanto se ha seguido escribiendo, no se pisa.
             const actual = E.tareas.get(id);
             if (actual) {
@@ -137,6 +143,14 @@ const ctx = {
                 return "conflicto";
             }
             aviso(`No se ha guardado: ${err.message}`, { tipo: "malo" });
+            // Lo que se había puesto en pantalla sin esperar al servidor vuelve a como estaba: si no, sin conexión la
+            // tarea se quedaba a la vista como «hecha» (o movida) sin estarlo, hasta que al volver se deshacía sola.
+            // (Si mientras tanto ha llegado otra versión del servidor, esa es la buena y no se toca.)
+            if (E.tareas.get(id) === t) {
+                Object.assign(t, antes);
+                pintar();
+                actualizarFicha(ctx);
+            }
             await recargar();
             return "error";
         }
@@ -550,7 +564,7 @@ function menuFiltroPersona(ancla) {
             { contenido: "Todos", marcado: E.filtros.persona === "todos", accion: elegir("todos") },
             { contenido: "Mis tareas", marcado: E.filtros.persona === "yo", accion: elegir("yo") },
             "-",
-            ...ctx.activos().filter((u) => u.id !== E.yo.id).map((u) => ({ contenido: [avatar(u), u.nombre], marcado: E.filtros.persona === u.id, accion: elegir(u.id) })),
+            ...ctx.conTareas([...E.tareas.values()]).filter((u) => u.id !== E.yo.id).map((u) => ({ contenido: personaEnMenu(u), marcado: E.filtros.persona === u.id, accion: elegir(u.id) })),
             { contenido: [avatar(null), "Sin asignar"], marcado: E.filtros.persona === "nadie", accion: elegir("nadie") },
         ]),
     );
@@ -650,32 +664,30 @@ async function panelCrew() {
         const nombre = h("input", { class: "campo", value: persona.nombre, maxlength: 24 });
         const correo = h("input", { class: "campo", type: "email", value: persona.email || "", placeholder: "correo@gmail.com", maxlength: 120 });
         const error = h("p", { class: "error" });
-        abrirMenu(
-            ancla,
-            h(
-                "form",
-                {
-                    class: "menu-fecha",
-                    onsubmit: async (e) => {
-                        e.preventDefault();
-                        try {
-                            await api.cambiarCrew(persona.id, { nombre: nombre.value, email: correo.value });
-                            cerrarMenu();
-                            await recargarCrew();
-                        } catch (err) {
-                            error.textContent = err.message;
-                        }
-                    },
+        const formulario = h(
+            "form",
+            {
+                class: "menu-fecha",
+                onsubmit: async (e) => {
+                    e.preventDefault();
+                    try {
+                        await api.cambiarCrew(persona.id, { nombre: nombre.value, email: correo.value });
+                        cerrarMenu();
+                        await recargarCrew();
+                    } catch (err) {
+                        error.textContent = err.message;
+                    }
                 },
-                h("div", { class: "menu-titulo" }, "Nombre"),
-                nombre,
-                h("div", { class: "menu-titulo" }, "Correo de Google"),
-                correo,
-                error,
-                h("button", { class: "btn primario pequeno", type: "submit" }, "Guardar"),
-            ),
-            { ancho: 280 },
+            },
+            h("div", { class: "menu-titulo" }, "Nombre"),
+            nombre,
+            h("div", { class: "menu-titulo" }, "Correo de Google"),
+            correo,
+            error,
+            h("button", { class: "btn primario pequeno", type: "submit" }, "Guardar"),
         );
+        quitarErrorAlCorregir(formulario, error);
+        abrirMenu(ancla, formulario, { ancho: 280 });
     }
     function pintarCrew() {
         const personas = [...info.crew].sort((a, b) => Number(a.baja) - Number(b.baja) || a.nombre.localeCompare(b.nombre));
@@ -760,6 +772,7 @@ async function panelCrew() {
         nombre,
         h("button", { class: "btn primario", type: "submit" }, "Añadir"),
     );
+    quitarErrorAlCorregir(form, error);
     ventana(
         "Crew",
         h(
@@ -890,6 +903,7 @@ function ajustesYo() {
             ),
         ),
     );
+    quitarErrorAlCorregir(v.caja, error);
 }
 
 function atajos() {
@@ -999,7 +1013,7 @@ function nuevaTarea(base = {}) {
             entrada.value = "";
             pintarPiezas();
             entrada.focus();
-            aviso(`Creada: «${t.titulo}»`, { accion: "Abrir", alAccion: () => (v.cerrar(), ctx.abrir(t.id)) });
+            aviso(`Creada: «${t.titulo.slice(0, 60)}${t.titulo.length > 60 ? "…" : ""}»`, { accion: "Abrir", alAccion: () => (v.cerrar(), ctx.abrir(t.id)) });
         }
     };
     entrada.addEventListener("keydown", (e) => {

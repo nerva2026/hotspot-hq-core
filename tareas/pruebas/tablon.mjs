@@ -4,7 +4,10 @@
 // que ya no es la que hay recibe un 409 con lo que hay ahora, y con la versión buena se guarda. Sin «antes» pasa lo
 // mismo si la tarea ya tiene notas, y el cliente de ahora (publico/app/) siempre lo manda. Y la lógica de las pantallas
 // que no necesita navegador: la franja «Sin conexión…» (app/conexion.js) y las capas (app/capas.js): el tabulador que da
-// la vuelta dentro de una ventana y el «atrás» que la cierra sin ensuciar el historial.
+// la vuelta dentro de una ventana y el «atrás» que la cierra sin ensuciar el historial. Y, de la ronda 4 del examen: el
+// buscador (app/tablon-buscar.js: etiquetas con «#», personas con «@», prioridad y estado), quien ha salido del crew y
+// sigue en una tarea (app/personas.js), el guardado al cerrar o recargar la página (app/guardado.js y «keepalive» en
+// app/api.js), las subtareas con dos personas a la vez y los errores de formulario que se quitan al corregir.
 
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
@@ -441,4 +444,446 @@ try {
     }
 }
 
-console.log("Tablón (notas que no se pisan, y ventanas que no dejan salir el foco y se cierran con «atrás»): bien");
+// ---------- el buscador del tablón (app/tablon-buscar.js) ----------
+// Encuentra lo que el tablón enseña, como lo enseña: la etiqueta con y sin «#», la persona (para quién y quién la pidió)
+// con y sin «@» y sin tildes, la prioridad y el estado; todas las palabras, en cualquier orden.
+{
+    const { coincide, prepararBusqueda, loBuscable } = await import(new URL("tablon-buscar.js", carpetaApp).href);
+    const nombres = { d: "Diego", v: "Víctor", a: "Ana", m: "Maximiliano Fernández-Et" };
+    const ayudas = { nombre: (id) => nombres[id] || "" };
+    const tarea = (titulo, mas = {}) => ({ titulo, notas: "", estado: "por-hacer", prioridad: null, responsables: [], pedidoPor: null, etiquetas: [], subtareas: [], ...mas });
+    const lista = [
+        tarea("Cerrar el bolo de Zaragoza", { etiquetas: ["bolos", "fiesta"], responsables: ["v"], pedidoPor: "d", prioridad: "urgente", estado: "en-marcha" }),
+        tarea("Pagar la factura del local", { etiquetas: ["dinero"], responsables: ["d"], prioridad: "alta", notas: "Hablar con Víctor antes" }),
+        tarea("Comprar bolos para el futbolín", { responsables: ["a", "v"], prioridad: "media", estado: "esperando", subtareas: [{ texto: "Pedir precio", hecha: false }] }),
+        tarea("Grabar cuña de radio", { responsables: ["m"], pedidoPor: "a", estado: "hecho", prioridad: "baja" }),
+        tarea("Fotos"),
+    ];
+    const buscar = (texto) => lista.filter((t) => coincide(t, texto, ayudas)).map((t) => t.titulo.split(" ")[0]);
+    // etiquetas: con y sin almohadilla; con ella, solo la etiqueta (no un título que lo diga)
+    assert.deepEqual(buscar("#bolos"), ["Cerrar"], "«#bolos» encuentra la etiqueta");
+    assert.deepEqual(buscar("bolos"), ["Cerrar", "Comprar"], "«bolos» encuentra la etiqueta y el título");
+    assert.deepEqual(buscar("#BOLOS"), ["Cerrar"]);
+    assert.deepEqual(buscar("#bol"), ["Cerrar"], "vale el principio, como mientras se escribe");
+    assert.deepEqual(buscar("#dinero #bolos"), [], "todas las palabras");
+    assert.deepEqual(buscar("#fiesta #bolos"), ["Cerrar"]);
+    // personas: para quién y pedido por; con y sin arroba; sin tildes ni mayúsculas
+    assert.deepEqual(buscar("víctor"), ["Cerrar", "Pagar", "Comprar"], "por persona (y lo que diga el texto)");
+    assert.deepEqual(buscar("victor"), ["Cerrar", "Pagar", "Comprar"]);
+    assert.deepEqual(buscar("@víctor"), ["Cerrar", "Comprar"], "«@víctor»: solo las suyas, no las que lo nombran en las notas");
+    assert.deepEqual(buscar("@VICTOR"), ["Cerrar", "Comprar"]);
+    assert.deepEqual(buscar("@diego"), ["Cerrar", "Pagar"], "para quién y pedido por");
+    assert.deepEqual(buscar("ana"), ["Comprar", "Grabar"]);
+    assert.deepEqual(buscar("@maximiliano"), ["Grabar"], "también quien ha salido del crew y sigue en la tarea");
+    assert.deepEqual(buscar("fernández-et"), ["Grabar"]);
+    assert.deepEqual(buscar("sin asignar"), ["Fotos"]);
+    // prioridad y estado
+    assert.deepEqual(buscar("urgente"), ["Cerrar"]);
+    assert.deepEqual(buscar("!urgente"), ["Cerrar"], "como se escribe al crear una tarea");
+    assert.deepEqual(buscar("!alta"), ["Pagar"]);
+    assert.deepEqual(buscar("prioridad media"), ["Comprar"]);
+    assert.deepEqual(buscar("sin prioridad"), ["Fotos"]);
+    assert.deepEqual(buscar("esperando"), ["Comprar"]);
+    assert.deepEqual(buscar("en marcha"), ["Cerrar"]);
+    assert.deepEqual(buscar("hecho"), ["Grabar"]);
+    assert.deepEqual(buscar("hecha"), ["Grabar"]);
+    assert.deepEqual(buscar("por hacer"), ["Pagar", "Fotos"]);
+    // varias palabras, en cualquier orden y de cosas distintas
+    assert.deepEqual(buscar("@víctor #bolos urgente"), ["Cerrar"]);
+    assert.deepEqual(buscar("urgente   zaragoza @victor"), ["Cerrar"]);
+    assert.deepEqual(buscar("@ana esperando bolos"), ["Comprar"]);
+    assert.deepEqual(buscar("@ana urgente"), []);
+    // lo de siempre: título, notas y subtareas
+    assert.deepEqual(buscar("factura"), ["Pagar"]);
+    assert.deepEqual(buscar("hablar antes"), ["Pagar"]);
+    assert.deepEqual(buscar("pedir precio"), ["Comprar"]);
+    assert.equal(buscar("").length, lista.length, "con el buscador vacío salen todas");
+    assert.equal(buscar("   ").length, lista.length);
+    assert.deepEqual(buscar("no-hay-nada-asi"), []);
+    assert.deepEqual(prepararBusqueda("  #Bolos   @Víctor "), ["#bolos", "@victor"]);
+    assert.equal(typeof loBuscable(lista[0], ayudas), "string");
+    // textos raros no rompen nada
+    assert.deepEqual(lista.filter((t) => coincide(tarea("<script>alert(1)</script> 🎉 \"comillas\"", { etiquetas: ["🎉"] }), "<script>", ayudas)).length, lista.length);
+    // y el tablón lo usa (con los nombres de todo el crew, también de quien ha salido)
+    const principal = readFileSync(new URL("principal.js", carpetaApp), "utf8");
+    assert.match(principal, /import \{ coincide, prepararBusqueda \} from "\.\/tablon-buscar\.js"/);
+    assert.match(principal, /return coincide\(t, palabras, ayudas\);/, "el buscador del tablón busca también por etiqueta, persona, prioridad y estado");
+}
+
+// ---------- quien ha salido del crew se puede quitar de sus tareas (app/personas.js) ----------
+{
+    const { paraElegir, conTareas, botonTodos } = await import(new URL("personas.js", carpetaApp).href);
+    const crew = [{ id: "d", nombre: "Diego" }, { id: "x", nombre: "Xavi", baja: true }, { id: "v", nombre: "Víctor" }, { id: "z", nombre: "Zoe", baja: true }];
+    const ids = (lista) => lista.map((u) => u.id);
+    assert.deepEqual(ids(paraElegir(crew, ["d"])), ["d", "v"], "sin nadie de fuera en la tarea, solo el crew de ahora");
+    assert.deepEqual(ids(paraElegir(crew, ["d", "x"])), ["d", "v", "x"], "quien ha salido y está en la tarea sale en la lista, al final");
+    assert.deepEqual(ids(paraElegir(crew, "z")), ["d", "v", "z"], "también para «Pedido por» (una sola persona)");
+    assert.deepEqual(ids(paraElegir(crew, null)), ["d", "v"]);
+    assert.deepEqual(ids(paraElegir(crew, [])), ["d", "v"]);
+    assert.equal(paraElegir(crew, ["x"]).at(-1).baja, true, "y va marcada, para que el menú diga «fuera del crew»");
+    assert.deepEqual(ids(conTareas(crew, [{ responsables: ["z", "d"] }, { responsables: [] }])), ["d", "v", "z"], "al agrupar por persona, su tarea tiene grupo");
+    assert.deepEqual(ids(conTareas(crew, [])), ["d", "v"]);
+    // «Todos» son los de ahora; a quien ha salido no lo pone, pero tampoco lo quita. «Nadie» quita a todos.
+    let b = botonTodos(paraElegir(crew, ["x"]), new Set(["x"]));
+    assert.equal(b.texto, "Los dos");
+    assert.deepEqual(b.alPulsar().sort(), ["d", "v", "x"]);
+    b = botonTodos(paraElegir(crew, ["x"]), new Set(["x", "d", "v"]));
+    assert.equal(b.texto, "Nadie");
+    assert.deepEqual(b.alPulsar(), []);
+    b = botonTodos(paraElegir(crew, []), new Set(["d"]));
+    assert.deepEqual([b.texto, b.alPulsar().sort()], ["Los dos", ["d", "v"]]);
+    assert.equal(botonTodos([...crew, { id: "a", nombre: "Ana" }], new Set()).texto, "Todos");
+    assert.equal(botonTodos([{ id: "d", nombre: "Diego" }, { id: "x", nombre: "Xavi", baja: true }], new Set(["x"])), null, "con una sola persona en el crew no hay botón");
+    // las pantallas lo usan: los menús de la ficha y de la lista, y los grupos por persona
+    const fuente = (f) => readFileSync(new URL(f, carpetaApp), "utf8");
+    for (const f of ["ficha.js", "lista.js"]) {
+        assert.match(fuente(f), /menuPersonas\(a, ctx\.paraElegir\(t\.responsables\), t\.responsables,/, `${f}: «Para quién» lista también a quien ha salido y sigue en la tarea`);
+        assert.match(fuente(f), /menuPersona\(a, ctx\.paraElegir\(t\.pedidoPor\), t\.pedidoPor,/, `${f}: y «Pedido por»`);
+        assert.ok(!/menuPersonas?\(a, ctx\.activos\(\)/.test(fuente(f)), `${f}: ningún menú de personas de una tarea con solo los activos`);
+    }
+    assert.match(fuente("menus.js"), /u\.baja \? h\("span", \{ class: "fuera-del-crew" \}, "fuera del crew"\) : null/, "el menú marca a quien ha salido");
+    assert.match(fuente("lista.js"), /ctx\.conTareas\(tareas\)/);
+    assert.match(fuente("cronograma.js"), /ctx\.conTareas\(conFechas\)/);
+    // Con el servidor: Víctor sale del crew con una tarea puesta; sigue en ella y en la lista de personas (marcado
+    // «baja»), y se le puede quitar.
+    r = await diego("GET", "datos");
+    const victorId = r.datos.usuarios.find((u) => u.nombre === "Víctor").id;
+    r = await diego("POST", "tareas", { titulo: "Tarea de quien se va", responsables: [victorId, idDiego], pedidoPor: victorId });
+    assert.equal(r.estado, 201, JSON.stringify(r.datos));
+    const suya = r.datos.id;
+    r = await diego("PATCH", `crew/${victorId}`, { baja: true });
+    assert.equal(r.estado, 200, JSON.stringify(r.datos));
+    r = await diego("GET", "datos");
+    const tareaSuya = r.datos.tareas.find((x) => x.id === suya);
+    assert.deepEqual(tareaSuya.responsables, [victorId, idDiego], "sus tareas se quedan");
+    assert.equal(r.datos.usuarios.find((u) => u.id === victorId).baja, true);
+    assert.deepEqual(ids(paraElegir(r.datos.usuarios, tareaSuya.responsables)), [idDiego, victorId], "y sale en el menú de esa tarea");
+    assert.deepEqual(ids(paraElegir(r.datos.usuarios, tareaSuya.pedidoPor)), [idDiego, victorId]);
+    r = await diego("PATCH", `tareas/${suya}`, { responsables: tareaSuya.responsables.filter((id) => id !== victorId), pedidoPor: null });
+    assert.equal(r.estado, 200, JSON.stringify(r.datos));
+    assert.deepEqual(r.datos.responsables, [idDiego]);
+    assert.equal(r.datos.pedidoPor, null);
+    r = await diego("GET", "datos");
+    assert.deepEqual(ids(paraElegir(r.datos.usuarios, r.datos.tareas.find((x) => x.id === suya).responsables)), [idDiego], "una vez quitado, ya no sale");
+    r = await diego("PATCH", `crew/${victorId}`, { baja: false });
+    assert.equal(r.estado, 200);
+}
+
+// ---------- guardar al cerrar o recargar la página (app/guardado.js) ----------
+// Las notas de una tarea y el texto de una nota de la pizarra se guardan un rato después de la última letra. Si la
+// página se cierra o se recarga antes, lo pendiente sale en ese momento (con «alSalir», que en api.js es «keepalive»),
+// una sola vez, y después no se repite.
+{
+    const { guardadoRetrasado, guardarAlSalir } = await import(new URL("guardado.js", carpetaApp).href);
+    // un reloj de mentira: los temporizadores solo saltan cuando se le dice
+    function relojFalso() {
+        let ahora = 0;
+        let n = 0;
+        const citas = new Map();
+        return {
+            poner: (fn, ms) => (citas.set(++n, { fn, cuando: ahora + ms }), n),
+            quitar: (id) => citas.delete(id),
+            pasar(ms) {
+                ahora += ms;
+                for (const [id, c] of [...citas]) if (c.cuando <= ahora && citas.delete(id)) c.fn();
+            },
+            pendientes: () => citas.size,
+        };
+    }
+    const tic = () => new Promise((resolver) => setImmediate(resolver));
+    function montaje({ contesta = async () => "ok", parado } = {}) {
+        const reloj = relojFalso();
+        const m = { texto: "inicio", envios: [], reloj };
+        m.g = guardadoRetrasado({
+            leer: () => m.texto,
+            espera: 800,
+            reloj,
+            parado,
+            enviar: (texto, antes, opciones) => {
+                m.envios.push({ texto, antes, alSalir: opciones.alSalir });
+                return contesta(texto, antes, opciones);
+            },
+        });
+        m.escribir = (texto) => {
+            m.texto = texto;
+            m.g.tocar();
+        };
+        return m;
+    }
+
+    // Lo normal: se guarda 0,8 s después de la última letra, una vez, basado en lo que había.
+    let m = montaje();
+    m.escribir("inicio a");
+    m.reloj.pasar(500);
+    m.escribir("inicio ab");
+    m.reloj.pasar(500);
+    assert.equal(m.envios.length, 0, "cada letra vuelve a empezar la cuenta");
+    assert.equal(m.g.pendiente(), true);
+    m.reloj.pasar(300);
+    await tic();
+    assert.deepEqual(m.envios, [{ texto: "inicio ab", antes: "inicio", alSalir: false }]);
+    assert.equal(m.g.limpio(), true);
+    assert.equal(m.g.base(), "inicio ab");
+
+    // La página se cierra en menos de un segundo: lo pendiente sale AL MOMENTO, con «alSalir», y solo una vez.
+    m = montaje();
+    m.escribir("inicio y la última frase");
+    m.reloj.pasar(100);
+    m.g.ya({ alSalir: true, forzar: true }); // pagehide
+    assert.deepEqual(m.envios, [{ texto: "inicio y la última frase", antes: "inicio", alSalir: true }], "sin esperar a los 0,8 s");
+    assert.equal(m.g.pendiente(), false, "y la espera se quita: no se guarda otra vez al cumplirse");
+    m.g.ya({ alSalir: true, forzar: false }); // visibilitychange justo después: ya va de camino
+    m.reloj.pasar(2000);
+    await tic();
+    m.g.ya(); // y el «blur» de después tampoco lo repite
+    assert.equal(m.envios.length, 1, "sin duplicar guardados");
+    assert.equal(m.g.limpio(), true);
+
+    // Sin nada escrito, salir no manda nada.
+    m = montaje();
+    m.g.ya({ alSalir: true, forzar: true });
+    m.reloj.pasar(2000);
+    assert.equal(m.envios.length, 0);
+
+    // Con un guardado de camino y más texto escrito: al irse la página sale lo nuevo sin esperar, basado en lo que va
+    // de camino (así el servidor no lo toma por un choque).
+    let soltar = [];
+    m = montaje({ contesta: () => new Promise((resolver) => soltar.push(resolver)) });
+    m.escribir("inicio uno");
+    m.reloj.pasar(800);
+    assert.equal(m.envios.length, 1);
+    assert.equal(m.g.enVuelo(), true);
+    m.escribir("inicio uno dos");
+    m.g.ya(); // salir del campo: no se manda a la vez que el otro
+    assert.equal(m.envios.length, 1, "con uno de camino, lo nuevo espera a que vuelva");
+    m.g.ya({ alSalir: true, forzar: true }); // …salvo que la página se vaya
+    assert.deepEqual(m.envios[1], { texto: "inicio uno dos", antes: "inicio uno", alSalir: true });
+    soltar[0]("ok");
+    soltar[1]("ok");
+    await tic();
+    m.reloj.pasar(2000);
+    await tic();
+    assert.equal(m.envios.length, 2, "y al volver los dos no se manda nada más");
+    assert.equal(m.g.base(), "inicio uno dos");
+    assert.equal(m.g.limpio(), true);
+
+    // Con un guardado de camino y nada nuevo: al irse la página se repite ese mismo texto (el de camino puede no llegar
+    // a salir), basado en lo confirmado; el servidor lo toma como lo que ya hay.
+    soltar = [];
+    m = montaje({ contesta: () => new Promise((resolver) => soltar.push(resolver)) });
+    m.escribir("inicio x");
+    m.reloj.pasar(800);
+    m.g.ya({ alSalir: true, forzar: false }); // esconderse: no repite
+    assert.equal(m.envios.length, 1);
+    m.g.ya({ alSalir: true, forzar: true }); // irse: sí
+    assert.deepEqual(m.envios[1], { texto: "inicio x", antes: "inicio", alSalir: true });
+
+    // Se sigue escribiendo mientras uno va de camino: al volver, sale lo que falta (después de su espera).
+    soltar = [];
+    m = montaje({ contesta: () => new Promise((resolver) => soltar.push(resolver)) });
+    m.escribir("inicio 1");
+    m.reloj.pasar(800);
+    m.texto = "inicio 12"; // sin tocar(): como si la espera ya hubiera pasado con el otro de camino
+    m.g.ya();
+    soltar[0]("ok");
+    await tic();
+    assert.equal(m.envios.length, 1);
+    m.reloj.pasar(800);
+    assert.deepEqual(m.envios[1], { texto: "inicio 12", antes: "inicio 1", alSalir: false });
+    // …y si la página se había escondido mientras tanto, sin esperar y con «alSalir»
+    soltar = [];
+    m = montaje({ contesta: () => new Promise((resolver) => soltar.push(resolver)) });
+    m.escribir("inicio 1");
+    m.reloj.pasar(800);
+    m.escribir("inicio 12");
+    m.g.ya({ alSalir: true }); // visibilitychange con uno de camino
+    assert.equal(m.envios.length, 1);
+    soltar[0]("ok");
+    await tic();
+    assert.deepEqual(m.envios[1], { texto: "inicio 12", antes: "inicio 1", alSalir: true });
+
+    // Un fallo (sin conexión): lo escrito no se da por guardado ni se reintenta solo sin parar; se reintenta cuando
+    // llega algo del servidor (reintentar) o al cerrar (ya), y basado en lo último que se confirmó.
+    let resultado = "error";
+    m = montaje({ contesta: async () => resultado });
+    m.escribir("inicio sin red");
+    m.reloj.pasar(800);
+    await tic();
+    assert.equal(m.g.limpio(), false, "lo escrito sigue sin guardar: no se puede cambiar por lo que llegue de fuera");
+    assert.equal(m.g.colgado(), true);
+    m.reloj.pasar(5000);
+    assert.equal(m.envios.length, 1, "no se reintenta solo");
+    resultado = "ok";
+    m.g.reintentar();
+    m.reloj.pasar(800);
+    await tic();
+    assert.deepEqual(m.envios[1], { texto: "inicio sin red", antes: "inicio", alSalir: false });
+    assert.equal(m.g.limpio(), true);
+    // …y un envío que revienta cuenta como fallo
+    m = montaje({ contesta: async () => { throw new Error("sin red"); } });
+    m.escribir("inicio z");
+    assert.equal(await m.g.ya(), "error");
+    assert.equal(m.g.colgado(), true);
+
+    // Parado (unas notas en conflicto): no se manda nada, tampoco al salir, hasta que se elija.
+    let enConflicto = true;
+    m = montaje({ parado: () => enConflicto });
+    m.escribir("inicio en conflicto");
+    m.reloj.pasar(800);
+    m.g.ya({ alSalir: true, forzar: true });
+    assert.equal(m.envios.length, 0);
+    enConflicto = false;
+    m.g.poner("lo del servidor"); // «Dejar las mías»: se guarda encima de lo que hay ahora
+    m.g.ya();
+    assert.deepEqual(m.envios, [{ texto: "inicio en conflicto", antes: "lo del servidor", alSalir: false }]);
+
+    // «base»: lo que tiene el servidor al empezar, cuando no es lo que hay escrito (el título de la ficha lo dice así)
+    {
+        const envios = [];
+        const g = guardadoRetrasado({ leer: () => "lo escrito", base: "lo del servidor", reloj: relojFalso(), enviar: async (texto, antes) => (envios.push([texto, antes]), "ok") });
+        assert.equal(g.limpio(), false);
+        assert.equal(await g.ya(), "ok");
+        assert.deepEqual(envios, [["lo escrito", "lo del servidor"]]);
+        assert.equal(g.limpio(), true);
+    }
+
+    // guardarAlSalir: al esconderse la página manda lo pendiente; al irse, además, sin esperar a lo de camino.
+    const oyentes = { documento: {}, ventana: {} };
+    const documento = { visibilityState: "visible", addEventListener: (t, fn) => (oyentes.documento[t] = fn), removeEventListener: (t) => delete oyentes.documento[t] };
+    const ventana = { addEventListener: (t, fn) => (oyentes.ventana[t] = fn), removeEventListener: (t) => delete oyentes.ventana[t] };
+    const llamadas = [];
+    const dejar = guardarAlSalir(() => [{ ya: (o) => llamadas.push(o) }, null], { ventana, documento });
+    oyentes.documento.visibilitychange();
+    assert.equal(llamadas.length, 0, "al volver a verse no se manda nada");
+    documento.visibilityState = "hidden";
+    oyentes.documento.visibilitychange();
+    assert.deepEqual(llamadas, [{ alSalir: true, forzar: false }]);
+    oyentes.ventana.pagehide();
+    assert.deepEqual(llamadas[1], { alSalir: true, forzar: true });
+    dejar();
+    assert.deepEqual([Object.keys(oyentes.documento), Object.keys(oyentes.ventana)], [[], []]);
+
+    // api.js: con «alSalir» el envío es de los que sobreviven a la página («keepalive»), si cabe (hasta 60 KB)
+    const opcionesDe = [];
+    globalThis.fetch = async (url, opciones) => {
+        opcionesDe.push(opciones);
+        return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+    };
+    try {
+        await api.cambiar("t1", { notas: "x" }, { notas: "" }, { alSalir: true });
+        await api.cambiar("t1", { notas: "x" }, { notas: "" });
+        await api.cambiar("t1", { notas: "ñ".repeat(40000) }, { notas: "" }, { alSalir: true });
+        await api.cambiarEnPizarra("reuniones", "n1", { texto: "hola" }, { alSalir: true });
+        assert.deepEqual(opcionesDe.map((o) => Boolean(o.keepalive)), [true, false, false, true]);
+        assert.deepEqual(JSON.parse(opcionesDe[0].body), { notas: "x", antes: { notas: "" } }, "y lo que se manda es lo mismo");
+    } finally {
+        globalThis.fetch = fetchReal;
+    }
+
+    // Contra el servidor: lo escrito en el último segundo queda guardado al «cerrar», una sola vez, y el guardado
+    // repetido del mismo texto (el de camino más el de la salida) no es un choque ni cambia nada.
+    r = await diego("POST", "tareas", { titulo: "Notas al cerrar", notas: "Lo que había" });
+    const idNotas = r.datos.id;
+    let peticiones = 0;
+    const notasDe = async () => (await diego("GET", "datos")).datos.tareas.find((t) => t.id === idNotas);
+    const pagina = { texto: "Lo que había" };
+    const g = guardadoRetrasado({
+        leer: () => pagina.texto,
+        espera: 800,
+        enviar: async (texto, antes) => {
+            peticiones += 1;
+            const x = await diego("PATCH", `tareas/${idNotas}`, { notas: texto, antes: { notas: antes } });
+            return x.estado === 200 ? "ok" : x.estado === 409 ? "conflicto" : "error";
+        },
+    });
+    pagina.texto = "Lo que había\ny la última frase, escrita justo antes de recargar";
+    g.tocar();
+    assert.equal((await notasDe()).notas, "Lo que había", "todavía no se ha guardado (no han pasado los 0,8 s)");
+    assert.equal(await g.ya({ alSalir: true, forzar: true }), "ok"); // pagehide
+    assert.equal((await notasDe()).notas, pagina.texto, "al cerrar la página queda guardado");
+    const guardadaEl = (await notasDe()).actualizada;
+    await new Promise((resolver) => setTimeout(resolver, 1000));
+    assert.equal(peticiones, 1, "y pasados los 0,8 s no se guarda otra vez");
+    r = await diego("PATCH", `tareas/${idNotas}`, { notas: pagina.texto, antes: { notas: "Lo que había" } });
+    assert.equal(r.estado, 200, "el mismo texto otra vez (basado en lo de antes) no es un choque");
+    assert.equal((await notasDe()).actualizada, guardadaEl, "ni toca la tarea");
+
+    // Las pantallas lo usan: las notas de la ficha y el texto de las notas de la pizarra
+    const fuente = (f) => readFileSync(new URL(f, carpetaApp), "utf8");
+    assert.match(fuente("ficha.js"), /guardarAlSalir\(\(\) => \(panel \? \[/, "la ficha guarda lo pendiente al esconderse o irse la página");
+    assert.match(fuente("ficha.js"), /const guardado = guardadoRetrasado\(\{/);
+    assert.match(fuente("ficha.js"), /const guardadoTitulo = guardadoRetrasado\(\{/, "y el título, igual");
+    assert.match(fuente("ficha.js"), /enviar: \(texto, _antes, \{ alSalir \}\) => cambiar\(\{ titulo: texto \}, \{ alSalir \}\)/);
+    assert.match(fuente("ficha.js"), /cambiar\(\{ notas: texto \}, \{ antes: \{ notas: antes \}, alSalir \}\)/);
+    assert.match(fuente("pizarra.js"), /guardarAlSalir\(\(\) => \[\.\.\.textos\.values\(\)\]/, "la pizarra, el texto de sus notas");
+    assert.match(fuente("pizarra.js"), /const guardarTexto = guardadoRetrasado\(\{/);
+    assert.match(fuente("principal.js"), /api\.cambiar\(id, c, opciones\.antes, \{ alSalir: opciones\.alSalir \}\)/);
+    assert.match(fuente("guardado.js"), /addEventListener\("visibilitychange"/);
+    assert.match(fuente("guardado.js"), /addEventListener\("pagehide"/);
+}
+
+// ---------- dos personas con las subtareas de la misma tarea ----------
+// Cada cambio se hace sobre la lista de ahora y sobre ESA subtarea, por su id (el de una nueva lo pone el navegador y
+// el servidor lo conserva). Antes se mandaba la lista tal como se pintó, y quien terminaba de escribir una subtarea
+// deshacía lo que el otro hubiera marcado o añadido mientras tanto.
+{
+    r = await diego("PATCH", vacia, { subtareas: [{ id: "abcd1234", texto: "Con el id del navegador", hecha: false }, { texto: "Sin id", hecha: true }, { id: "no vale", texto: "Con un id raro", hecha: false }] });
+    assert.equal(r.estado, 200, JSON.stringify(r.datos));
+    assert.equal(r.datos.subtareas[0].id, "abcd1234", "el id de una subtarea nueva se conserva");
+    assert.match(r.datos.subtareas[1].id, /^[\w-]{4,24}$/, "y a la que no lo trae se le pone");
+    assert.match(r.datos.subtareas[2].id, /^[\w-]{4,24}$/);
+    assert.notEqual(r.datos.subtareas[2].id, "no vale");
+    const ficha = readFileSync(new URL("ficha.js", carpetaApp), "utf8");
+    assert.match(ficha, /const subtareasDeAhora = \(\) => ctx\.E\.tareas\.get\(id\)\?\.subtareas \|\| \[\];/);
+    assert.match(ficha, /const esLa = \(s, i\) => \(x, j\) => \(s\.id \? x\.id === s\.id : j === i\);/);
+    assert.ok(!/guardarLista\(\s*t\.subtareas/.test(ficha) && !/\.\.\.t\.subtareas/.test(ficha), "ningún cambio de subtareas sale de la lista que se pintó");
+    assert.match(ficha, /guardarLista\(\[\.\.\.subtareasDeAhora\(\), \{ id: nuevoIdSubtarea\(\), texto: v, hecha: false \}\]\)/);
+}
+
+// ---------- los errores de los formularios se quitan al corregir (app/util.js) ----------
+{
+    const { corrigeElError } = await import(new URL("util.js", carpetaApp).href);
+    const concepto = { isConnected: true, nombre: "concepto" };
+    const dentroDe = (campo) => (c) => c === campo;
+    const suyo = { campo: concepto, texto: "Pon en qué se ha gastado." };
+    assert.equal(corrigeElError({ texto: "", tipo: "input", dentro: () => true }), false, "sin error no hay nada que quitar");
+    assert.equal(corrigeElError({ texto: suyo.texto, suyo, tipo: "input", dentro: dentroDe(concepto) }), true, "escribir en su campo lo quita");
+    assert.equal(corrigeElError({ texto: suyo.texto, suyo, tipo: "input", dentro: dentroDe({}) }), false, "escribir en otro campo, no");
+    assert.equal(corrigeElError({ texto: "Lo que dice el servidor", suyo, tipo: "input", dentro: dentroDe({}) }), true, "un error que ya no es el de ese campo se quita al tocar cualquiera");
+    assert.equal(corrigeElError({ texto: "Lo que dice el servidor", tipo: "change", dentro: () => false }), true);
+    assert.equal(corrigeElError({ texto: suyo.texto, suyo: { ...suyo, campo: { isConnected: false } }, tipo: "input", dentro: () => false }), true, "si su campo ya no está, cualquier cambio");
+    assert.equal(corrigeElError({ texto: "x", tipo: "click", enEleccion: false, dentro: () => true }), false, "un clic en un botón cualquiera no lo quita");
+    assert.equal(corrigeElError({ texto: "x", tipo: "click", enEleccion: true, dentro: () => true }), true, "elegir una opción, sí");
+    // todo formulario con mensaje de error lo quita al corregir (y ninguno se queda sin enganchar)
+    const fuente = (f) => readFileSync(new URL(f, carpetaApp), "utf8");
+    for (const f of readdirSync(carpetaApp).filter((f) => f.endsWith(".js") && f !== "util.js")) {
+        const codigo = fuente(f);
+        const errores = (codigo.match(/const error = (?:quitarErrorAlCorregir\(\w+, )?h\("p", \{ class: "error"/g) || []).length;
+        const enganchados = (codigo.match(/quitarErrorAlCorregir\(/g) || []).length;
+        assert.equal(enganchados, errores, `${f}: ${errores} mensajes de error de formulario y ${enganchados} que se quitan al corregir`);
+    }
+    assert.match(fuente("libro.js"), /ponerError\(error, v\.tipo === "gasto" \? "Pon en qué se ha gastado\." : "Pon de dónde viene el dinero\.", campos\.concepto\)/);
+}
+
+// ---------- Escape con una subtarea a medio escribir: primero el campo, luego la ficha ----------
+{
+    const ficha = readFileSync(new URL("ficha.js", carpetaApp), "utf8");
+    assert.match(ficha, /e\.target\.closest\?\.\("\.subtarea-nueva, \.subtarea-texto"\)/);
+    assert.match(ficha, /if \(campo && campo\.value !== \(campo\.dataset\.original \?\? ""\)\) \{\s+e\.preventDefault\(\);\s+campo\.value = campo\.dataset\.original \?\? "";\s+return;/);
+    assert.match(ficha, /dataset: \{ original: s\.texto/, "cada subtarea recuerda a qué vuelve con Escape");
+}
+
+// ---------- el menú de fecha: una fecha escrita con el teclado (app/menus.js) ----------
+// Una fecha tecleada no se da por elegida con la primera cifra del año (el navegador avisa de un «cambio» con cada
+// cifra: 0002-10-03, 0020-10-03…): se pone con Intro o, si está entera, al pulsar fuera del menú.
+{
+    const { fechaTecleadaVale } = await import(new URL("menus.js", carpetaApp).href);
+    for (const [fecha, vale] of [["2026-10-03", true], ["2000-01-01", true], ["2100-12-31", true], ["0002-10-03", false], ["0202-10-03", false], ["1999-12-31", false], ["2101-01-01", false], ["", false], [null, false], ["03/10/2026", false]]) {
+        assert.equal(fechaTecleadaVale(fecha), vale, String(fecha));
+    }
+    const menus = readFileSync(new URL("menus.js", carpetaApp), "utf8");
+    assert.match(menus, /if \(!tecleando && e\.target\.value\) elegir\(e\.target\.value\);/, "mientras se teclea, un «cambio» del campo de fecha no cierra el menú");
+    assert.match(menus, /motivo === "fuera" && fechaTecleadaVale\(entrada\?\.value\)/);
+}
+
+console.log("Tablón (notas que no se pisan, buscador, quien sale del crew, guardar al cerrar la página, y ventanas que no dejan salir el foco y se cierran con «atrás»): bien");
