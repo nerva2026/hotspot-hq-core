@@ -64,7 +64,10 @@ cualquier navegador.
   marca con una sombra el lado por el que sigue; en los dos, el título de una barra que empieza antes del borde visible
   se corre hasta lo que se ve. Desde 600 px de ancho el mes se ve siempre entero, de lunes a domingo (los días se
   estrechan hasta 82 px antes que salirse); «Sin fecha» va al lado solo si caben los dos (desde 871 px) y, si no,
-  debajo, dentro de la pantalla: el mes se encoge (se desplaza por dentro) para dejarle sitio. En el cronograma, el rótulo del mes va pegado al borde de la columna de
+  debajo, dentro de la pantalla: el mes se encoge (se desplaza por dentro) para dejarle sitio. Al lado, «Sin fecha»
+  mide siempre lo mismo (240 px; 190 hasta los 900): un título largo no lo ensancha, va en dos líneas y acaba en «…»
+  (entero, al pasar el ratón), y el mes tiene siempre su sitio. En las barras del calendario y en los nombres del
+  cronograma, los avatares pequeños van uno al lado del otro, sin montarse. En el cronograma, el rótulo del mes va pegado al borde de la columna de
   nombres mientras ese mes esté a la vista y solo sale si cabe entero (donde no cabe se acorta: «sep 2026», «sep»; en un
   móvil, sin el año si es el de ahora); el selector «Nada · Estado · Persona» lleva siempre su etiqueta «Agrupar»; y el
   título que va al lado de una barra corta se coloca detrás de lo que la barra mide de verdad.

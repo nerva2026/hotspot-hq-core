@@ -1488,7 +1488,10 @@ table.lista {
     text-decoration: underline;
 }
 .cal-sinfecha {
+    /* Su ancho es fijo (240 px; 190 en un panel estrecho): min-width 0 para que un título largo no lo ensanche (con el
+       «auto» de fábrica medía lo que el título más largo en una línea y dejaba al mes sin sitio, o en 0 px). */
     flex: 0 0 240px;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -1527,8 +1530,20 @@ table.lista {
     -webkit-user-select: none;
     -webkit-touch-callout: none;
 }
+.cal-suelta {
+    min-width: 0; /* en la rejilla de 601 a 870 px, un título largo tampoco ensancha su columna */
+}
+/* El título de una tarea sin fecha: hasta dos líneas y, si no cabe, «…» (entero, al pasar el ratón). Una palabra más
+   larga que la caja se parte. */
 .cal-suelta .texto {
     flex: 1;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
 }
 .fantasma-mini {
     position: fixed;

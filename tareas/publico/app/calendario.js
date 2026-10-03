@@ -147,6 +147,7 @@ export function pintarCalendario(cont, ctx, ev) {
                         class: ["cal-suelta", "arrastrable", t.estado === "hecho" && "hecha"],
                         dataset: { id: t.id },
                         style: { "--color-prioridad": prio.color },
+                        title: t.titulo, // en la lista va cortado a dos líneas: entero, al pasar el ratón
                         onclick: (e) => e.detail === 0 && ctx.abrir(t.id), // con el teclado
                     },
                     h("span", { class: "texto" }, t.titulo),
