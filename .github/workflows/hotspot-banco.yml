@@ -90,6 +90,9 @@ jobs:
           # la versión de la oficina (novedades.ts): las pruebas la usan para que el aviso de novedades no salga en todas
           version=$(sed -n 's/^export const VERSION = "\(.*\)";$/\1/p' play/src/front/Components/Hotspot/novedades.ts)
           echo "BANCO_VERSION=$version" >> "$GITHUB_ENV"
+          # …y la versión de la que habla el aviso (su clave en el navegador): en una versión de arreglos no es la misma
+          aviso=$(sed -n 's/^export const VERSION_DEL_AVISO = "\(.*\)";$/\1/p' play/src/front/Components/Hotspot/novedades.ts)
+          echo "BANCO_VERSION_DEL_AVISO=${aviso:-$version}" >> "$GITHUB_ENV"
           echo "Versión de la oficina: $version"
 
       - name: Poner el banco dentro de WorkAdventure

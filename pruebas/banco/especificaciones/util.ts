@@ -18,6 +18,8 @@ export const PLAY = "https://play.workadventure.localhost";
 export const MAPAS = "https://maps.workadventure.localhost/tests/banco/";
 /** La versión de la oficina (la saca el flujo de `novedades.ts`): sirve para que el aviso de novedades no salga. */
 export const VERSION = process.env.BANCO_VERSION ?? "";
+/** La versión de la que habla el aviso de novedades: es la clave con la que el navegador recuerda que ya salió. */
+export const VERSION_DEL_AVISO = process.env.BANCO_VERSION_DEL_AVISO ?? VERSION;
 export const LADO = 32;
 
 export type Estado = "bien" | "mal" | "no se pudo" | "dato";
@@ -133,14 +135,14 @@ export async function entrar(browser: Browser, nombre: string, opciones: Opcione
         ignoreHTTPSErrors: true,
         permissions: ["microphone", "camera", "notifications"],
     });
-    if (opciones.novedadesVistas !== false && VERSION !== "") {
+    if (opciones.novedadesVistas !== false && VERSION_DEL_AVISO !== "") {
         await contexto.addInitScript((version) => {
             try {
                 localStorage.setItem("hotspot-novedades-vistas", version);
             } catch {
                 // sin localStorage (un marco sin permiso): da igual
             }
-        }, VERSION);
+        }, VERSION_DEL_AVISO);
     }
     const pagina = await contexto.newPage();
     const consola: string[] = [];
