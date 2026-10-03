@@ -1,16 +1,21 @@
 // Ficha de una tarea: panel lateral para verla y editarla entera, como una página de Notion.
 
-import { h, rellenar, retrasar, estadoDe, prioridadDe, plazo, fechaMedia, fechaCorta, fechaLarga, haceCuanto } from "./util.js";
+import { h, rellenar, estadoDe, prioridadDe, plazo, fechaMedia, fechaCorta, fechaLarga, haceCuanto } from "./util.js";
 import { menuEstado, menuPrioridad, menuPersonas, menuPersona, menuFecha, menuEtiquetas, avatar, chipEtiqueta, cerrarMenu, aviso, colocarAvisos } from "./menus.js";
 import { abrirCapa } from "./capas.js";
 import { conSolo } from "./solo.js";
+import { guardadoRetrasado, guardarAlSalir } from "./guardado.js";
 
 let abierta = null; // id
 let panel = null;
 let capa = null; // la ficha es una capa (capas.js): el tabulador no sale de ella y «atrás» la cierra
-let guardarTitulo = null;
+let guardarTitulo = null; // los guardados retrasados del título y de las notas de la ficha abierta (guardado.js)
 let guardarNotas = null;
 let notasEnConflicto = false; // otra persona ha cambiado las notas a la vez y quien escribe aún no ha elegido
+
+// Al esconderse o irse la página (cerrarla, recargarla, cambiar de aplicación en el móvil) se guarda lo que estuviera
+// esperando su turno: antes, recargar en el segundo siguiente a escribir perdía la última frase de las notas.
+guardarAlSalir(() => (panel ? [guardarTitulo, guardarNotas] : []));
 
 export const fichaAbierta = () => abierta;
 
@@ -28,8 +33,9 @@ export function cerrarFicha({ forzar = false } = {}) {
         return false;
     }
     notasEnConflicto = false;
-    guardarTitulo?.pendiente() && guardarTitulo.ya();
-    guardarNotas?.pendiente() && guardarNotas.ya();
+    // lo que estuviera esperando y también lo que no se llegó a guardar (un fallo de conexión)
+    guardarTitulo?.ya();
+    guardarNotas?.ya();
     cerrarMenu();
     panel.remove();
     panel = null;
@@ -86,14 +92,21 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
         "aria-label": "Título",
         placeholder: "Sin título",
     });
-    guardarTitulo = retrasar(() => {
-        const v = titulo.value.replace(/\s+/g, " ").trim();
-        if (v && v !== ctx.E.tareas.get(id)?.titulo) cambiar({ titulo: v });
-    }, 700);
+    titulo.value = t.titulo;
+    // El título, como las notas: se guarda un rato después de la última letra, al salir del campo, al cerrar la ficha
+    // y al cerrar o recargar la página; si falla el envío, lo escrito se queda y se reintenta al volver la conexión.
+    // Un título vacío no se guarda (cuenta como el que tiene la tarea).
+    const guardadoTitulo = guardadoRetrasado({
+        leer: () => titulo.value.replace(/\s+/g, " ").trim() || guardadoTitulo.base(),
+        base: t.titulo,
+        espera: 700,
+        enviar: (texto, _antes, { alSalir }) => cambiar({ titulo: texto }, { alSalir }),
+    });
+    guardarTitulo = guardadoTitulo;
     titulo.addEventListener("input", () => {
         crecer(titulo);
         marcarGuardando();
-        guardarTitulo();
+        guardadoTitulo.tocar();
     });
     titulo.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
@@ -103,33 +116,32 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
     });
     titulo.addEventListener("blur", () => {
         if (!titulo.value.trim()) titulo.value = ctx.E.tareas.get(id)?.titulo || "";
-        guardarTitulo.pendiente() && guardarTitulo.ya();
+        guardadoTitulo.pendiente() && guardadoTitulo.ya();
     });
 
     const notas = h("textarea", { class: "ficha-notas", placeholder: "Detalles, enlaces, contactos, lo que haga falta…", "aria-label": "Notas" });
+    notas.value = t.notas;
     const enlaces = h("div", { class: "ficha-enlaces" });
     const avisoConflicto = h("div", { class: "ficha-conflicto", role: "alert", hidden: true });
-    // Las notas del servidor en las que se basa lo que hay escrito. Se mandan al guardar: si otra persona ya las ha
-    // cambiado, el servidor no las pisa (409) y aquí se deja elegir.
-    let baseNotas = t.notas;
-    let enVuelo = false;
     let conflicto = false;
-    const notasSinConfirmar = () => guardarNotas.pendiente() || enVuelo || conflicto;
-    async function enviarNotas() {
-        if (conflicto || enVuelo || notas.value === baseNotas) return;
-        const texto = notas.value;
-        const suPanel = panel;
-        enVuelo = true;
-        const r = await cambiar({ notas: texto }, { antes: { notas: baseNotas } });
-        enVuelo = false;
-        if (r === "ok") baseNotas = texto;
-        if (r === "conflicto") {
-            if (panel === suPanel) mostrarConflicto();
-            else aviso("Notas sin guardar: otra persona las cambió.", { tipo: "malo", accion: "Ver", duracion: 15000, alAccion: () => abrirFicha(id, ctx, { mias: texto }) });
-            return;
-        }
-        if (panel === suPanel && notas.value !== baseNotas) guardarNotas(); // se ha seguido escribiendo mientras tanto
-    }
+    // Las notas se guardan un rato después de la última letra, al salir del campo, al cerrar la ficha y al cerrar o
+    // recargar la página (guardado.js). Con cada envío va «antes», las notas del servidor en las que se basa lo escrito:
+    // si otra persona ya las ha cambiado, el servidor no las pisa (409) y aquí se deja elegir.
+    const guardado = guardadoRetrasado({
+        leer: () => notas.value,
+        espera: 800,
+        parado: () => conflicto,
+        enviar: async (texto, antes, { alSalir }) => {
+            const suPanel = panel;
+            const r = await cambiar({ notas: texto }, { antes: { notas: antes }, alSalir });
+            if (r === "conflicto") {
+                if (panel === suPanel) mostrarConflicto();
+                else aviso("Notas sin guardar: otra persona las cambió.", { tipo: "malo", accion: "Ver", duracion: 15000, alAccion: () => abrirFicha(id, ctx, { mias: texto }) });
+            }
+            return r;
+        },
+    });
+    guardarNotas = guardado;
     function mostrarConflicto() {
         conflicto = true;
         notasEnConflicto = true;
@@ -151,29 +163,28 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
     }
     function dejarLasMias() {
         resolverConflicto();
-        baseNotas = ctx.E.tareas.get(id)?.notas ?? baseNotas; // lo que hay ahora en el servidor: se guarda encima
-        if (notas.value === baseNotas) estadoGuardado.textContent = "Guardado";
-        enviarNotas();
+        guardado.poner(ctx.E.tareas.get(id)?.notas ?? guardado.base()); // lo que hay ahora en el servidor: se guarda encima
+        if (notas.value === guardado.base()) estadoGuardado.textContent = "Guardado";
+        guardado.ya();
     }
     function usarLasSuyas() {
         resolverConflicto();
         const actual = ctx.E.tareas.get(id);
         if (actual) {
             notas.value = actual.notas;
-            baseNotas = actual.notas;
+            guardado.poner(actual.notas);
             crecer(notas);
             pintarEnlaces();
         }
         estadoGuardado.textContent = "Guardado";
     }
-    guardarNotas = retrasar(enviarNotas, 800);
     notas.addEventListener("input", () => {
         crecer(notas);
         if (!conflicto) marcarGuardando();
-        guardarNotas();
+        guardado.tocar();
         pintarEnlaces();
     });
-    notas.addEventListener("blur", () => guardarNotas.pendiente() && guardarNotas.ya());
+    notas.addEventListener("blur", () => guardado.pendiente() && guardado.ya());
     function pintarEnlaces() {
         const urls = [...new Set(notas.value.match(ENLACE) || [])].slice(0, 12);
         rellenar(enlaces, ...urls.map((u) => h("a", { href: u, target: "_blank", rel: "noopener noreferrer" }, u.replace(/^https?:\/\//, "").slice(0, 60), " ↗")));
@@ -371,18 +382,27 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
     panel.pintar = ({ deFuera = false } = {}) => {
         const t = ctx.E.tareas.get(id);
         if (!t) return;
-        if (document.activeElement !== titulo && titulo.value !== t.titulo && !guardarTitulo.pendiente()) {
+        // (el título, igual que las notas de más abajo: solo se cambia por el que llega si aquí no hay otro a medias)
+        if (document.activeElement !== titulo && titulo.value !== t.titulo && guardadoTitulo.limpio()) {
             titulo.value = t.titulo;
+            guardadoTitulo.poner(t.titulo);
             crecer(titulo);
         }
-        // Con el cursor puesto también se actualizan, si no hay nada escrito encima de lo que se veía.
-        if ((document.activeElement !== notas || notas.value === baseNotas) && notas.value !== t.notas && !notasSinConfirmar()) {
+        // Las notas se cambian por las que llegan solo si aquí no hay nada escrito encima de lo que tiene el servidor
+        // (también con el cursor puesto). Si lo hay (esperando, de camino, en conflicto o sin guardar porque falló el
+        // envío), lo escrito no se toca: antes, tras un fallo de conexión, el siguiente cambio que llegaba se lo llevaba.
+        if (notas.value !== t.notas && guardado.limpio() && !conflicto) {
             const { selectionStart: desde, selectionEnd: hasta } = notas;
             notas.value = t.notas;
-            baseNotas = t.notas;
+            guardado.poner(t.notas);
             if (document.activeElement === notas) notas.setSelectionRange(Math.min(desde, t.notas.length), Math.min(hasta, t.notas.length));
             crecer(notas);
             pintarEnlaces();
+        }
+        // Lo que no se pudo guardar (se cayó la conexión) se vuelve a intentar cuando llega algo del servidor: es que ha vuelto.
+        if (deFuera) {
+            guardadoTitulo.reintentar();
+            guardado.reintentar();
         }
         pintarPropiedades();
         // No se repintan las subtareas mientras se está escribiendo en una (se perdería lo escrito).
@@ -394,8 +414,6 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
         }
     };
 
-    titulo.value = t.titulo;
-    notas.value = t.notas;
     panel.pintar();
     pintarEnlaces();
     if (mias !== undefined) {

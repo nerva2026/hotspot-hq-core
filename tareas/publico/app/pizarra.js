@@ -6,12 +6,13 @@
 // está pintando ahora), para poder pintar encima de todo. Los botones de lo elegido y los lápices de los demás
 // van a tamaño de pantalla, se vea la pizarra grande o pequeña.
 
-import { h, $, vaciar, retrasar, hoy, textoSobre } from "./util.js";
+import { h, $, vaciar, hoy, textoSobre } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion, direccionApi } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
 import { sinSolo } from "./solo.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar } from "./menus.js";
 import { pestanaEnDirecto } from "./libro-pestana.js";
+import { guardadoRetrasado, guardarAlSalir } from "./guardado.js";
 
 aplicacion("PIZARRA", "La pizarra es del crew de HOT SPOT S.L. Entra con tu cuenta de Google.");
 
@@ -78,6 +79,11 @@ let escala = 1;
 
 const cajas = new WeakMap();
 const pendientes = new Map(); // id → promesa de lo que aún se está guardando (para no cambiarlo antes de que exista)
+const textos = new Map(); // id de una nota → el guardado retrasado de su texto (guardado.js)
+
+// Al esconderse o irse la página (cerrarla, recargarla, cambiar de aplicación en el móvil) se guarda el texto de la
+// nota que estuviera esperando su turno: antes, recargar justo después de escribir dejaba la nota vacía.
+guardarAlSalir(() => [...textos.values()].filter((g) => g.pendiente() || g.enVuelo()));
 const nuevoId = () => {
     const b = crypto.getRandomValues(new Uint8Array(9));
     return btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -226,7 +232,11 @@ function pintarPiezas() {
             if (E.editando !== e.id && texto.value !== e.texto) texto.value = e.texto;
         }
     }
-    for (const [id, el] of hechas) if (!vistas.has(id)) el.remove();
+    for (const [id, el] of hechas) {
+        if (vistas.has(id)) continue;
+        el.remove();
+        textos.delete(id);
+    }
     if (E.seleccion && !E.elementos.has(E.seleccion)) E.seleccion = null;
     if (E.editando && !E.elementos.has(E.editando)) E.editando = null;
     pintarEleccion();
@@ -385,13 +395,16 @@ function guardarCaja(e, antes) {
 }
 
 // Lo de aquí manda (es lo último que ha hecho esta persona): la respuesta del servidor no se copia encima.
-async function cambiarEnServidor(id, cambios) {
+// «alSalir»: la página se va o se esconde; el envío sale ya (sin esperar a nada) y de manera que la sobreviva.
+async function cambiarEnServidor(id, cambios, { alSalir = false } = {}) {
     try {
-        await pendientes.get(id);
-        await api.cambiarEnPizarra(ID, id, cambios);
+        if (!alSalir) await pendientes.get(id);
+        await api.cambiarEnPizarra(ID, id, cambios, { alSalir });
+        return "ok";
     } catch (err) {
         aviso(err.message, { tipo: "malo" });
         recargar();
+        return "error";
     }
 }
 
@@ -407,10 +420,14 @@ function crearFoto(e) {
 }
 
 function crearNota(e) {
-    const guardarTexto = retrasar(() => {
-        const actual = E.elementos.get(e.id);
-        if (actual) cambiarEnServidor(e.id, { texto: actual.texto });
-    }, 600);
+    // El texto se guarda un rato después de la última letra, al salir de la nota y al cerrar o recargar la página.
+    const guardarTexto = guardadoRetrasado({
+        leer: () => E.elementos.get(e.id)?.texto ?? "",
+        espera: 600,
+        parado: () => !E.elementos.has(e.id),
+        enviar: (texto, _antes, { alSalir }) => cambiarEnServidor(e.id, { texto }, { alSalir }),
+    });
+    textos.set(e.id, guardarTexto);
     const texto = h("textarea", {
         class: "texto-nota",
         maxlength: 1000,
@@ -421,7 +438,7 @@ function crearNota(e) {
             const actual = E.elementos.get(e.id);
             if (!actual) return;
             actual.texto = ev.target.value;
-            guardarTexto();
+            guardarTexto.tocar();
         },
         onblur: () => {
             if (guardarTexto.pendiente()) guardarTexto.ya();

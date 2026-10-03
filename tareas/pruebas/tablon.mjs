@@ -566,4 +566,257 @@ try {
     assert.equal(r.estado, 200);
 }
 
+// ---------- guardar al cerrar o recargar la página (app/guardado.js) ----------
+// Las notas de una tarea y el texto de una nota de la pizarra se guardan un rato después de la última letra. Si la
+// página se cierra o se recarga antes, lo pendiente sale en ese momento (con «alSalir», que en api.js es «keepalive»),
+// una sola vez, y después no se repite.
+{
+    const { guardadoRetrasado, guardarAlSalir } = await import(new URL("guardado.js", carpetaApp).href);
+    // un reloj de mentira: los temporizadores solo saltan cuando se le dice
+    function relojFalso() {
+        let ahora = 0;
+        let n = 0;
+        const citas = new Map();
+        return {
+            poner: (fn, ms) => (citas.set(++n, { fn, cuando: ahora + ms }), n),
+            quitar: (id) => citas.delete(id),
+            pasar(ms) {
+                ahora += ms;
+                for (const [id, c] of [...citas]) if (c.cuando <= ahora && citas.delete(id)) c.fn();
+            },
+            pendientes: () => citas.size,
+        };
+    }
+    const tic = () => new Promise((resolver) => setImmediate(resolver));
+    function montaje({ contesta = async () => "ok", parado } = {}) {
+        const reloj = relojFalso();
+        const m = { texto: "inicio", envios: [], reloj };
+        m.g = guardadoRetrasado({
+            leer: () => m.texto,
+            espera: 800,
+            reloj,
+            parado,
+            enviar: (texto, antes, opciones) => {
+                m.envios.push({ texto, antes, alSalir: opciones.alSalir });
+                return contesta(texto, antes, opciones);
+            },
+        });
+        m.escribir = (texto) => {
+            m.texto = texto;
+            m.g.tocar();
+        };
+        return m;
+    }
+
+    // Lo normal: se guarda 0,8 s después de la última letra, una vez, basado en lo que había.
+    let m = montaje();
+    m.escribir("inicio a");
+    m.reloj.pasar(500);
+    m.escribir("inicio ab");
+    m.reloj.pasar(500);
+    assert.equal(m.envios.length, 0, "cada letra vuelve a empezar la cuenta");
+    assert.equal(m.g.pendiente(), true);
+    m.reloj.pasar(300);
+    await tic();
+    assert.deepEqual(m.envios, [{ texto: "inicio ab", antes: "inicio", alSalir: false }]);
+    assert.equal(m.g.limpio(), true);
+    assert.equal(m.g.base(), "inicio ab");
+
+    // La página se cierra en menos de un segundo: lo pendiente sale AL MOMENTO, con «alSalir», y solo una vez.
+    m = montaje();
+    m.escribir("inicio y la última frase");
+    m.reloj.pasar(100);
+    m.g.ya({ alSalir: true, forzar: true }); // pagehide
+    assert.deepEqual(m.envios, [{ texto: "inicio y la última frase", antes: "inicio", alSalir: true }], "sin esperar a los 0,8 s");
+    assert.equal(m.g.pendiente(), false, "y la espera se quita: no se guarda otra vez al cumplirse");
+    m.g.ya({ alSalir: true, forzar: false }); // visibilitychange justo después: ya va de camino
+    m.reloj.pasar(2000);
+    await tic();
+    m.g.ya(); // y el «blur» de después tampoco lo repite
+    assert.equal(m.envios.length, 1, "sin duplicar guardados");
+    assert.equal(m.g.limpio(), true);
+
+    // Sin nada escrito, salir no manda nada.
+    m = montaje();
+    m.g.ya({ alSalir: true, forzar: true });
+    m.reloj.pasar(2000);
+    assert.equal(m.envios.length, 0);
+
+    // Con un guardado de camino y más texto escrito: al irse la página sale lo nuevo sin esperar, basado en lo que va
+    // de camino (así el servidor no lo toma por un choque).
+    let soltar = [];
+    m = montaje({ contesta: () => new Promise((resolver) => soltar.push(resolver)) });
+    m.escribir("inicio uno");
+    m.reloj.pasar(800);
+    assert.equal(m.envios.length, 1);
+    assert.equal(m.g.enVuelo(), true);
+    m.escribir("inicio uno dos");
+    m.g.ya(); // salir del campo: no se manda a la vez que el otro
+    assert.equal(m.envios.length, 1, "con uno de camino, lo nuevo espera a que vuelva");
+    m.g.ya({ alSalir: true, forzar: true }); // …salvo que la página se vaya
+    assert.deepEqual(m.envios[1], { texto: "inicio uno dos", antes: "inicio uno", alSalir: true });
+    soltar[0]("ok");
+    soltar[1]("ok");
+    await tic();
+    m.reloj.pasar(2000);
+    await tic();
+    assert.equal(m.envios.length, 2, "y al volver los dos no se manda nada más");
+    assert.equal(m.g.base(), "inicio uno dos");
+    assert.equal(m.g.limpio(), true);
+
+    // Con un guardado de camino y nada nuevo: al irse la página se repite ese mismo texto (el de camino puede no llegar
+    // a salir), basado en lo confirmado; el servidor lo toma como lo que ya hay.
+    soltar = [];
+    m = montaje({ contesta: () => new Promise((resolver) => soltar.push(resolver)) });
+    m.escribir("inicio x");
+    m.reloj.pasar(800);
+    m.g.ya({ alSalir: true, forzar: false }); // esconderse: no repite
+    assert.equal(m.envios.length, 1);
+    m.g.ya({ alSalir: true, forzar: true }); // irse: sí
+    assert.deepEqual(m.envios[1], { texto: "inicio x", antes: "inicio", alSalir: true });
+
+    // Se sigue escribiendo mientras uno va de camino: al volver, sale lo que falta (después de su espera).
+    soltar = [];
+    m = montaje({ contesta: () => new Promise((resolver) => soltar.push(resolver)) });
+    m.escribir("inicio 1");
+    m.reloj.pasar(800);
+    m.texto = "inicio 12"; // sin tocar(): como si la espera ya hubiera pasado con el otro de camino
+    m.g.ya();
+    soltar[0]("ok");
+    await tic();
+    assert.equal(m.envios.length, 1);
+    m.reloj.pasar(800);
+    assert.deepEqual(m.envios[1], { texto: "inicio 12", antes: "inicio 1", alSalir: false });
+    // …y si la página se había escondido mientras tanto, sin esperar y con «alSalir»
+    soltar = [];
+    m = montaje({ contesta: () => new Promise((resolver) => soltar.push(resolver)) });
+    m.escribir("inicio 1");
+    m.reloj.pasar(800);
+    m.escribir("inicio 12");
+    m.g.ya({ alSalir: true }); // visibilitychange con uno de camino
+    assert.equal(m.envios.length, 1);
+    soltar[0]("ok");
+    await tic();
+    assert.deepEqual(m.envios[1], { texto: "inicio 12", antes: "inicio 1", alSalir: true });
+
+    // Un fallo (sin conexión): lo escrito no se da por guardado ni se reintenta solo sin parar; se reintenta cuando
+    // llega algo del servidor (reintentar) o al cerrar (ya), y basado en lo último que se confirmó.
+    let resultado = "error";
+    m = montaje({ contesta: async () => resultado });
+    m.escribir("inicio sin red");
+    m.reloj.pasar(800);
+    await tic();
+    assert.equal(m.g.limpio(), false, "lo escrito sigue sin guardar: no se puede cambiar por lo que llegue de fuera");
+    assert.equal(m.g.colgado(), true);
+    m.reloj.pasar(5000);
+    assert.equal(m.envios.length, 1, "no se reintenta solo");
+    resultado = "ok";
+    m.g.reintentar();
+    m.reloj.pasar(800);
+    await tic();
+    assert.deepEqual(m.envios[1], { texto: "inicio sin red", antes: "inicio", alSalir: false });
+    assert.equal(m.g.limpio(), true);
+    // …y un envío que revienta cuenta como fallo
+    m = montaje({ contesta: async () => { throw new Error("sin red"); } });
+    m.escribir("inicio z");
+    assert.equal(await m.g.ya(), "error");
+    assert.equal(m.g.colgado(), true);
+
+    // Parado (unas notas en conflicto): no se manda nada, tampoco al salir, hasta que se elija.
+    let enConflicto = true;
+    m = montaje({ parado: () => enConflicto });
+    m.escribir("inicio en conflicto");
+    m.reloj.pasar(800);
+    m.g.ya({ alSalir: true, forzar: true });
+    assert.equal(m.envios.length, 0);
+    enConflicto = false;
+    m.g.poner("lo del servidor"); // «Dejar las mías»: se guarda encima de lo que hay ahora
+    m.g.ya();
+    assert.deepEqual(m.envios, [{ texto: "inicio en conflicto", antes: "lo del servidor", alSalir: false }]);
+
+    // «base»: lo que tiene el servidor al empezar, cuando no es lo que hay escrito (el título de la ficha lo dice así)
+    {
+        const envios = [];
+        const g = guardadoRetrasado({ leer: () => "lo escrito", base: "lo del servidor", reloj: relojFalso(), enviar: async (texto, antes) => (envios.push([texto, antes]), "ok") });
+        assert.equal(g.limpio(), false);
+        assert.equal(await g.ya(), "ok");
+        assert.deepEqual(envios, [["lo escrito", "lo del servidor"]]);
+        assert.equal(g.limpio(), true);
+    }
+
+    // guardarAlSalir: al esconderse la página manda lo pendiente; al irse, además, sin esperar a lo de camino.
+    const oyentes = { documento: {}, ventana: {} };
+    const documento = { visibilityState: "visible", addEventListener: (t, fn) => (oyentes.documento[t] = fn), removeEventListener: (t) => delete oyentes.documento[t] };
+    const ventana = { addEventListener: (t, fn) => (oyentes.ventana[t] = fn), removeEventListener: (t) => delete oyentes.ventana[t] };
+    const llamadas = [];
+    const dejar = guardarAlSalir(() => [{ ya: (o) => llamadas.push(o) }, null], { ventana, documento });
+    oyentes.documento.visibilitychange();
+    assert.equal(llamadas.length, 0, "al volver a verse no se manda nada");
+    documento.visibilityState = "hidden";
+    oyentes.documento.visibilitychange();
+    assert.deepEqual(llamadas, [{ alSalir: true, forzar: false }]);
+    oyentes.ventana.pagehide();
+    assert.deepEqual(llamadas[1], { alSalir: true, forzar: true });
+    dejar();
+    assert.deepEqual([Object.keys(oyentes.documento), Object.keys(oyentes.ventana)], [[], []]);
+
+    // api.js: con «alSalir» el envío es de los que sobreviven a la página («keepalive»), si cabe (hasta 60 KB)
+    const opcionesDe = [];
+    globalThis.fetch = async (url, opciones) => {
+        opcionesDe.push(opciones);
+        return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+    };
+    try {
+        await api.cambiar("t1", { notas: "x" }, { notas: "" }, { alSalir: true });
+        await api.cambiar("t1", { notas: "x" }, { notas: "" });
+        await api.cambiar("t1", { notas: "ñ".repeat(40000) }, { notas: "" }, { alSalir: true });
+        await api.cambiarEnPizarra("reuniones", "n1", { texto: "hola" }, { alSalir: true });
+        assert.deepEqual(opcionesDe.map((o) => Boolean(o.keepalive)), [true, false, false, true]);
+        assert.deepEqual(JSON.parse(opcionesDe[0].body), { notas: "x", antes: { notas: "" } }, "y lo que se manda es lo mismo");
+    } finally {
+        globalThis.fetch = fetchReal;
+    }
+
+    // Contra el servidor: lo escrito en el último segundo queda guardado al «cerrar», una sola vez, y el guardado
+    // repetido del mismo texto (el de camino más el de la salida) no es un choque ni cambia nada.
+    r = await diego("POST", "tareas", { titulo: "Notas al cerrar", notas: "Lo que había" });
+    const idNotas = r.datos.id;
+    let peticiones = 0;
+    const notasDe = async () => (await diego("GET", "datos")).datos.tareas.find((t) => t.id === idNotas);
+    const pagina = { texto: "Lo que había" };
+    const g = guardadoRetrasado({
+        leer: () => pagina.texto,
+        espera: 800,
+        enviar: async (texto, antes) => {
+            peticiones += 1;
+            const x = await diego("PATCH", `tareas/${idNotas}`, { notas: texto, antes: { notas: antes } });
+            return x.estado === 200 ? "ok" : x.estado === 409 ? "conflicto" : "error";
+        },
+    });
+    pagina.texto = "Lo que había\ny la última frase, escrita justo antes de recargar";
+    g.tocar();
+    assert.equal((await notasDe()).notas, "Lo que había", "todavía no se ha guardado (no han pasado los 0,8 s)");
+    assert.equal(await g.ya({ alSalir: true, forzar: true }), "ok"); // pagehide
+    assert.equal((await notasDe()).notas, pagina.texto, "al cerrar la página queda guardado");
+    const guardadaEl = (await notasDe()).actualizada;
+    await new Promise((resolver) => setTimeout(resolver, 1000));
+    assert.equal(peticiones, 1, "y pasados los 0,8 s no se guarda otra vez");
+    r = await diego("PATCH", `tareas/${idNotas}`, { notas: pagina.texto, antes: { notas: "Lo que había" } });
+    assert.equal(r.estado, 200, "el mismo texto otra vez (basado en lo de antes) no es un choque");
+    assert.equal((await notasDe()).actualizada, guardadaEl, "ni toca la tarea");
+
+    // Las pantallas lo usan: las notas de la ficha y el texto de las notas de la pizarra
+    const fuente = (f) => readFileSync(new URL(f, carpetaApp), "utf8");
+    assert.match(fuente("ficha.js"), /guardarAlSalir\(\(\) => \(panel \? \[/, "la ficha guarda lo pendiente al esconderse o irse la página");
+    assert.match(fuente("ficha.js"), /const guardado = guardadoRetrasado\(\{/);
+    assert.match(fuente("ficha.js"), /const guardadoTitulo = guardadoRetrasado\(\{/, "y el título, igual");
+    assert.match(fuente("ficha.js"), /enviar: \(texto, _antes, \{ alSalir \}\) => cambiar\(\{ titulo: texto \}, \{ alSalir \}\)/);
+    assert.match(fuente("ficha.js"), /cambiar\(\{ notas: texto \}, \{ antes: \{ notas: antes \}, alSalir \}\)/);
+    assert.match(fuente("pizarra.js"), /guardarAlSalir\(\(\) => \[\.\.\.textos\.values\(\)\]/, "la pizarra, el texto de sus notas");
+    assert.match(fuente("pizarra.js"), /const guardarTexto = guardadoRetrasado\(\{/);
+    assert.match(fuente("principal.js"), /api\.cambiar\(id, c, opciones\.antes, \{ alSalir: opciones\.alSalir \}\)/);
+    assert.match(fuente("guardado.js"), /addEventListener\("visibilitychange"/);
+    assert.match(fuente("guardado.js"), /addEventListener\("pagehide"/);
+}
+
 console.log("Tablón (notas que no se pisan, y ventanas que no dejan salir el foco y se cierran con «atrás»): bien");

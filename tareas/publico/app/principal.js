@@ -126,7 +126,7 @@ const ctx = {
         pintar();
         actualizarFicha(ctx);
         try {
-            const nueva = await api.cambiar(id, c, opciones.antes);
+            const nueva = await api.cambiar(id, c, opciones.antes, { alSalir: opciones.alSalir });
             // Solo se copian los campos que se han pedido: si mientras tanto se ha seguido escribiendo, no se pisa.
             const actual = E.tareas.get(id);
             if (actual) {
