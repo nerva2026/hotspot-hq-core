@@ -252,6 +252,12 @@ textarea {
        cambio, un punto más entre palabras. */
     letter-spacing: -0.027em;
     word-spacing: 0.093em;
+    /* Esa cuenta solo sale si cada letra avanza lo que dice su dibujo (6,29 px a 10,75 px). Donde el navegador ajusta
+       las letras a la rejilla («hinting»: Chromium y Firefox en Linux) cada avance se redondea antes a píxeles enteros,
+       y al quitarle los 0,027 em los huecos salían de 1 y de 2 px. Con `geometricPrecision` se le piden los avances
+       exactos, sin ajustar: las burbujas salen igual que en un Mac, con o sin «hinting». (Los retoques de las letras
+       llevan además sus tablas de «sin ajuste»: herramientas/retoques.py.) */
+    text-rendering: geometricPrecision;
     color: var(--hs-tinta) !important;
     text-align: center;
     overflow-wrap: anywhere;
@@ -347,6 +353,8 @@ textarea {
     line-height: 14px !important;
     letter-spacing: -0.027em !important;
     word-spacing: 0.093em;
+    /* Como en las burbujas: avances exactos, para que el hueco entre letras sea el mismo con y sin «hinting». */
+    text-rendering: geometricPrecision;
     color: var(--hs-crema) !important;
     background: rgba(28, 23, 21, 0.94) !important;
     border: 1px solid var(--hs-borde) !important;
