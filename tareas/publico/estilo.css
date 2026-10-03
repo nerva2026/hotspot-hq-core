@@ -462,6 +462,11 @@ kbd {
 .avatares .avatar + .avatar {
     margin-left: -5px;
 }
+/* Los pequeños (las barras del calendario y los nombres del cronograma) no se montan: con 16 px de lado, el de detrás
+   le tapaba media letra al de delante. */
+.avatares .avatar.mini + .avatar.mini {
+    margin-left: 1px;
+}
 .persona {
     display: inline-flex;
     align-items: center;
