@@ -76,7 +76,7 @@ test("1 · arranca: versión y aviso de bienvenida", async ({ browser }) => {
             ];
             const esquina = !!caja && !!ventana && caja.x < 200 && caja.y + caja.height > ventana.height - 120;
             return {
-                estado: texto === "v0.4.0" && esquina ? "bien" : "mal",
+                estado: texto === "v0.4.1" && esquina ? "bien" : "mal",
                 dato: { texto, caja, ventana, versionDelRepositorio: VERSION },
                 capturas,
             };
