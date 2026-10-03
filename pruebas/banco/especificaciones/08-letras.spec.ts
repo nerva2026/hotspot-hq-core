@@ -40,7 +40,7 @@ import {
 const P = "8";
 const FRASE = "¿Bailamos a las 17:35? Café con Gabi";
 const MARGEN_ALTO = { lados: 110, arriba: 150, abajo: 32 };
-/** Para medir los huecos: todas las cifras y las letras retocadas (B C G Z a c f j t í, los paréntesis y el €) entre letras normales. Cabe en los 100 caracteres de «decir». */
+/** Para medir los huecos: todas las cifras y las letras retocadas (B C G Z a c e f j t é í, los paréntesis y el €) entre letras normales. Cabe en los 100 caracteres de «decir». */
 const FRASE_DE_HUECOS = "¿Bailamos a las 22:30? Café con Gabi (día de jazz y fútbol). Zona 2: 1234567890 €";
 const VENTANAS = [
     { width: 1280, height: 800 },
@@ -332,6 +332,116 @@ test("8 · las letras de la casa", async ({ browser }) => {
             return { estado: bien ? "bien" : "mal", dato: letra, capturas };
         });
 
+        // ---- la tecla ESPACIO de los avisos (parche 14) ----
+        /** El amarillo de la casa (#ffd84a), como lo da el navegador. */
+        const AMARILLO = "rgb(255, 216, 74)";
+        type TeclaDeAviso = {
+            /** El texto entero del aviso (`textContent`), con los espacios seguidos en uno. */
+            textoDelAviso: string;
+            /** Cuántos `.hs-tecla` hay dentro. */
+            teclas: number;
+            tecla: { texto: string; fondo: string; color: string; familia: string; tamano: string; ancho: number; alto: number } | null;
+            /** Lo que mide de alto el texto del aviso y su interlínea, en px (con la ampliación del juego, si la tiene). */
+            altoDelTexto: number;
+            interlinea: number;
+            /** La tecla cabe en la caja del texto: no asoma por arriba ni por abajo. */
+            teclaDentro: boolean;
+        };
+        /** Dentro del aviso `selector`: su texto entero, su tecla (el primer `.hs-tecla`) y lo que mide. */
+        const teclaDe = (selector: string): Promise<TeclaDeAviso | null> =>
+            pagina.evaluate((s) => {
+                const aviso = document.querySelector(s);
+                if (!aviso) return null;
+                const teclas = aviso.querySelectorAll(".hs-tecla");
+                const primera = teclas.length > 0 ? teclas[0] : null;
+                const caja = aviso.getBoundingClientRect();
+                let tecla: { texto: string; fondo: string; color: string; familia: string; tamano: string; ancho: number; alto: number } | null = null;
+                let teclaDentro = false;
+                if (primera) {
+                    const e = getComputedStyle(primera);
+                    const r = primera.getBoundingClientRect();
+                    tecla = { texto: primera.textContent ?? "", fondo: e.backgroundColor, color: e.color, familia: e.fontFamily, tamano: e.fontSize, ancho: Math.round(r.width * 100) / 100, alto: Math.round(r.height * 100) / 100 };
+                    teclaDentro = r.top >= caja.top - 0.5 && r.bottom <= caja.bottom + 0.5;
+                }
+                return {
+                    textoDelAviso: (aviso.textContent ?? "").replace(/\s+/g, " ").trim(),
+                    teclas: teclas.length,
+                    tecla,
+                    altoDelTexto: Math.round(caja.height * 100) / 100,
+                    interlinea: parseFloat(getComputedStyle(aviso).lineHeight),
+                    teclaDentro,
+                };
+            }, selector);
+        /** ¿Lleva el aviso UNA tecla que dice ESPACIO, amarilla, y su texto entero es el de siempre? */
+        const conSuTecla = (t: TeclaDeAviso | null, texto: string): boolean => !!t && t.teclas === 1 && t.tecla?.texto === "ESPACIO" && t.tecla.fondo === AMARILLO && t.textoDelAviso === texto && t.teclaDentro;
+        /** En un aviso de los de abajo, el texto mide líneas enteras: la tecla no le ha subido el alto a la línea. */
+        const lineasEnteras = (t: TeclaDeAviso | null): boolean => !!t && t.interlinea > 0 && Math.abs(t.altoDelTexto - Math.max(1, Math.round(t.altoDelTexto / t.interlinea)) * t.interlinea) <= 0.5;
+
+        await comprobar(P, "tecla-espacio", "(e) La palabra ESPACIO de los avisos sale dibujada como una tecla (parche 14) y el texto del aviso es el mismo", [pagina], async () => {
+            const TEXTO_DE_ZONA = "Pulsa ESPACIO para abrir el panel de prueba"; // el de la zona «panel» del mapa de prueba
+            const TEXTO_DEL_SCRIPT = "Pulsa ESPACIO para probar la tecla (17:35)";
+            const TEXTO_DEL_MUNECO = "Pulsa ESPACIO para probar (17:35)";
+            const capturas: string[] = [];
+
+            // 1 · el aviso de una zona que abre un panel (con su botón)
+            await teletransportar(pagina, centro(12, 9));
+            await expect(pagina.locator(".popup-container")).toHaveCount(0, { timeout: 8_000 }).catch(() => undefined);
+            await teletransportar(pagina, { x: 10 * 32, y: 3 * 32 }); // el centro de la zona «panel»
+            await expect(pagina.locator(".popup-container").first()).toBeVisible();
+            await espera(900);
+            const zona = await teclaDe(".popup-container .responsive-message");
+            capturas.push(await capturaDeElemento(pagina, ".popup-container", "8e-tecla-en-el-aviso-de-zona", 14));
+            await teletransportar(pagina, centro(12, 9));
+            await expect(pagina.locator(".popup-container")).toHaveCount(0, { timeout: 8_000 }).catch(() => undefined);
+
+            // 2 · el aviso que pone el script del mapa (ui.displayActionMessage)
+            await enScript(
+                pagina,
+                (texto) => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const w = window as any;
+                    w.bancoAvisoTecla = w.WA.ui.displayActionMessage({ message: texto, type: "message", callback: () => undefined });
+                },
+                TEXTO_DEL_SCRIPT,
+            );
+            await expect(pagina.locator(".popup-container").first()).toBeVisible();
+            await espera(900);
+            const script = await teclaDe(".popup-container .responsive-message");
+            capturas.push(await capturaDeElemento(pagina, ".popup-container", "8e-tecla-en-el-aviso-del-script", 14));
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await enScript(pagina, async () => { try { await (window as any).bancoAvisoTecla.remove(); } catch { /* ya no está */ } });
+            await expect(pagina.locator(".popup-container")).toHaveCount(0, { timeout: 8_000 }).catch(() => undefined);
+
+            // 3 · el aviso junto al muñeco (ui.displayPlayerMessage)
+            await expect(pagina.locator(".characterTriggerAction")).toHaveCount(0, { timeout: 8_000 }).catch(() => undefined);
+            await enScript(
+                pagina,
+                (texto) => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const w = window as any;
+                    w.bancoMensajeTecla = w.WA.ui.displayPlayerMessage({ message: texto, type: "message", callback: () => undefined });
+                },
+                TEXTO_DEL_MUNECO,
+            );
+            await expect(pagina.locator(".characterTriggerAction").first()).toBeVisible();
+            await espera(900);
+            const muneco = await teclaDe(".characterTriggerAction");
+            capturas.push(await capturaDeElemento(pagina, ".characterTriggerAction", "8e-tecla-en-el-aviso-junto-al-muneco", 14));
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await enScript(pagina, async () => { try { await (window as any).bancoMensajeTecla.remove(); } catch { /* ya no está */ } });
+
+            const juicio = {
+                zona: conSuTecla(zona, TEXTO_DE_ZONA) && lineasEnteras(zona),
+                script: conSuTecla(script, TEXTO_DEL_SCRIPT) && lineasEnteras(script),
+                juntoAlMuneco: conSuTecla(muneco, TEXTO_DEL_MUNECO),
+            };
+            return {
+                estado: juicio.zona && juicio.script && juicio.juntoAlMuneco ? "bien" : "mal",
+                dato: { bien: juicio, fondoEsperado: AMARILLO, zona: { esperado: TEXTO_DE_ZONA, ...zona }, script: { esperado: TEXTO_DEL_SCRIPT, ...script }, juntoAlMuneco: { esperado: TEXTO_DEL_MUNECO, ...muneco } },
+                capturas,
+            };
+        });
+
         await comprobar(P, "fuentes", "Las letras de la casa y sus retoques (hs-retoques-*.woff) se han cargado", [pagina], async () => {
             const fuentes = await pagina.evaluate(async (frase) => {
                 await Promise.all([
@@ -381,9 +491,9 @@ test("8 · las letras de la casa", async ({ browser }) => {
                 pincel.fillStyle = "#1c1715";
                 pincel.textBaseline = "alphabetic";
                 const lineas: [string, string][] = [
-                    ['500 44px "Pixelify Sans"', "Pixelify 500: 0123456789 S5 B8 C G a o c Z2 j (1) € Efectivo: día"],
+                    ['500 44px "Pixelify Sans"', "Pixelify 500: 0123456789 S5 B8 C G a o c e Z2 j (1) € Efectivo: día"],
                     ['500 44px "Pixelify Sans"', frase],
-                    ['700 44px "Pixelify Sans"', "Pixelify 700: 0123456789 S5 B8 C G a o €"],
+                    ['700 44px "Pixelify Sans"', "Pixelify 700: 0123456789 S5 B8 C G a o c e é €"],
                     ['400 40px "Silkscreen"', "Silkscreen 400: 0123456789 A4"],
                     ['700 40px "Silkscreen"', "Silkscreen 700: 0123456789 A4"],
                     ["500 44px monospace", "monospace (para comparar): 0123456789 S5"],
@@ -405,6 +515,8 @@ test("8 · las letras de la casa", async ({ browser }) => {
                         "a y o (Pixelify)": distintos("a", "o", pixelify),
                         "C y G (Pixelify)": distintos("C", "G", pixelify),
                         "c y o (Pixelify)": distintos("c", "o", pixelify),
+                        "e y a (Pixelify)": distintos("e", "a", pixelify),
+                        "e y o (Pixelify)": distintos("e", "o", pixelify),
                         "Z y 2 (Pixelify)": distintos("Z", "2", pixelify),
                         "S y S (control: tiene que dar 0)": distintos("S", "S", pixelify),
                     },
@@ -416,14 +528,17 @@ test("8 · las letras de la casa", async ({ browser }) => {
             const pedidas = jugador.respuestas.filter((r) => r.includes("/static/fonts/"));
             const retoques = pedidas.filter((r) => r.includes("hs-retoques"));
             const retoquesCargados = fuentes.caras.filter((c) => c.familia.includes("Pixelify") && c.caracteres !== "U+0-10FFFF" && c.estado === "loaded");
+            // La «e» (U+65), la «é» y la «è» (U+E8-E9) son retoques desde la v0.4.1: tienen que estar en el `unicode-range` de los de Pixelify Sans
+            const laEEsUnRetoque = retoquesCargados.length > 0 && retoquesCargados.every((c) => /U\+65(-66)?\b/i.test(c.caracteres) && /U\+E8(-E9)?\b/i.test(c.caracteres));
             const bien =
                 retoques.length > 0 &&
                 retoques.every((r) => r.startsWith("200 ")) &&
                 retoquesCargados.length > 0 &&
+                laEEsUnRetoque &&
                 fuentes.puntosQueCambian["5 y S (Pixelify)"] > 0;
             return {
                 estado: bien ? "bien" : "mal",
-                dato: { carasDeLetra: fuentes.caras, disponibles: fuentes.disponibles, puntosQueCambian: fuentes.puntosQueCambian, archivosPedidos: pedidas.map((r) => r.replace(/https:\/\/[^/]+/, "")) },
+                dato: { carasDeLetra: fuentes.caras, laEEsUnRetoque, disponibles: fuentes.disponibles, puntosQueCambian: fuentes.puntosQueCambian, archivosPedidos: pedidas.map((r) => r.replace(/https:\/\/[^/]+/, "")) },
                 capturas: [archivo],
             };
         });

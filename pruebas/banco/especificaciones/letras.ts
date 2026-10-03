@@ -1,7 +1,7 @@
 /*
  * Banco de pruebas · medir las letras: lo que avanza cada una y el hueco que deja detrás.
  *
- * Por qué: las letras de la casa son de píxeles, y unas pocas (cifras, B, C, E, G, Z, a, c, f, j, t…) salen de otras
+ * Por qué: las letras de la casa son de píxeles, y unas pocas (cifras, B, C, E, G, Z, a, c, e, f, j, t…) salen de otras
  * fuentes, los «retoques» (`hs-retoques-*.woff`, `herramientas/retoques.py`). Si un retoque no avanza lo mismo que una
  * letra normal de su ancho, entre letra y letra quedan huecos desiguales («¿B ailamos», «C af é»). Pasó: a los
  * retoques les faltaban las tablas de «sin ajuste» y FreeType (Chromium en Linux, con «hinting») les cambiaba el
@@ -32,9 +32,9 @@ const MARGEN = 0.06;
 /** Cuánto ensanchan los retoques de la negrita (pesos 550-700) cada letra, en em. */
 const GRUESO_NEGRA = 0.058;
 /** Las letras retocadas de Pixelify Sans, por columnas de puntos de su dibujo. */
-export const RETOCADAS: Record<number, string> = { 5: "23456789BCEGZacÉàá€", 4: "0", 3: "1ft", 2: "()jí" };
+export const RETOCADAS: Record<number, string> = { 5: "23456789BCEGZaceÉàáèé€", 4: "0", 3: "1ft", 2: "()jí" };
 /** Letras normales de Pixelify Sans (sin retocar), por columnas: las de 5 miden lo mismo que las retocadas de 5. */
-export const NORMALES: Record<number, string> = { 7: "MWmw", 5: "ADFHJKLNOPQRSTUVXYbdeghknopqrsuxyzéóúñü¿?", 3: "I", 1: "il.:!¡" };
+export const NORMALES: Record<number, string> = { 7: "MWmw", 5: "ADFHJKLNOPQRSTUVXYbdghknopqrsuxyzóúñü¿?", 3: "I", 1: "il.:!¡" };
 /** Lo que mide el dibujo de las letras normales, en em, a peso 400 y a peso 700 (la letra es variable: engorda con el peso). */
 const TINTA_NORMAL: Record<number, [number, number]> = { 7: [0.646, 0.657], 5: [0.465, 0.481], 3: [0.283, 0.304], 1: [0.101, 0.127] };
 /** Silkscreen: sus cifras retocadas tienen el ancho de diseño de su A (y el 1, el de su E): tienen que medir igual. */
@@ -245,7 +245,7 @@ export async function sondaDeLetrasEnPagina(pedido: { texto: string; titulo: str
 }
 
 /** El texto de la muestra de Pixelify Sans: todos los retoques y unas letras normales de 5, de 3 y de 1 columnas. */
-export const TEXTO_DE_SONDA = Object.values(RETOCADAS).join("") + "onesuIil";
+export const TEXTO_DE_SONDA = Object.values(RETOCADAS).join("") + "onsuIil";
 export const TITULO_DE_SONDA = CIFRAS_DE_TITULO + "AEOH";
 
 export async function sondaDeLetras(pagina: Page): Promise<MedidaDeSonda> {
