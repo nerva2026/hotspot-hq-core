@@ -1515,9 +1515,11 @@ table.lista {
     font: 400 16px/1 var(--titulo);
     text-transform: uppercase;
     border-left-color: rgba(243, 230, 216, 0.45);
-    /* «clip» y no «hidden»: con «hidden» el tramo pasaba a ser la caja de desplazamiento del rótulo, que entonces no se
-       pegaba al borde: quedaba siempre a --ancho-nombre del principio del mes (en un móvil, cortado por la derecha) */
-    overflow: clip;
+    /* Sin recortar («hidden» es lo que traen los demás tramos): con «hidden» el tramo pasaba a ser la caja de
+       desplazamiento del rótulo, que entonces no se pegaba al borde y quedaba siempre a --ancho-nombre del principio
+       del mes (en un móvil, cortado por la derecha). No hace falta recortar nada: el rótulo solo se pone si cabe en su
+       tramo y no puede salirse de él. («clip» también valdría, pero un Safari anterior al 16 no lo conoce.) */
+    overflow: visible;
 }
 /* El rótulo del mes (o del año): pegado al borde de la columna de nombres mientras su tramo esté a la vista, así se lee
    siempre entero en qué mes se está. Donde no cabe, cronograma.js lo acorta (rotuloMayor): «sep 2026», «sep» o nada. */
