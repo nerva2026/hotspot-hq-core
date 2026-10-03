@@ -49,6 +49,13 @@ const HERRAMIENTAS = [
     { id: "foto", nombre: "Foto", tecla: "F" },
 ];
 const ZOOMS = [1, 1.25, 1.5, 2, 2.5, 3, 4];
+// La letra de las notas mide 26 px de la pizarra (pizarra.css): en pantalla, 26 × la escala. En un móvil, con la
+// pizarra entera (19 %), son 5 px: no se lee lo que se teclea. Si al ponerse a escribir mide menos de LETRA_MINIMA, la
+// pizarra se acerca a la nota hasta LETRA_AL_ESCRIBIR y vuelve a como estaba al terminar (ver acercarALaNota).
+const LETRA_NOTA = 26;
+const LETRA_MINIMA = 11;
+const LETRA_AL_ESCRIBIR = 16;
+const ZOOM_MAXIMO_AL_ESCRIBIR = 8;
 const RADIO_GOMA = 14;
 const MAXIMO_PUNTOS = 4990; // el servidor admite 5000 por trazo: si se pasa, sigue en otro
 
@@ -80,6 +87,7 @@ let escala = 1;
 const cajas = new WeakMap();
 const pendientes = new Map(); // id → promesa de lo que aún se está guardando (para no cambiarlo antes de que exista)
 const textos = new Map(); // id de una nota → el guardado retrasado de su texto (guardado.js)
+let acercada = null; // la pizarra está acercada a la nota que se escribe: { zoom, vuelta: { zoom, izquierda, arriba } }
 
 // Al esconderse o irse la página (cerrarla, recargarla, cambiar de aplicación en el móvil) se guarda el texto de la
 // nota que estuviera esperando su turno: antes, recargar justo después de escribir dejaba la nota vacía.
@@ -238,7 +246,10 @@ function pintarPiezas() {
         textos.delete(id);
     }
     if (E.seleccion && !E.elementos.has(E.seleccion)) E.seleccion = null;
-    if (E.editando && !E.elementos.has(E.editando)) E.editando = null;
+    if (E.editando && !E.elementos.has(E.editando)) {
+        E.editando = null;
+        alejarDeLaNota(); // otra persona ha quitado la nota que se escribía: la pizarra vuelve a como estaba
+    }
     pintarEleccion();
 }
 
@@ -476,6 +487,7 @@ function editar(id) {
     texto.focus({ preventScroll: true });
     texto.setSelectionRange(texto.value.length, texto.value.length);
     pintarPiezas();
+    acercarALaNota(id);
 }
 
 function dejarDeEditar(id) {
@@ -485,7 +497,60 @@ function dejarDeEditar(id) {
         el.querySelector("textarea").readOnly = true;
     }
     if (E.editando === id) E.editando = null;
+    alejarDeLaNota();
     pintarEleccion();
+}
+
+// ---------- escribir en una pantalla pequeña: la pizarra se acerca a la nota ----------
+
+// El zoom con el que la letra de las notas se lee al escribir, sabiendo a cuánto se ve la pizarra entera.
+const zoomParaEscribir = (entera) => limitar(Math.ceil((LETRA_AL_ESCRIBIR / LETRA_NOTA / entera) * 100) / 100, 1, ZOOM_MAXIMO_AL_ESCRIBIR);
+
+// Al ponerse a escribir una nota: si su letra no se lee (un móvil con la pizarra entera), la pizarra se acerca a esa
+// nota y se apunta cómo estaba, para volver al terminar.
+function acercarALaNota(id) {
+    const e = E.elementos.get(id);
+    const zona = $("#zona-pizarra");
+    if (!e || !zona) return;
+    if (!acercada) {
+        if (LETRA_NOTA * escala >= LETRA_MINIMA) return; // ya se lee
+        const vuelta = { zoom: E.zoom, izquierda: zona.scrollLeft, arriba: zona.scrollTop };
+        E.zoom = Math.max(E.zoom, zoomParaEscribir(escala / E.zoom));
+        acercada = { zoom: E.zoom, vuelta };
+        // sitio de sobra por debajo, para poder subir hasta arriba también una nota del final de la pizarra
+        zona.style.paddingBottom = "75vh";
+        ajustar();
+    }
+    colocarNota(e);
+}
+
+// La nota que se escribe, arriba de lo que se ve (en un móvil el teclado tapa la mitad de abajo), con sitio encima
+// para su barra de colores; centrada a lo ancho si cabe y, si no, desde su borde izquierdo.
+function colocarNota(e) {
+    const zona = $("#zona-pizarra");
+    const marco = $("#mundo-marco");
+    if (!zona || !marco) return;
+    const rz = zona.getBoundingClientRect();
+    const rm = marco.getBoundingClientRect();
+    const x = rm.left - rz.left + zona.scrollLeft + e.x * escala;
+    const y = rm.top - rz.top + zona.scrollTop + e.y * escala;
+    const ancho = e.ancho * escala;
+    zona.scrollLeft = Math.round(ancho <= zona.clientWidth - 24 ? x - (zona.clientWidth - ancho) / 2 : x - 12);
+    zona.scrollTop = Math.round(y - 64);
+}
+
+// Al terminar de escribir, la pizarra vuelve a como estaba; quien ha cambiado el tamaño a mano mientras escribía se
+// queda con el que ha puesto.
+function alejarDeLaNota() {
+    const a = acercada;
+    acercada = null;
+    const zona = $("#zona-pizarra");
+    if (!a) return;
+    if (zona) zona.style.paddingBottom = "";
+    if (E.zoom !== a.zoom) return;
+    E.zoom = a.vuelta.zoom;
+    ajustar();
+    if (zona) [zona.scrollLeft, zona.scrollTop] = [a.vuelta.izquierda, a.vuelta.arriba];
 }
 
 // ---------- acciones, con «Deshacer» y «Rehacer» ----------
@@ -1331,8 +1396,14 @@ function ajustar() {
     if (!zona || !marco) return;
     const estilo = getComputedStyle(zona);
     const ancho = Math.max(100, zona.offsetWidth - parseFloat(estilo.paddingLeft) - parseFloat(estilo.paddingRight));
-    const alto = Math.max(60, zona.offsetHeight - parseFloat(estilo.paddingTop) - parseFloat(estilo.paddingBottom));
-    escala = Math.min(ancho / ANCHO, alto / ALTO) * E.zoom;
+    // (por abajo, el mismo margen que por arriba: mientras se escribe una nota hay más, y ese no cuenta)
+    const alto = Math.max(60, zona.offsetHeight - 2 * parseFloat(estilo.paddingTop));
+    const entera = Math.min(ancho / ANCHO, alto / ALTO);
+    // Mientras se escribe una nota con la pizarra acercada a ella, si cambia el sitio (en un móvil, al salir el teclado
+    // puede encogerse la página) la letra sigue leyéndose y la nota, a la vista.
+    const siguiendoNota = acercada && E.zoom === acercada.zoom && E.editando;
+    if (siguiendoNota) acercada.zoom = E.zoom = Math.max(acercada.vuelta.zoom, zoomParaEscribir(entera));
+    escala = entera * E.zoom;
     marco.style.width = `${Math.floor(ANCHO * escala)}px`;
     marco.style.height = `${Math.floor(ALTO * escala)}px`;
     const mundo = $("#mundo");
@@ -1340,6 +1411,7 @@ function ajustar() {
     mundo.style.setProperty("--inversa", String(1 / escala));
     pintarZoom();
     pintarTodo();
+    if (siguiendoNota && E.elementos.has(E.editando)) colocarNota(E.elementos.get(E.editando));
 }
 
 function menuYo(ancla) {

@@ -260,6 +260,12 @@ misma sesión que el tablón.
   botón que enseña los de ahora (se pliegan solos al empezar a pintar) y «¿Cómo funciona?» queda en el menú de la cuenta.
   Con menos de 372 px los botones van más juntos y, con menos de 340 (un móvil de 320), «Descargar» se queda solo en el
   menú de la cuenta: las dos filas caben sin cortar ningún botón.
+- **Escribir una nota en una pantalla pequeña:** la letra de las notas mide 26 px de la pizarra; con la pizarra entera
+  en un móvil (19 %) son 5 px. Al ponerse a escribir, si la letra mediría menos de 11 px, la pizarra se acerca a esa
+  nota (hasta 16 px de letra, con la nota arriba, por encima del teclado) y, al terminar, vuelve a como estaba; quien
+  cambia el tamaño a mano mientras escribe se queda con el suyo.
+- **El texto de una nota** se guarda un rato después de la última letra, al salir de ella y al cerrar o recargar la
+  página (`publico/app/guardado.js`).
 - **En directo:** cada uno ve el lápiz de los demás y lo que pintan mientras lo pintan, y quién tiene la
   pizarra abierta.
 - **Vaciar:** quita todo para todos; se puede recuperar durante 30 días.
