@@ -1150,6 +1150,7 @@ table.lista {
     }
 }
 .titulo-celda {
+    position: relative; /* para «Abrir» mientras no se ve (más abajo) */
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1187,19 +1188,28 @@ table.lista {
     color: var(--tinta-suave);
 }
 /* «Abrir» sale al pasar el ratón por la fila o al llegar a ella con el teclado. Escondido es transparente, no
-   invisible: así se le puede devolver el foco al cerrar la ficha que abrió (y se ve en cuanto lo tiene). */
+   invisible: así se le puede devolver el foco al cerrar la ficha que abrió (y se ve en cuanto lo tiene). Y mientras no
+   se ve NO ocupa sitio (va fuera de la fila de la celda): el título usa todo el ancho de su columna, en vez de cortarse
+   con «…» al lado de un hueco vacío; al salir, el título le hace sitio. */
 .fila .abrir {
     flex: none;
+    position: absolute;
+    right: 6px;
     opacity: 0;
+    pointer-events: none;
 }
 .fila:hover .abrir,
 .fila:focus-within .abrir {
+    position: static;
     opacity: 1;
+    pointer-events: auto;
 }
 /* Donde no hay ratón (un móvil, una tableta) «Abrir» está siempre a la vista. */
 @media (hover: none) {
     .fila .abrir {
+        position: static;
         opacity: 1;
+        pointer-events: auto;
     }
 }
 /* El título como texto y el resumen de la fila son de la lista estrecha (más abajo): en la ancha no salen. */
@@ -2543,7 +2553,9 @@ table.lista {
         color: var(--tinta-suave);
     }
     .fila .abrir {
+        position: static;
         opacity: 1;
+        pointer-events: auto;
         margin-top: 4px;
     }
     .fila-resumen {

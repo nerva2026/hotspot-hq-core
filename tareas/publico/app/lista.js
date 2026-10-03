@@ -202,6 +202,7 @@ function fila(t, ctx) {
         value: t.titulo,
         maxlength: 300,
         "aria-label": "Título",
+        title: t.titulo, // si no cabe en su columna acaba en «…»: entero, al pasar el ratón
         onkeydown: (e) => {
             if (e.key === "Enter") e.target.blur();
             if (e.key === "Escape") {

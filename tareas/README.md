@@ -55,7 +55,9 @@ cualquier navegador.
 - **La lista de 721 a 1114 px** (el panel de la oficina, una ventana sin maximizar): la tabla cabe siempre a lo ancho,
   sin cortar ninguna columna por la mitad. Las columnas que no caben se esconden por orden, de la menos importante a la
   más: «Pedido por» (por debajo de 1115 px de ventana), «Etiquetas» (1003), «Empieza» (893) y «Prioridad» (809), que
-  sigue viéndose en la franja de color de la fila. Título, estado, para quién y para cuándo están siempre; lo demás, en
+  sigue viéndose en la franja de color de la fila. El título usa todo el ancho de su columna: «Abrir» no ocupa sitio
+  mientras no se ve (sale al pasar el ratón por la fila o al llegar con el teclado, y entonces el título le hace
+  hueco), y un título que no cabe se lee entero al pasar el ratón. Título, estado, para quién y para cuándo están siempre; lo demás, en
   la ficha («Abrir»). Los cortes se miden en la caja de la lista (reglas `@container lista` de `publico/estilo.css`):
   cada columna tiene un mínimo y lo que lleva dentro no la ensancha (un nombre largo acaba en «…»), y los cortes dejan
   17 px para la barra de desplazar de un ordenador. Si aun así la
