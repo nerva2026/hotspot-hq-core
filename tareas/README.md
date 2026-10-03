@@ -94,6 +94,11 @@ cualquier navegador.
     que ya se ve: un «atrás» puede haber cerrado solo una ventana.
 - **Cada tarea tiene:** título, estado, prioridad (urgente, alta, media, baja; cada una con su color),
   para quién, pedido por, fecha de inicio y fecha límite, etiquetas, subtareas y notas.
+- **Buscar:** el buscador encuentra lo que el tablón enseña, como lo enseña: el título, las notas y las subtareas; las
+  etiquetas, con y sin almohadilla («bolos», «#bolos»); las personas (para quién y quién la pidió), con y sin arroba
+  y sin tildes («víctor», «@victor»; «sin asignar»); la prioridad («urgente», «!alta», «sin prioridad») y el estado
+  («en marcha», «hecho»). Todas las palabras, en cualquier orden. La lógica está aparte, en
+  `publico/app/tablon-buscar.js`, y se prueba en `pruebas/tablon.mjs`.
 - **En directo:** lo que cambia uno lo ve el otro al momento (Server-Sent Events).
 - **Excel:** descarga del tablón entero en `.xlsx`, e importación de la hoja «Pendiente» de Drive o de
   una descarga anterior. Las filas que empiezan por «EJEMPLO» y las tareas que ya existen se saltan.

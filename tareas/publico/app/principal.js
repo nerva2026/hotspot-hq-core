@@ -1,11 +1,12 @@
 // Tablón de tareas de HOT SPOT S.L. · arranque, estado compartido, barra superior y filtros.
 
-import { h, $, vaciar, normalizar, hoy, plazo, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, pesoPrioridad, guardarLocal, leerLocal, fechaMedia, retrasar, MESES } from "./util.js";
+import { h, $, vaciar, hoy, plazo, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, pesoPrioridad, guardarLocal, leerLocal, fechaMedia, retrasar, MESES } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion } from "./api.js";
 import { pantallaEntrar, pantallaAlta } from "./acceso.js";
 import { sinSolo, conSolo } from "./solo.js";
 import { BUSQUEDA_AL_CARGAR } from "./capas.js";
 import { pestanaEnDirecto } from "./libro-pestana.js";
+import { coincide, prepararBusqueda } from "./tablon-buscar.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar, chipEtiqueta } from "./menus.js";
 import { hayArrastre } from "./arrastre.js";
 import { interpretar } from "./rapida.js";
@@ -67,7 +68,9 @@ const ctx = {
     // Tareas que pasan los filtros. «incluirHechas» ignora el filtro de ocultar hechas.
     visibles({ incluirHechas = false } = {}) {
         const f = E.filtros;
-        const q = normalizar(f.texto);
+        // El buscador encuentra también por etiqueta («#bolos»), por persona («@víctor»), por prioridad y por estado (tablon-buscar.js).
+        const palabras = prepararBusqueda(f.texto);
+        const ayudas = { nombre: (id) => ctx.usuario(id)?.nombre || "" };
         return [...E.tareas.values()].filter((t) => {
             if (f.ocultarHechas && !incluirHechas && t.estado === "hecho") return false;
             if (f.persona === "yo" && !t.responsables.includes(E.yo.id)) return false;
@@ -75,11 +78,7 @@ const ctx = {
             if (!["todos", "yo", "nadie"].includes(f.persona) && !t.responsables.includes(f.persona)) return false;
             if (f.prioridades.length && !f.prioridades.includes(t.prioridad || "ninguna")) return false;
             if (f.etiqueta && !t.etiquetas.includes(f.etiqueta)) return false;
-            if (q) {
-                const donde = normalizar(`${t.titulo} ${t.notas} ${t.etiquetas.join(" ")} ${t.subtareas.map((s) => s.texto).join(" ")}`);
-                if (!q.split(/\s+/).every((p) => donde.includes(p))) return false;
-            }
-            return true;
+            return coincide(t, palabras, ayudas);
         });
     },
     abrir: (id, opciones) => abrirFicha(id, ctx, opciones),

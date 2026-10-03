@@ -441,4 +441,70 @@ try {
     }
 }
 
+// ---------- el buscador del tablón (app/tablon-buscar.js) ----------
+// Encuentra lo que el tablón enseña, como lo enseña: la etiqueta con y sin «#», la persona (para quién y quién la pidió)
+// con y sin «@» y sin tildes, la prioridad y el estado; todas las palabras, en cualquier orden.
+{
+    const { coincide, prepararBusqueda, loBuscable } = await import(new URL("tablon-buscar.js", carpetaApp).href);
+    const nombres = { d: "Diego", v: "Víctor", a: "Ana", m: "Maximiliano Fernández-Et" };
+    const ayudas = { nombre: (id) => nombres[id] || "" };
+    const tarea = (titulo, mas = {}) => ({ titulo, notas: "", estado: "por-hacer", prioridad: null, responsables: [], pedidoPor: null, etiquetas: [], subtareas: [], ...mas });
+    const lista = [
+        tarea("Cerrar el bolo de Zaragoza", { etiquetas: ["bolos", "fiesta"], responsables: ["v"], pedidoPor: "d", prioridad: "urgente", estado: "en-marcha" }),
+        tarea("Pagar la factura del local", { etiquetas: ["dinero"], responsables: ["d"], prioridad: "alta", notas: "Hablar con Víctor antes" }),
+        tarea("Comprar bolos para el futbolín", { responsables: ["a", "v"], prioridad: "media", estado: "esperando", subtareas: [{ texto: "Pedir precio", hecha: false }] }),
+        tarea("Grabar cuña de radio", { responsables: ["m"], pedidoPor: "a", estado: "hecho", prioridad: "baja" }),
+        tarea("Fotos"),
+    ];
+    const buscar = (texto) => lista.filter((t) => coincide(t, texto, ayudas)).map((t) => t.titulo.split(" ")[0]);
+    // etiquetas: con y sin almohadilla; con ella, solo la etiqueta (no un título que lo diga)
+    assert.deepEqual(buscar("#bolos"), ["Cerrar"], "«#bolos» encuentra la etiqueta");
+    assert.deepEqual(buscar("bolos"), ["Cerrar", "Comprar"], "«bolos» encuentra la etiqueta y el título");
+    assert.deepEqual(buscar("#BOLOS"), ["Cerrar"]);
+    assert.deepEqual(buscar("#bol"), ["Cerrar"], "vale el principio, como mientras se escribe");
+    assert.deepEqual(buscar("#dinero #bolos"), [], "todas las palabras");
+    assert.deepEqual(buscar("#fiesta #bolos"), ["Cerrar"]);
+    // personas: para quién y pedido por; con y sin arroba; sin tildes ni mayúsculas
+    assert.deepEqual(buscar("víctor"), ["Cerrar", "Pagar", "Comprar"], "por persona (y lo que diga el texto)");
+    assert.deepEqual(buscar("victor"), ["Cerrar", "Pagar", "Comprar"]);
+    assert.deepEqual(buscar("@víctor"), ["Cerrar", "Comprar"], "«@víctor»: solo las suyas, no las que lo nombran en las notas");
+    assert.deepEqual(buscar("@VICTOR"), ["Cerrar", "Comprar"]);
+    assert.deepEqual(buscar("@diego"), ["Cerrar", "Pagar"], "para quién y pedido por");
+    assert.deepEqual(buscar("ana"), ["Comprar", "Grabar"]);
+    assert.deepEqual(buscar("@maximiliano"), ["Grabar"], "también quien ha salido del crew y sigue en la tarea");
+    assert.deepEqual(buscar("fernández-et"), ["Grabar"]);
+    assert.deepEqual(buscar("sin asignar"), ["Fotos"]);
+    // prioridad y estado
+    assert.deepEqual(buscar("urgente"), ["Cerrar"]);
+    assert.deepEqual(buscar("!urgente"), ["Cerrar"], "como se escribe al crear una tarea");
+    assert.deepEqual(buscar("!alta"), ["Pagar"]);
+    assert.deepEqual(buscar("prioridad media"), ["Comprar"]);
+    assert.deepEqual(buscar("sin prioridad"), ["Fotos"]);
+    assert.deepEqual(buscar("esperando"), ["Comprar"]);
+    assert.deepEqual(buscar("en marcha"), ["Cerrar"]);
+    assert.deepEqual(buscar("hecho"), ["Grabar"]);
+    assert.deepEqual(buscar("hecha"), ["Grabar"]);
+    assert.deepEqual(buscar("por hacer"), ["Pagar", "Fotos"]);
+    // varias palabras, en cualquier orden y de cosas distintas
+    assert.deepEqual(buscar("@víctor #bolos urgente"), ["Cerrar"]);
+    assert.deepEqual(buscar("urgente   zaragoza @victor"), ["Cerrar"]);
+    assert.deepEqual(buscar("@ana esperando bolos"), ["Comprar"]);
+    assert.deepEqual(buscar("@ana urgente"), []);
+    // lo de siempre: título, notas y subtareas
+    assert.deepEqual(buscar("factura"), ["Pagar"]);
+    assert.deepEqual(buscar("hablar antes"), ["Pagar"]);
+    assert.deepEqual(buscar("pedir precio"), ["Comprar"]);
+    assert.equal(buscar("").length, lista.length, "con el buscador vacío salen todas");
+    assert.equal(buscar("   ").length, lista.length);
+    assert.deepEqual(buscar("no-hay-nada-asi"), []);
+    assert.deepEqual(prepararBusqueda("  #Bolos   @Víctor "), ["#bolos", "@victor"]);
+    assert.equal(typeof loBuscable(lista[0], ayudas), "string");
+    // textos raros no rompen nada
+    assert.deepEqual(lista.filter((t) => coincide(tarea("<script>alert(1)</script> 🎉 \"comillas\"", { etiquetas: ["🎉"] }), "<script>", ayudas)).length, lista.length);
+    // y el tablón lo usa (con los nombres de todo el crew, también de quien ha salido)
+    const principal = readFileSync(new URL("principal.js", carpetaApp), "utf8");
+    assert.match(principal, /import \{ coincide, prepararBusqueda \} from "\.\/tablon-buscar\.js"/);
+    assert.match(principal, /return coincide\(t, palabras, ayudas\);/, "el buscador del tablón busca también por etiqueta, persona, prioridad y estado");
+}
+
 console.log("Tablón (notas que no se pisan, y ventanas que no dejan salir el foco y se cierran con «atrás»): bien");
