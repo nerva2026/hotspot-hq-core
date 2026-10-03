@@ -155,10 +155,11 @@ export function pintarLista(cont, ctx, ev) {
     // La tabla va en un marco que marca con una sombra el lado por el que sigue si no cabe a lo ancho (como el mes del
     // calendario). Las columnas se esconden por orden para que quepa (estilo.css, «la lista en un panel estrecho»): la
     // sombra es el aviso que queda para un navegador que no sepa esconderlas.
+    const tabla = h("table", { class: "lista" }, h("thead", null, cabecera), cuerpo);
     const envoltura = h(
         "div",
         { class: "lista-envoltura", "data-desplazar": "lista" },
-        h("table", { class: "lista" }, h("thead", null, cabecera), cuerpo),
+        tabla,
         tareas.length ? null : h("p", { class: "nota centro vacio-vista" }, ctx.E.tareas.size ? "Ninguna tarea cumple los filtros." : "Todavía no hay tareas. Pulsa «+ Nueva» o escribe en «+ Nueva tarea»."),
     );
     const marco = h("div", { class: "lista-marco" }, envoltura);
@@ -167,7 +168,12 @@ export function pintarLista(cont, ctx, ev) {
         marco.classList.toggle("sigue-derecha", envoltura.scrollLeft + envoltura.clientWidth < envoltura.scrollWidth - 2);
     };
     envoltura.addEventListener("scroll", marcarBordes, { passive: true });
-    if (typeof ResizeObserver === "function") new ResizeObserver(marcarBordes).observe(envoltura);
+    if (typeof ResizeObserver === "function") {
+        // cambia lo que mide la caja (la ventana) o lo que mide la tabla (las letras, al terminar de cargarse)
+        const observador = new ResizeObserver(marcarBordes);
+        observador.observe(envoltura);
+        observador.observe(tabla);
+    }
     cont.append(barra, marco);
     marcarBordes();
 }
