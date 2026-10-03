@@ -3,10 +3,18 @@
  * «pensar», el nombre sobre la cabeza y un aviso de zona, con la letra que el navegador usa de verdad en cada una;
  * y que las letras de la casa (con sus retoques) se han cargado. El mensaje del chat con su hora se captura en la
  * prueba de la llamada (05), que es donde hay chat.
+ *
+ * Y los HUECOS ENTRE LETRAS (`letras.ts`), que no se ven mirando solo el tamaño: que en las burbujas de decir y de
+ * pensar, a 1280×800, 1440×900 y 1920×1080, cada letra retocada deje detrás el mismo hueco que las demás y avance lo
+ * mismo que una letra normal de su ancho; y, en una muestra aparte, que cada retoque avance lo que dice su dibujo.
+ * Se mide dos veces: con el navegador del banco, que ajusta las letras a la rejilla («hinting» completo:
+ * `banco.config.ts`), y con otro que se arranca aquí sin ajuste (como se ven las letras en un Mac). La tabla de
+ * avances de cada burbuja queda en `diagnostico/8-huecos-….md`.
  */
 import fs from "fs";
 import path from "path";
-import { expect, test } from "@playwright/test";
+import { chromium, expect, test, type Page } from "@playwright/test";
+import { esDeLaRejillaDeTexto, juzgarHuecos, juzgarSonda, medirLetras, sondaDeLetras } from "./letras";
 import {
     RESULTADOS,
     aPantalla,
@@ -19,20 +27,112 @@ import {
     enScript,
     entrar,
     espera,
+    guardarDiagnostico,
     letraDe,
     posicion,
     recorteDelMuneco,
     salir,
     teletransportar,
+    type Estado,
     type Jugador,
 } from "./util";
 
 const P = "8";
 const FRASE = "¿Bailamos a las 17:35? Café con Gabi";
 const MARGEN_ALTO = { lados: 110, arriba: 150, abajo: 32 };
+/** Para medir los huecos: todas las cifras y las letras retocadas (B C G Z a c f j t í, los paréntesis y el €) entre letras normales. Cabe en los 100 caracteres de «decir». */
+const FRASE_DE_HUECOS = "¿Bailamos a las 22:30? Café con Gabi (día de jazz y fútbol). Zona 2: 1234567890 €";
+const VENTANAS = [
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 },
+    { width: 1920, height: 1080 },
+];
+/** Con qué se arranca el segundo navegador, el que no ajusta las letras (lo demás, como el del banco: `banco.config.ts`). */
+const NAVEGADOR_SIN_HINTING = ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", "--font-render-hinting=none"];
+
+/** Dice (o piensa) algo y espera a que salga la burbuja. */
+async function decirEn(pagina: Page, texto: string, pensando = false): Promise<void> {
+    if (pensando) await pagina.keyboard.down("Control");
+    await pagina.keyboard.press("Enter");
+    if (pensando) await pagina.keyboard.up("Control");
+    await expect(pagina.getByTestId("say-popup")).toBeVisible();
+    await pagina.keyboard.type(texto, { delay: 10 });
+    await pagina.keyboard.press("Enter");
+    await expect(pagina.locator(pensando ? ".thinking-cloud" : ".say-bubble").first()).toBeVisible();
+    await espera(500);
+}
+
+/**
+ * Los huecos entre letras, con el navegador de `jugador`. `conHinting` dice lo que se espera de ese navegador: si no
+ * ajusta las letras cuando debería (o al revés), la medida no vale para lo que se quiere y se apunta «no se pudo».
+ * Las claves llevan `sufijo` («» con el navegador del banco, «-sin-hinting» con el otro).
+ */
+async function comprobarHuecos(jugador: Jugador, conHinting: boolean, sufijo: string): Promise<void> {
+    const pagina = jugador.pagina;
+    const comoSeVe = conHinting ? "con «hinting» completo" : "sin «hinting»";
+
+    await comprobar(P, "retoques" + sufijo, `Cada letra retocada avanza lo que dice su dibujo y lo mismo que una normal de su ancho (${comoSeVe})`, [pagina], async () => {
+        const juicio = juzgarSonda(await sondaDeLetras(pagina));
+        const tabla = guardarDiagnostico(`8-avances-de-los-retoques${sufijo}.md`, ["# Lo que avanza cada letra en la muestra, en px (las retocadas, con *)", "", ...juicio.tabla.map((l) => "- " + l), "", "## Desajustadas", "", ...(juicio.desajustados.length > 0 ? juicio.desajustados.map((l) => "- " + l) : ["Ninguna."]), ""].join("\n"));
+        const dato = { elNavegadorAjustaLasLetras: juicio.conHinting, retoquesMedidos: juicio.retoquesMedidos, desajustados: juicio.desajustados.length, losPrimeros: juicio.desajustados.slice(0, 6), muestra: juicio.tabla.slice(0, 2), tabla };
+        let estado: Estado = juicio.bien ? "bien" : "mal";
+        if (juicio.conHinting !== conHinting) estado = juicio.bien ? "no se pudo" : "mal";
+        return { estado, dato: juicio.conHinting !== conHinting ? { aviso: `se esperaba un navegador ${comoSeVe} y no lo es: la medida no vale para eso`, ...dato } : dato, capturas: [tabla] };
+    });
+
+    for (const [clave, pensando, burbuja, texto] of [
+        ["decir", false, ".say-bubble", ".say-bubble"],
+        ["pensar", true, ".thinking-cloud", ".thinking-cloud .thinking-text"],
+    ] as const) {
+        await comprobar(P, `huecos-${clave}${sufijo}`, `Huecos parejos entre letras en la burbuja de «${clave}», a 1280, 1440 y 1920 px (${comoSeVe})`, [pagina], async () => {
+            const medidas: Record<string, unknown> = {};
+            const capturas: string[] = [];
+            const tablas: string[] = [`# Burbuja de «${clave}» ${comoSeVe}: letra (con * las retocadas), lo que avanza en px de la pantalla y el hueco que deja, en puntos de la letra`, ""];
+            let parejos = true;
+            let trazado = "";
+            for (const ventana of VENTANAS) {
+                const nombre = `${ventana.width}x${ventana.height}`;
+                await pagina.setViewportSize(ventana);
+                await espera(2000);
+                await decirEn(pagina, FRASE_DE_HUECOS, pensando);
+                await pagina.evaluate(() => document.fonts.ready);
+                await espera(300);
+                const medida = await medirLetras(pagina, texto);
+                if (!medida) throw new Error(`No se ve el texto de la burbuja («${texto}») a ${nombre}`);
+                const juicio = juzgarHuecos(medida);
+                const ampliacion = Math.round(medida.ampliacion * 1000) / 1000;
+                // lo justo para que las tres medidas quepan en la tabla del informe; la tabla entera, letra a letra, va aparte
+                medidas[nombre] = {
+                    letra_px: medida.tamano,
+                    ampliacion,
+                    huecoDeLasRetocadas_puntos: juicio.huecoDeLasRetocadas_puntos,
+                    huecoDeLasNormales_puntos: juicio.huecoDeLasNormales_puntos,
+                    avanceDe5Columnas_px: { retocadas: juicio.avanceRetocadasDe5_px, normales: juicio.avanceNormalesDe5_px },
+                    desiguales: juicio.desiguales,
+                };
+                trazado = medida.trazado;
+                tablas.push(
+                    `## ${nombre}: letra de ${medida.tamano} px ampliada ×${ampliacion} (${juicio.letraEnPantalla_px} px en la pantalla; un punto, ${juicio.unPuntoEnPantalla_px} px) · ${juicio.parejos ? "parejos" : "DESIGUALES: " + (juicio.desiguales.join(", ") || "las retocadas no avanzan como las normales")}`,
+                    "",
+                    `Letras medidas: ${juicio.letrasMedidas} (${juicio.retocadasMedidas} retocadas). Una retocada de 5 columnas se aparta de las normales, como mucho, ${juicio.diferenciaRetocadaNormal_px} px.`,
+                    "",
+                    juicio.tabla,
+                    "",
+                );
+                parejos = parejos && juicio.parejos;
+                capturas.push(await capturaDeElemento(pagina, burbuja, `8f-huecos-${clave}-${nombre}${sufijo}`, 14));
+                await espera(5200); // la burbuja se va sola a los 5 s
+            }
+            capturas.push(guardarDiagnostico(`8-huecos-${clave}${sufijo}.md`, tablas.join("\n")));
+            return { estado: parejos ? "bien" : "mal", dato: { parejos, trazado, ...medidas }, capturas };
+        });
+    }
+    await pagina.setViewportSize(VENTANAS[0]);
+    await espera(2000);
+}
 
 test("8 · las letras de la casa", async ({ browser }) => {
-    test.setTimeout(540_000);
+    test.setTimeout(900_000);
     let a: Jugador | undefined;
     try {
         a = await entrar(browser, "Alicia", { sala: "letras" });
@@ -50,16 +150,7 @@ test("8 · las letras de la casa", async ({ browser }) => {
         });
 
         /** Dice algo y espera a que salga la burbuja. */
-        const decir = async (texto: string, pensando = false): Promise<void> => {
-            if (pensando) await pagina.keyboard.down("Control");
-            await pagina.keyboard.press("Enter");
-            if (pensando) await pagina.keyboard.up("Control");
-            await expect(pagina.getByTestId("say-popup")).toBeVisible();
-            await pagina.keyboard.type(texto, { delay: 10 });
-            await pagina.keyboard.press("Enter");
-            await expect(pagina.locator(pensando ? ".thinking-cloud" : ".say-bubble").first()).toBeVisible();
-            await espera(500);
-        };
+        const decir = (texto: string, pensando = false): Promise<void> => decirEn(pagina, texto, pensando);
         /** Cuánto se meten la burbuja (con su pico, de 5 puntos del mapa) y la etiqueta del nombre una en la otra, en píxeles de pantalla. */
         const solape = async (burbuja: string): Promise<Record<string, unknown>> => {
             const b = await cajaDe(pagina, burbuja);
@@ -336,7 +427,42 @@ test("8 · las letras de la casa", async ({ browser }) => {
                 capturas: [archivo],
             };
         });
+
+        await comprobar(P, "franja", "La franja de avisos (WA.ui.banner), a un tamaño de la rejilla de la letra: 16 px el texto y el botón", [pagina], async () => {
+            await enScript(pagina, () => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (window as any).WA.ui.banner.openBanner({ id: "banco-franja", text: "Aviso de prueba del banco: 17:35", bgColor: "#e0562a", textColor: "#ffffff", closable: true });
+            });
+            const franja = pagina.locator("#banco-franja");
+            await expect(franja).toBeVisible();
+            await espera(700);
+            const texto = await letraDe(pagina, "#banco-franja > div");
+            const boton = await letraDe(pagina, "#banco-franja button");
+            const capturas = [await capturaDeElemento(pagina, "#banco-franja", "8g-franja", 10)];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await enScript(pagina, () => (window as any).WA.ui.banner.closeBanner());
+            await expect(franja).toHaveCount(0, { timeout: 8_000 }).catch(() => undefined);
+            const deLaCasaYEnLaRejilla = (letra: Record<string, string> | null): boolean => deLaCasa(letra) && esDeLaRejillaDeTexto(letra?.tamano);
+            return { estado: deLaCasaYEnLaRejilla(texto) && deLaCasaYEnLaRejilla(boton) && texto?.tamano === "16px" ? "bien" : "mal", dato: { texto, boton }, capturas };
+        });
+
+        // Los huecos entre letras, con el navegador del banco («hinting» completo)
+        await teletransportar(pagina, centro(12, 9));
+        await comprobarHuecos(jugador, true, "");
     } finally {
         await salir(a);
+    }
+
+    // Y otra vez sin «hinting» (como se ven las letras en un Mac), con un navegador arrancado aquí para eso
+    const sinHinting = await chromium.launch({ args: NAVEGADOR_SIN_HINTING });
+    let b: Jugador | undefined;
+    try {
+        b = await entrar(sinHinting, "Alicia", { sala: "letras-sin-hinting" });
+        await teletransportar(b.pagina, centro(12, 9));
+        await espera(1500);
+        await comprobarHuecos(b, false, "-sin-hinting");
+    } finally {
+        await salir(b);
+        await sinHinting.close();
     }
 });
