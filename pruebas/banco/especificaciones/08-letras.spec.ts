@@ -89,6 +89,7 @@ async function comprobarHuecos(jugador: Jugador, conHinting: boolean, sufijo: st
             const capturas: string[] = [];
             const tablas: string[] = [`# Burbuja de «${clave}» ${comoSeVe}: letra (con * las retocadas), lo que avanza en px de la pantalla y el hueco que deja, en puntos de la letra`, ""];
             let parejos = true;
+            let trazado = "";
             for (const ventana of VENTANAS) {
                 const nombre = `${ventana.width}x${ventana.height}`;
                 await pagina.setViewportSize(ventana);
@@ -99,15 +100,31 @@ async function comprobarHuecos(jugador: Jugador, conHinting: boolean, sufijo: st
                 const medida = await medirLetras(pagina, texto);
                 if (!medida) throw new Error(`No se ve el texto de la burbuja («${texto}») a ${nombre}`);
                 const juicio = juzgarHuecos(medida);
-                const { tabla, ...resumen } = juicio;
-                medidas[nombre] = { letra_px: medida.tamano, ampliacion: Math.round(medida.ampliacion * 1000) / 1000, trazado: medida.trazado, ...resumen };
-                tablas.push(`## ${nombre}: letra de ${medida.tamano} px ampliada ×${Math.round(medida.ampliacion * 1000) / 1000} · ${juicio.parejos ? "parejos" : "DESIGUALES: " + juicio.desiguales.join(", ")}`, "", tabla, "");
+                const ampliacion = Math.round(medida.ampliacion * 1000) / 1000;
+                // lo justo para que las tres medidas quepan en la tabla del informe; la tabla entera, letra a letra, va aparte
+                medidas[nombre] = {
+                    letra_px: medida.tamano,
+                    ampliacion,
+                    huecoDeLasRetocadas_puntos: juicio.huecoDeLasRetocadas_puntos,
+                    huecoDeLasNormales_puntos: juicio.huecoDeLasNormales_puntos,
+                    avanceDe5Columnas_px: { retocadas: juicio.avanceRetocadasDe5_px, normales: juicio.avanceNormalesDe5_px },
+                    desiguales: juicio.desiguales,
+                };
+                trazado = medida.trazado;
+                tablas.push(
+                    `## ${nombre}: letra de ${medida.tamano} px ampliada ×${ampliacion} (${juicio.letraEnPantalla_px} px en la pantalla; un punto, ${juicio.unPuntoEnPantalla_px} px) · ${juicio.parejos ? "parejos" : "DESIGUALES: " + (juicio.desiguales.join(", ") || "las retocadas no avanzan como las normales")}`,
+                    "",
+                    `Letras medidas: ${juicio.letrasMedidas} (${juicio.retocadasMedidas} retocadas). Una retocada de 5 columnas se aparta de las normales, como mucho, ${juicio.diferenciaRetocadaNormal_px} px.`,
+                    "",
+                    juicio.tabla,
+                    "",
+                );
                 parejos = parejos && juicio.parejos;
                 capturas.push(await capturaDeElemento(pagina, burbuja, `8f-huecos-${clave}-${nombre}${sufijo}`, 14));
                 await espera(5200); // la burbuja se va sola a los 5 s
             }
             capturas.push(guardarDiagnostico(`8-huecos-${clave}${sufijo}.md`, tablas.join("\n")));
-            return { estado: parejos ? "bien" : "mal", dato: medidas, capturas };
+            return { estado: parejos ? "bien" : "mal", dato: { parejos, trazado, ...medidas }, capturas };
         });
     }
     await pagina.setViewportSize(VENTANAS[0]);
