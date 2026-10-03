@@ -42,20 +42,42 @@ test("1 · arranca: versión y aviso de bienvenida", async ({ browser }) => {
         if (!a || entrada.estado === "no se pudo") throw new Error("No se ha podido entrar: " + JSON.stringify(entrada.dato));
         const pagina = a.pagina;
 
-        await comprobar(P, "aviso", "Sale el aviso «¡Bienvenido a la v0.4.0!»", [pagina], async () => {
+        await comprobar(P, "aviso", "Sale el aviso «¡Bienvenido a la v0.4.1!»", [pagina], async () => {
             const titulo = pagina.locator("#hs-novedades-titulo");
             await expect(titulo).toBeVisible({ timeout: 20_000 });
             const texto = ((await titulo.textContent()) ?? "").trim();
-            const lineas = await pagina.locator(".hs-lista li").allTextContents();
+            const lineas = await pagina.locator(".hs-cuerpo > .hs-lista li").allTextContents();
             const capturas = [
                 await capturaEntera(pagina, "1-aviso-pantalla"),
                 await capturaDeElemento(pagina, ".hs-ventana", "1-aviso", 12),
             ];
             return {
-                estado: texto === "¡Bienvenido a la v0.4.0!" ? "bien" : "mal",
+                estado: texto === "¡Bienvenido a la v0.4.1!" && lineas.length >= 5 ? "bien" : "mal",
                 dato: { titulo: texto, lineas },
                 capturas,
             };
+        });
+
+        await comprobar(P, "historico", "Debajo de las novedades, el histórico: cada versión anterior, plegada, se abre y enseña lo que traía", [pagina], async () => {
+            const anteriores = pagina.getByTestId("hotspot-version-anterior");
+            const versiones = (await anteriores.locator(".hs-anterior-numero").allTextContents()).map((t) => t.trim());
+            const fechas = (await anteriores.locator(".hs-anterior-fecha").allTextContents()).map((t) => t.trim());
+            const plegadas = await anteriores.evaluateAll((lista) => lista.map((d) => !(d as HTMLDetailsElement).open));
+            await anteriores.first().locator("summary").click();
+            const abierta = await anteriores.first().evaluate((d) => (d as HTMLDetailsElement).open);
+            const lineasDeLaPrimera = await anteriores.first().locator("li").allTextContents();
+            const capturas = [await capturaDeElemento(pagina, ".hs-ventana", "1-aviso-historico", 12)];
+            // …y se vuelve a plegar (el botón de cerrar tiene que seguir a la vista para lo que viene después)
+            await anteriores.first().locator("summary").click();
+            const bien =
+                versiones.length >= 2 &&
+                versiones[0] === "v0.4.0" &&
+                versiones.includes("v0.3.0") &&
+                fechas.every((f) => f.length > 0) &&
+                plegadas.every((x) => x) &&
+                abierta &&
+                lineasDeLaPrimera.length >= 5;
+            return { estado: bien ? "bien" : "mal", dato: { versiones, fechas, plegadas, abierta, lineasDeLaPrimera }, capturas };
         });
 
         await comprobar(P, "aviso-cierra", "El aviso se cierra con su botón", [pagina], async () => {

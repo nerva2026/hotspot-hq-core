@@ -21,7 +21,7 @@ const OBJETOS = ["lata", "cafe", "agua", "cana", "snack", "disco"];
 const TAMANOS = ["1280x800", "1024x768", "1440x900"];
 const PUNTOS = [
     { punto: "0", titulo: "SONDA (el banco monta una llamada)", claves: ["llamada"] },
-    { punto: "1", titulo: "ARRANCA", claves: ["entra", "aviso", "aviso-cierra", "version", "aviso-vuelve", "medidas"] },
+    { punto: "1", titulo: "ARRANCA", claves: ["entra", "aviso", "historico", "aviso-cierra", "version", "aviso-vuelve", "medidas"] },
     { punto: "2", titulo: "TECLAS (parche 11)", claves: ["llegan", "e-no", "con-ctrl", "repeticion", "decir", "vuelven", "chat"] },
     {
         punto: "3",
