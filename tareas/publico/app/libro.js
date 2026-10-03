@@ -3,7 +3,7 @@
 // Pensado para quien no usa Excel: se apunta con un formulario, el reparto y quién debe a quién salen solos, y
 // si hace falta se descarga en Excel o en CSV. Los importes van en céntimos, como en el servidor (servidor/libro.js).
 
-import { h, $, vaciar, hoy, sumarDias, fechaCorta, fechaLarga, MESES, MESES_CORTOS, haceCuanto, retrasar } from "./util.js";
+import { h, $, vaciar, hoy, sumarDias, fechaCorta, fechaLarga, MESES, MESES_CORTOS, haceCuanto, retrasar, ponerError, quitarErrorAlCorregir } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion, direccionApi } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
 import { sinSolo } from "./solo.js";
@@ -636,7 +636,7 @@ function formulario({ movimiento = null, tipo = "gasto", persona, para, importe 
             guardar();
         },
     });
-    const error = h("p", { class: "error", role: "alert" });
+    const error = quitarErrorAlCorregir(cuerpo, h("p", { class: "error", role: "alert" })); // se quita al corregir su campo
     const previo = h("div", { class: "previo-libro", "aria-live": "polite" });
     const boton = h("button", { class: "btn primario", type: "submit" });
     const campos = {};
@@ -674,6 +674,7 @@ function formulario({ movimiento = null, tipo = "gasto", persona, para, importe 
 
     function construir() {
         const t = TIPOS[v.tipo];
+        ponerError(error, ""); // al cambiar de tipo, el error del tipo anterior ya no pinta nada
         if (v.tipo === "pago" && (!v.para || v.para === v.persona)) v.para = otros(v.persona)[0]?.id || null;
         const tipos = h(
             "div",
@@ -931,22 +932,23 @@ function formulario({ movimiento = null, tipo = "gasto", persona, para, importe 
         pintarPrevio();
         campos.importe = campoImporte;
         campos.concepto = campoConcepto;
+        campos.para = elegirPara.el;
     }
 
     async function guardar() {
-        error.textContent = "";
+        ponerError(error, "");
         if (!v.importe) {
-            error.textContent = "Escribe cuánto, por ejemplo 12,50.";
+            ponerError(error, "Escribe cuánto, por ejemplo 12,50.", campos.importe);
             campos.importe.focus();
             return;
         }
         if (v.tipo !== "pago" && !v.concepto.trim()) {
-            error.textContent = v.tipo === "gasto" ? "Pon en qué se ha gastado." : "Pon de dónde viene el dinero.";
+            ponerError(error, v.tipo === "gasto" ? "Pon en qué se ha gastado." : "Pon de dónde viene el dinero.", campos.concepto);
             campos.concepto.focus();
             return;
         }
         if (v.tipo === "pago" && (!v.para || v.para === v.persona)) {
-            error.textContent = "Elige a quién se le paga.";
+            ponerError(error, "Elige a quién se le paga.", campos.para);
             return;
         }
         const datos = {
@@ -1140,6 +1142,7 @@ function ajustes() {
         ),
         { ancho: 480 },
     );
+    quitarErrorAlCorregir(v.caja, error); // lo que contesta el servidor se quita al cambiar una parte o una categoría
 }
 
 function ayuda() {

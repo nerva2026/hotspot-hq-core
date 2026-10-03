@@ -819,4 +819,29 @@ try {
     assert.match(fuente("guardado.js"), /addEventListener\("pagehide"/);
 }
 
+// ---------- los errores de los formularios se quitan al corregir (app/util.js) ----------
+{
+    const { corrigeElError } = await import(new URL("util.js", carpetaApp).href);
+    const concepto = { isConnected: true, nombre: "concepto" };
+    const dentroDe = (campo) => (c) => c === campo;
+    const suyo = { campo: concepto, texto: "Pon en qué se ha gastado." };
+    assert.equal(corrigeElError({ texto: "", tipo: "input", dentro: () => true }), false, "sin error no hay nada que quitar");
+    assert.equal(corrigeElError({ texto: suyo.texto, suyo, tipo: "input", dentro: dentroDe(concepto) }), true, "escribir en su campo lo quita");
+    assert.equal(corrigeElError({ texto: suyo.texto, suyo, tipo: "input", dentro: dentroDe({}) }), false, "escribir en otro campo, no");
+    assert.equal(corrigeElError({ texto: "Lo que dice el servidor", suyo, tipo: "input", dentro: dentroDe({}) }), true, "un error que ya no es el de ese campo se quita al tocar cualquiera");
+    assert.equal(corrigeElError({ texto: "Lo que dice el servidor", tipo: "change", dentro: () => false }), true);
+    assert.equal(corrigeElError({ texto: suyo.texto, suyo: { ...suyo, campo: { isConnected: false } }, tipo: "input", dentro: () => false }), true, "si su campo ya no está, cualquier cambio");
+    assert.equal(corrigeElError({ texto: "x", tipo: "click", enEleccion: false, dentro: () => true }), false, "un clic en un botón cualquiera no lo quita");
+    assert.equal(corrigeElError({ texto: "x", tipo: "click", enEleccion: true, dentro: () => true }), true, "elegir una opción, sí");
+    // todo formulario con mensaje de error lo quita al corregir (y ninguno se queda sin enganchar)
+    const fuente = (f) => readFileSync(new URL(f, carpetaApp), "utf8");
+    for (const f of readdirSync(carpetaApp).filter((f) => f.endsWith(".js") && f !== "util.js")) {
+        const codigo = fuente(f);
+        const errores = (codigo.match(/const error = (?:quitarErrorAlCorregir\(\w+, )?h\("p", \{ class: "error"/g) || []).length;
+        const enganchados = (codigo.match(/quitarErrorAlCorregir\(/g) || []).length;
+        assert.equal(enganchados, errores, `${f}: ${errores} mensajes de error de formulario y ${enganchados} que se quitan al corregir`);
+    }
+    assert.match(fuente("libro.js"), /ponerError\(error, v\.tipo === "gasto" \? "Pon en qué se ha gastado\." : "Pon de dónde viene el dinero\.", campos\.concepto\)/);
+}
+
 console.log("Tablón (notas que no se pisan, y ventanas que no dejan salir el foco y se cierran con «atrás»): bien");

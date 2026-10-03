@@ -1,6 +1,6 @@
 // Tablón de tareas de HOT SPOT S.L. · arranque, estado compartido, barra superior y filtros.
 
-import { h, $, vaciar, hoy, plazo, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, pesoPrioridad, guardarLocal, leerLocal, fechaMedia, retrasar, MESES } from "./util.js";
+import { h, $, vaciar, quitarErrorAlCorregir, hoy, plazo, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, pesoPrioridad, guardarLocal, leerLocal, fechaMedia, retrasar, MESES } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion } from "./api.js";
 import { pantallaEntrar, pantallaAlta } from "./acceso.js";
 import { sinSolo, conSolo } from "./solo.js";
@@ -656,32 +656,30 @@ async function panelCrew() {
         const nombre = h("input", { class: "campo", value: persona.nombre, maxlength: 24 });
         const correo = h("input", { class: "campo", type: "email", value: persona.email || "", placeholder: "correo@gmail.com", maxlength: 120 });
         const error = h("p", { class: "error" });
-        abrirMenu(
-            ancla,
-            h(
-                "form",
-                {
-                    class: "menu-fecha",
-                    onsubmit: async (e) => {
-                        e.preventDefault();
-                        try {
-                            await api.cambiarCrew(persona.id, { nombre: nombre.value, email: correo.value });
-                            cerrarMenu();
-                            await recargarCrew();
-                        } catch (err) {
-                            error.textContent = err.message;
-                        }
-                    },
+        const formulario = h(
+            "form",
+            {
+                class: "menu-fecha",
+                onsubmit: async (e) => {
+                    e.preventDefault();
+                    try {
+                        await api.cambiarCrew(persona.id, { nombre: nombre.value, email: correo.value });
+                        cerrarMenu();
+                        await recargarCrew();
+                    } catch (err) {
+                        error.textContent = err.message;
+                    }
                 },
-                h("div", { class: "menu-titulo" }, "Nombre"),
-                nombre,
-                h("div", { class: "menu-titulo" }, "Correo de Google"),
-                correo,
-                error,
-                h("button", { class: "btn primario pequeno", type: "submit" }, "Guardar"),
-            ),
-            { ancho: 280 },
+            },
+            h("div", { class: "menu-titulo" }, "Nombre"),
+            nombre,
+            h("div", { class: "menu-titulo" }, "Correo de Google"),
+            correo,
+            error,
+            h("button", { class: "btn primario pequeno", type: "submit" }, "Guardar"),
         );
+        quitarErrorAlCorregir(formulario, error);
+        abrirMenu(ancla, formulario, { ancho: 280 });
     }
     function pintarCrew() {
         const personas = [...info.crew].sort((a, b) => Number(a.baja) - Number(b.baja) || a.nombre.localeCompare(b.nombre));
@@ -766,6 +764,7 @@ async function panelCrew() {
         nombre,
         h("button", { class: "btn primario", type: "submit" }, "Añadir"),
     );
+    quitarErrorAlCorregir(form, error);
     ventana(
         "Crew",
         h(
@@ -896,6 +895,7 @@ function ajustesYo() {
             ),
         ),
     );
+    quitarErrorAlCorregir(v.caja, error);
 }
 
 function atajos() {

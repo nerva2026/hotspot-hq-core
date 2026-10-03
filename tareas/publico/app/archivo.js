@@ -3,7 +3,7 @@
 // dentro). Aquí está la lista (carpetas, búsqueda, subir y soltar, papelera); el visor de un documento está en
 // archivo-visor.js. Todo lo que hace uno lo ven los demás en directo (el servidor avisa a todos).
 
-import { h, $, vaciar, retrasar, haceCuanto, guardarLocal, leerLocal, MESES_CORTOS } from "./util.js";
+import { h, $, vaciar, retrasar, haceCuanto, guardarLocal, leerLocal, MESES_CORTOS, ponerError, quitarErrorAlCorregir } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion, subirDocumento } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
 import { conSolo, sinSolo } from "./solo.js";
@@ -185,7 +185,7 @@ function editar(doc) {
                 const cambios = { titulo: titulo.value.trim(), descripcion: descripcion.value.trim(), carpeta: carpeta.entrada.value.trim() };
                 if (direccion) cambios.url = direccion.value.trim();
                 if (!cambios.titulo) {
-                    error.textContent = "El documento necesita un título.";
+                    ponerError(error, "El documento necesita un título.", titulo);
                     titulo.focus();
                     return;
                 }
@@ -195,7 +195,7 @@ function editar(doc) {
                     v.cerrar();
                     aviso("Cambios guardados");
                 } catch (err) {
-                    error.textContent = err.message;
+                    ponerError(error, err.message);
                     guardar.disabled = false;
                 }
             },
@@ -207,6 +207,7 @@ function editar(doc) {
         error,
         h("div", { class: "fila-botones" }, h("button", { type: "button", class: "btn", onclick: () => v.cerrar() }, "Cancelar"), guardar),
     );
+    quitarErrorAlCorregir(formulario, error);
     const v = ventana("Editar documento", formulario, { ancho: 480 });
 }
 
@@ -225,7 +226,7 @@ function nuevoEnlace() {
             onsubmit: async (ev) => {
                 ev.preventDefault();
                 if (!direccion.value.trim()) {
-                    error.textContent = "Pega la dirección del enlace.";
+                    ponerError(error, "Pega la dirección del enlace.", direccion);
                     direccion.focus();
                     return;
                 }
@@ -236,7 +237,7 @@ function nuevoEnlace() {
                     v.cerrar();
                     aviso(`«${recortar(doc.titulo)}» añadido`);
                 } catch (err) {
-                    error.textContent = err.message;
+                    ponerError(error, err.message);
                     guardar.disabled = false;
                 }
             },
@@ -249,6 +250,7 @@ function nuevoEnlace() {
         error,
         h("div", { class: "fila-botones" }, h("button", { type: "button", class: "btn", onclick: () => v.cerrar() }, "Cancelar"), guardar),
     );
+    quitarErrorAlCorregir(formulario, error);
     const v = ventana("Añadir enlace", formulario, { ancho: 480 });
 }
 

@@ -58,6 +58,48 @@ export const normalizar = (s) =>
         .toLowerCase()
         .trim();
 
+// ---------- los errores de los formularios ----------
+
+// El mensaje de error de un formulario se quita solo en cuanto se corrige: si se puso con ponerError(error, texto, campo),
+// al escribir o elegir algo en ESE campo; si no es de ningún campo (lo que contesta el servidor), al tocar cualquier
+// cosa de «zona» (el formulario). Antes seguía en rojo, con el campo ya bien, hasta volver a pulsar el botón.
+const campoDelError = new WeakMap(); // error → { campo, texto }
+const ELECCIONES = "[role=radio], [role=checkbox], [aria-pressed], select";
+
+export function ponerError(error, texto, campo = null) {
+    error.textContent = texto;
+    if (campo) campoDelError.set(error, { campo, texto });
+    else campoDelError.delete(error);
+}
+
+// ¿Quita el error este gesto? «suyo»: { campo, texto } si el error se puso para un campo; «dentro(campo)»: si el gesto
+// ha sido en ese campo. Un clic solo cuenta si es en algo que se elige (una opción), no en cualquier botón.
+export function corrigeElError({ texto, suyo, tipo, enEleccion, dentro }) {
+    if (!texto) return false;
+    if (tipo === "click" && !enEleccion) return false;
+    // el campo solo manda mientras el error sea el que se puso para él y el campo siga en la página
+    if (suyo && suyo.texto === texto && suyo.campo.isConnected && !dentro(suyo.campo)) return false;
+    return true;
+}
+
+// Devuelve el error, para ponerlo donde vaya.
+export function quitarErrorAlCorregir(zona, error) {
+    const quitar = (e) => {
+        const corrige = corrigeElError({
+            texto: error.textContent,
+            suyo: campoDelError.get(error),
+            tipo: e.type,
+            enEleccion: Boolean(e.target.closest?.(ELECCIONES)),
+            dentro: (campo) => campo.contains(e.target),
+        });
+        if (!corrige) return;
+        error.textContent = "";
+        campoDelError.delete(error);
+    };
+    for (const tipo of ["input", "change", "click"]) zona.addEventListener(tipo, quitar);
+    return error;
+}
+
 export function retrasar(fn, ms) {
     let t = null;
     const envuelta = (...args) => {
