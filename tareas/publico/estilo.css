@@ -835,6 +835,13 @@ a.pestana {
 .separador {
     width: 8px;
 }
+/* una etiqueta («Agrupar») con su selector: saltan de línea juntos */
+.con-etiqueta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
 .vacio-vista {
     padding: 40px 16px;
     font-size: 15px;
@@ -1507,11 +1514,40 @@ table.lista {
     font: 400 16px/1 var(--titulo);
     text-transform: uppercase;
     border-left-color: rgba(243, 230, 216, 0.45);
+    /* «clip» y no «hidden»: con «hidden» el tramo pasaba a ser la caja de desplazamiento del rótulo, que entonces no se
+       pegaba al borde: quedaba siempre a --ancho-nombre del principio del mes (en un móvil, cortado por la derecha) */
+    overflow: clip;
 }
-.crono-tramo.mayor span {
+/* El rótulo del mes (o del año): pegado al borde de la columna de nombres mientras su tramo esté a la vista, así se lee
+   siempre entero en qué mes se está. Donde no cabe, cronograma.js lo acorta (rotuloMayor): «sep 2026», «sep» o nada. */
+.rotulo-mayor {
     position: sticky;
-    left: calc(var(--ancho-nombre) + 6px);
+    left: var(--ancho-nombre);
     padding: 0 6px;
+}
+.rotulo-mayor.sin-sitio {
+    visibility: hidden; /* no cabe entero en lo que se ve de su mes: ni asoma a medias (cronograma.js) */
+}
+.rotulo-mayor .mes-corto,
+.rotulo-mayor.corto .mes-largo,
+.rotulo-mayor.minimo .mes-largo,
+.rotulo-mayor.minimo .anio {
+    display: none;
+}
+.rotulo-mayor.corto .mes-corto,
+.rotulo-mayor.minimo .mes-corto {
+    display: inline;
+}
+@media (max-width: 600px) {
+    /* en el móvil caben poco más de 200 px de línea de tiempo: el mes sin el año si es el de ahora («octubre») y, si
+       es de otro, corto y con él («ene 2027»), como las fechas cortas de las tareas */
+    .rotulo-mayor.este-anio .anio,
+    .rotulo-mayor.otro-anio .mes-largo {
+        display: none;
+    }
+    .rotulo-mayor.otro-anio .mes-corto {
+        display: inline;
+    }
 }
 .crono-tramo.finde {
     color: rgba(243, 230, 216, 0.55);
@@ -2278,9 +2314,6 @@ table.lista {
     .cal-sinfecha {
         flex: none;
         max-height: 40vh;
-    }
-    .solo-ancho {
-        display: none;
     }
     .propiedades {
         grid-template-columns: 100px 1fr;
