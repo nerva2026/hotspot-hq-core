@@ -63,7 +63,8 @@ let espera = null; // quien ve «Solo para los socios» sigue escuchando por si 
 
 const formato = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const euros = (c) => `${formato.format((c || 0) / 100)} €`;
-const porcentaje = (n) => `${String(Math.round(n * 100) / 100).replace(".", ",")} %`;
+// con un espacio que no se parte: «(50 %)» no se queda con el «%)» solo en la línea de abajo
+const porcentaje = (n) => `${String(Math.round(n * 100) / 100).replace(".", ",")}\u00a0%`;
 // Las cifras van con la letra de los títulos: en la del texto el 5 parece una S y el € un 0.
 const cifra = (texto) => h("span", { class: "cifra-pixel" }, texto);
 const sumar = (lista) => lista.reduce((s, m) => s + m.importe, 0);

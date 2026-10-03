@@ -1107,3 +1107,19 @@ mark.hallazgo.actual {
         min-height: 44px;
     }
 }
+/* El visor en un móvil. Cinco botones (fijar, editar, descargar, abrir y papelera) no caben en una fila con menos de
+   412 px y «Papelera» se quedaba sola en la segunda: ahí van tres arriba y dos debajo, repartiéndose el ancho. Con
+   cuatro (un enlace no se descarga) caben en una fila desde 320 px y se quedan como están. */
+@media (max-width: 419.98px) {
+    .visor-acciones > :first-child:nth-last-child(5),
+    .visor-acciones > :first-child:nth-last-child(5) ~ * {
+        flex: 1 1 30%;
+    }
+}
+/* …y en uno de 320 px, en el buscador del documento, «↓» se quedaba solo en una segunda fila: el hueco de la cuenta
+   («3 de 12») es un poco más estrecho. */
+@media (max-width: 339.98px) {
+    .cuenta-hallazgos {
+        min-width: 3.5em;
+    }
+}

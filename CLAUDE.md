@@ -86,7 +86,7 @@ Lo que se abre encima de una pantalla (ventanas, la ficha de una tarea, menús) 
 sale de ahí (el tabulador da la vuelta dentro), lo de detrás de una ventana queda inerte y «atrás» la cierra sin ensuciar el
 historial. Una ventana nueva se hace con `ventana()` (`menus.js`), nunca a mano (lo vigila `pruebas/tablon.mjs`).
 La pestaña «Cuentas» sale solo a quien puede ver el libro, y en directo en las cinco pantallas (`libro-pestana.js`).
-La lista del tablón cabe siempre a lo ancho: de 721 a 1097 px esconde por orden las columnas menos importantes
+La lista del tablón cabe siempre a lo ancho: de 721 a 1114 px esconde por orden las columnas menos importantes
 (`@container lista` en `estilo.css`); quien añada o ensanche una columna tiene que rehacer esos cortes y volver a medir.
 El cartel de cumpleaños (`/tareas/cumples/`) y el puente (`/tareas/oficina/`) no se enlazan: solo los abre el mapa.
 

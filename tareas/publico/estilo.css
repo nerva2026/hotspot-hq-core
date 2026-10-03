@@ -1110,9 +1110,11 @@ table.lista {
    por», «Etiquetas», «Empieza» y, al final, «Prioridad», que sigue viéndose en la franja de color de la fila); título,
    estado, para quién y para cuándo están siempre, y lo demás, en la ficha de la tarea («Abrir»). Los cortes son lo que
    mide la caja de la lista (su ancho menos 24 px de márgenes): 4 px del borde + 36 de la casilla + 280 del título + los
-   mínimos de las columnas que quedan (108 + 100 + 112 + 128 + 84 + 110 + 112). Con 720 px o menos de ventana manda la
-   lista de fichas (más abajo). Las columnas que quedan miden su mínimo y el título se queda con el resto. */
-@container lista (max-width: 1073.98px) {
+   mínimos de las columnas que quedan (108 + 100 + 112 + 128 + 84 + 110 + 112) + 17 px de la barra de desplazar, que en
+   un ordenador ocupa sitio y aquí aún no se ha descontado (sin ese margen, la tabla se pasaba 7 px justo por encima de
+   cada corte). Con 720 px o menos de ventana manda la lista de fichas (más abajo). Las columnas que quedan miden su
+   mínimo y el título se queda con el resto. */
+@container lista (max-width: 1090.98px) {
     table.lista {
         min-width: 0;
     }
@@ -1132,17 +1134,17 @@ table.lista {
         display: none;
     }
 }
-@container lista (max-width: 961.98px) {
+@container lista (max-width: 978.98px) {
     .lista .col-etiquetas {
         display: none;
     }
 }
-@container lista (max-width: 851.98px) {
+@container lista (max-width: 868.98px) {
     .lista .col-inicio {
         display: none;
     }
 }
-@container lista (max-width: 767.98px) {
+@container lista (max-width: 784.98px) {
     .lista .col-prioridad {
         display: none;
     }
@@ -1236,9 +1238,12 @@ table.lista {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+/* …y una etiqueta más larga que su columna, también */
 .celda .etiqueta {
+    display: inline-block;
     max-width: 100%;
     overflow: hidden;
+    text-overflow: ellipsis;
 }
 /* El estado, siempre en una línea (el cuadrado y su nombre juntos), aunque la tabla vaya apretada. */
 .col-estado .celda {

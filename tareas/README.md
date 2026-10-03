@@ -52,12 +52,13 @@ cualquier navegador.
   tres líneas) y, debajo, estado, prioridad, para quién y fecha; «Abrir» está siempre a la vista y un toque en la fila
   (fuera de la casilla) abre la tarea, que es donde se cambia lo demás. Más ancha es la tabla de siempre, que se edita
   en el sitio; donde no hay ratón (`hover: none`) «Abrir» tampoco se esconde.
-- **La lista de 721 a 1097 px** (el panel de la oficina, una ventana sin maximizar): la tabla cabe siempre a lo ancho,
+- **La lista de 721 a 1114 px** (el panel de la oficina, una ventana sin maximizar): la tabla cabe siempre a lo ancho,
   sin cortar ninguna columna por la mitad. Las columnas que no caben se esconden por orden, de la menos importante a la
-  más: «Pedido por» (por debajo de 1098 px de ventana), «Etiquetas» (986), «Empieza» (876) y «Prioridad» (792), que
+  más: «Pedido por» (por debajo de 1115 px de ventana), «Etiquetas» (1003), «Empieza» (893) y «Prioridad» (809), que
   sigue viéndose en la franja de color de la fila. Título, estado, para quién y para cuándo están siempre; lo demás, en
   la ficha («Abrir»). Los cortes se miden en la caja de la lista (reglas `@container lista` de `publico/estilo.css`):
-  cada columna tiene un mínimo y lo que lleva dentro no la ensancha (un nombre largo acaba en «…»). Si aun así la
+  cada columna tiene un mínimo y lo que lleva dentro no la ensancha (un nombre largo acaba en «…»), y los cortes dejan
+  17 px para la barra de desplazar de un ordenador. Si aun así la
   tabla no cupiera (un navegador sin `@container`), una sombra marca el lado por el que sigue, como en el calendario.
 - **Calendario y cronograma:** el calendario se abre desplazado hasta hoy (en un móvil solo caben tres o cuatro días) y
   marca con una sombra el lado por el que sigue; en los dos, el título de una barra que empieza antes del borde visible
