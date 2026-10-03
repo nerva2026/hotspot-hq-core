@@ -102,6 +102,10 @@ fechas de las tareas a 16 px; y lo menudo («hace 3 min», «3,4 KB», la escala
 principio de «piezas pequeñas» en `publico/estilo.css`; lo que escribe la gente (títulos, conceptos, notas) y las frases
 con un número dentro no cuentan. Al añadir una cifra nueva, ponerla a uno de esos tamaños.
 
+**Las horas, con su artículo.** Una hora dentro de una frase («a», «desde», «hasta») sale siempre de `laHora()`, en
+`publico/app/util.js`: «desde la 1:08» (entre la 1:00 y la 1:59 es «la») y «desde las 13:05». Nunca «las» escrito a
+mano delante de una hora (lo vigila `pruebas/musica.mjs`). Hoy la única es la de la cabina de la música.
+
 **Cómo se llega de una pantalla a otra:** el menú de la cuenta (arriba a la derecha) de cada pantalla y las pestañas
 de arriba llevan a las demás con los mismos nombres: «Tablón de tareas», «Libro de cuentas» (en las pestañas,
 «Tareas» y «Cuentas»; esta, solo a quien tiene parte en el reparto), «Pizarra», «Archivo» y «Música». Las cinco
@@ -468,7 +472,7 @@ sus variables, están en el workflow.
 | Probar el tablón | `pruebas/tablon.mjs` | 3993 | Que las notas no se pisan (409 con lo que hay ahora, y también si falta «antes» y la tarea ya tiene notas), que el cliente siempre manda «antes» y la franja «Sin conexión…» (`publico/app/conexion.js`). |
 | Probar cumpleaños y personaje | `pruebas/cumple.mjs` | 3994 | Cumpleaños, «hoy» en la oficina (con `TAREAS_HOY` fijo), personaje, puente `/tareas/oficina/` y cartel `/tareas/cumples/` (la API y lo que sirve; en pantalla se mira con un navegador). |
 | Probar el archivo | `pruebas/archivo.mjs` | 3992 | Subir un documento de cada tipo, enlaces, papelera, búsqueda, lo que no debe entrar, Markdown y Word escapados y el límite total (`ARCHIVO_MAXIMO_MB=40`). |
-| Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify (y entrar en la cabina al conectar, libre u ocupada), lo que suena en directo, cómo le va a cada oyente, el aviso a la oficina y el puente con `hsMusica` (el módulo de verdad con una oficina de mentira); y la música «sin configurar». |
+| Probar la música | `pruebas/musica.mjs` y `pruebas/spotify-falso.mjs` | 3995 (y 3996 para el servidor sin Spotify que arranca la prueba) y 8614 (el Spotify de mentira) | La cabina, conectar Spotify (y entrar en la cabina al conectar, libre u ocupada), lo que suena en directo, cómo le va a cada oyente, el aviso a la oficina y el puente con `hsMusica` (el módulo de verdad con una oficina de mentira); la música «sin configurar»; y las horas con su artículo («desde la 1:08», `laHora()`), sin ninguna escrita a mano en las pantallas. |
 | Probar el reproductor de la música | `pruebas/reproductor.mjs` | ninguno (sin servidor ni navegador) | Los estados del reproductor (`publico/app/musica-seguidor.js`) con un Embed y un reloj de mentira: suena entera, la muestra de 30 s y su final, no arranca solo, no carga, y el cambio de canción. |
 | Probar el modo solo | `pruebas/solo.mjs` | 3990 | `?solo=1` sin navegador: lo que sirve el servidor (las cinco pantallas, `app/solo.js`, la regla de `estilo.css`, la vuelta de entrar), la lógica del módulo y que las pantallas marcan sus enlaces a las demás y no pierden el modo al cambiar de dirección. También las pestañas: las mismas cinco en las cinco pantallas, la fila entera marcada, el nombre de la pantalla en la cabecera y las reglas que dejan las pestañas en el mismo sitio en las cinco (lo que miden se mira con un navegador). |
 | Probar el acceso de la oficina | `pruebas/oficina-oidc.mjs` y `pruebas/google-falso.mjs` | 3998 y 8412 (el Google de mentira) | Entrar por `/cuentas` con `openid-client` 5 (la librería de WorkAdventure): PKCE, `userinfo` y revocar. Es el único paso que instala un paquete (`npm install`). |

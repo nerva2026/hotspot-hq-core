@@ -871,6 +871,34 @@ for (const archivo of ["app/musica.js", "app/musica-mini.js", "app/musica-comun.
     assert.equal((await fetch(`${base}/${archivo}`)).status, 200, archivo);
 }
 
+// ---------- las horas, con su artículo: «desde la 1:08», «desde las 13:05» ----------
+
+// La cabina dice desde cuándo pincha alguien. Entre la 1:00 y la 1:59 es «la», no «las»; el artículo lo pone laHora()
+// (publico/app/util.js), el único sitio, con la hora del reloj de quien mira.
+const { laHora, horaCorta } = await import("../publico/app/util.js");
+const aLas = (hora, minuto) => new Date(2026, 5, 15, hora, minuto).toISOString();
+assert.equal(horaCorta(aLas(1, 8)), "1:08");
+assert.equal(laHora(aLas(1, 8)), "la 1:08", "«desde la 1:08», no «desde las 1:08»");
+assert.equal(laHora(aLas(1, 0)), "la 1:00");
+assert.equal(laHora(aLas(1, 59)), "la 1:59");
+assert.equal(laHora(aLas(0, 15)), "las 0:15");
+assert.equal(laHora(aLas(2, 0)), "las 2:00");
+assert.equal(laHora(aLas(13, 5)), "las 13:05", "las 13:05 son «las trece», aunque sea la una de la tarde");
+assert.equal(laHora(aLas(21, 1)), "las 21:01");
+for (let hora = 0; hora < 24; hora++) assert.equal(laHora(aLas(hora, 30)), `${hora === 1 ? "la" : "las"} ${hora}:30`);
+// Y ninguna pantalla escribe el artículo a mano delante de una hora (ni «a las», ni «desde las», ni «hasta las»).
+const carpetaApp = new URL("../publico/app/", import.meta.url);
+for (const archivo of fs.readdirSync(carpetaApp).filter((f) => f.endsWith(".js"))) {
+    const codigo = fs.readFileSync(new URL(archivo, carpetaApp), "utf8");
+    codigo.split("\n").forEach((linea, n) => {
+        if (/^\s*(\/\/|\*|\/\*)/.test(linea)) return; // los comentarios pueden decir lo que quieran
+        assert.doesNotMatch(linea, /\bl[ae]s?\s+\$\{[^}]*(hora|getHours)/i, `${archivo}:${n + 1} escribe el artículo de una hora a mano: que use laHora()`);
+        if (archivo !== "util.js") assert.doesNotMatch(linea, /getHours\(\)/, `${archivo}:${n + 1} saca una hora por su cuenta: que use horaCorta() o laHora() de util.js`);
+    });
+}
+const cabina = fs.readFileSync(new URL("musica.js", carpetaApp), "utf8");
+assert.equal(cabina.match(/`desde \$\{laHora\(E\.cabina\.desde\)\}`/g)?.length, 2, "«Estás pinchando tú» y «Pincha …» dicen la hora con laHora()");
+
 // ---------- un servidor sin Spotify: «sin configurar» ----------
 
 if (puertoSinSpotify) {

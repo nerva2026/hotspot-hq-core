@@ -128,6 +128,21 @@ export function fechaLarga(iso) {
     return `${DIAS[diaSemana(iso)]} ${f.getUTCDate()} de ${MESES[f.getUTCMonth()]} de ${f.getUTCFullYear()}`;
 }
 
+// ---------- horas (la del navegador de cada uno) ----------
+
+// «1:08», «13:05».
+export function horaCorta(iso) {
+    const d = new Date(iso);
+    return `${d.getHours()}:${dos(d.getMinutes())}`;
+}
+
+// La hora con su artículo, para escribirla detrás de «a», «desde» o «hasta»: «la 1:08» (la una), «las 13:05»,
+// «las 0:15». Toda hora que vaya dentro de una frase sale de aquí: nunca «las ${…}» escrito a mano (lo vigila
+// pruebas/musica.mjs), que entre la 1:00 y la 1:59 decía «desde las 1:08».
+export function laHora(iso) {
+    return `${new Date(iso).getHours() === 1 ? "la" : "las"} ${horaCorta(iso)}`;
+}
+
 // Cómo de cerca queda una fecha límite: texto corto y clase para el color.
 export function plazo(iso, hecha = false) {
     if (!iso) return null;
