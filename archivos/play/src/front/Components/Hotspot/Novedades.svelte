@@ -201,7 +201,9 @@
 
 <style>
     /* Paleta de la casa: tinta #1c1715, crema #f3e6d8, naranja #e0562a, acento #c4461f, amarillo #ffd84a.
-       Letras: Silkscreen (títulos) y Pixelify Sans (texto), cargadas por hotspot-retro.css. */
+       Letras: Silkscreen (títulos) y Pixelify Sans (texto), cargadas por hotspot-retro.css. Todas a un tamaño de su
+       rejilla (Silkscreen: 16 y 24 px; Pixelify Sans: 11 y 16 px): fuera de ella los trazos salen de grosores
+       distintos, y aquí hay cifras (el número de versión) en la barra, en el título y en la etiqueta. */
 
     /* ---------- etiqueta de la versión: discreta, abajo a la izquierda ---------- */
     .hs-version {
@@ -215,7 +217,7 @@
         background: none;
         cursor: pointer;
         font-family: "Pixelify Sans", ui-monospace, monospace;
-        font-size: 10px;
+        font-size: 11px;
         line-height: 1;
         letter-spacing: 0.03em;
         color: rgba(243, 230, 216, 0.45);
@@ -241,7 +243,7 @@
     .hs-ventana {
         display: flex;
         flex-direction: column;
-        width: min(100%, 440px);
+        width: min(100%, 472px);
         max-height: 100%;
         background: #1c1715;
         color: #f3e6d8;
@@ -257,14 +259,15 @@
         display: flex;
         justify-content: space-between;
         gap: 12px;
-        padding: 7px 14px 6px;
+        padding: 5px 14px 4px;
         background: #e0562a;
         color: #1c1715;
         border-bottom: 3px solid #0b0706;
         font-family: "Silkscreen", "Pixelify Sans", monospace;
-        font-size: 11px;
+        font-size: 16px;
+        line-height: 20px;
         font-weight: 700;
-        letter-spacing: 0.06em;
+        letter-spacing: 0;
         text-transform: uppercase;
     }
     .hs-cuerpo {
@@ -274,10 +277,10 @@
     .hs-titulo {
         margin: 0 0 14px;
         font-family: "Silkscreen", "Pixelify Sans", monospace;
-        font-size: 18px;
+        font-size: 24px;
         font-weight: 700;
-        line-height: 1.25;
-        letter-spacing: 0.02em;
+        line-height: 28px;
+        letter-spacing: 0;
         color: #ffd84a;
         text-shadow: 2px 2px 0 #c4461f;
     }
@@ -290,15 +293,15 @@
         position: relative;
         margin: 0 0 9px;
         padding-left: 22px;
-        font-size: 15px;
-        line-height: 1.3;
+        font-size: 16px;
+        line-height: 21px;
     }
     /* viñeta: cuadradito amarillo con sombra del acento */
     .hs-lista li::before {
         content: "";
         position: absolute;
         left: 2px;
-        top: 0.38em;
+        top: 6px;
         width: 8px;
         height: 8px;
         background: #ffd84a;
@@ -315,21 +318,22 @@
     .hs-pie p {
         margin: 0;
         flex: 1 1 180px;
-        font-size: 12px;
-        line-height: 1.3;
+        font-size: 11px;
+        line-height: 14px;
         color: rgba(243, 230, 216, 0.6);
     }
     .hs-cerrar {
         margin: 0;
-        padding: 9px 18px 8px;
+        padding: 7px 16px 6px;
         border: 2px solid #0b0706;
         background: #e0562a;
         color: #1c1715;
         cursor: pointer;
         font-family: "Silkscreen", "Pixelify Sans", monospace;
-        font-size: 12px;
+        font-size: 16px;
+        line-height: 20px;
         font-weight: 700;
-        letter-spacing: 0.06em;
+        letter-spacing: 0;
         text-transform: uppercase;
         box-shadow:
             inset 2px 2px 0 rgba(255, 255, 255, 0.28),

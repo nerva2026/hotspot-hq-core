@@ -411,12 +411,16 @@ textarea {
 .warningMain .btn {
     font-size: 16px;
     line-height: 24px;
+    /* Avances exactos, como en las burbujas: donde el navegador ajusta las letras a la rejilla, «¡Entendido!» salía
+       con un hueco de más entre la «d» y la «i». */
+    text-rendering: geometricPrecision;
 }
 /* Los botones del sistema de diseño de WorkAdventure (.btn: «Abrir» en el aviso de una zona, «Cerrar», los de los
    ajustes…) traen su propia letra (Roboto Condensed): con la de la casa, como todo lo demás. */
 .btn {
     font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace !important;
     letter-spacing: 0.02em;
+    text-rendering: geometricPrecision;
 }
 /* El número de versión (abajo a la izquierda, pulsable) y el aviso de novedades llevan su propio estilo
    en Components/Hotspot/Novedades.svelte; qué versión es y qué novedades salen, en novedades.ts. */
