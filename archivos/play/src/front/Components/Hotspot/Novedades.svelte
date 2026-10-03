@@ -23,7 +23,7 @@
     import { onboardingStore } from "../../Stores/OnboardingStore";
     import { inputFormFocusStore } from "../../Stores/UserInputStore";
     import { chatVisibilityStore } from "../../Stores/ChatStore";
-    import { NOVEDADES, TITULO, VERSION, type Novedad } from "./novedades";
+    import { NOVEDADES, TITULO, VERSION, VERSION_DEL_AVISO, type Novedad } from "./novedades";
 
     /** En localStorage: la última versión cuyo aviso ya salió. */
     const CLAVE_VISTA = "hotspot-novedades-vistas";
@@ -80,7 +80,7 @@
 
     function apuntarVista(): void {
         try {
-            localStorage.setItem(CLAVE_VISTA, VERSION);
+            localStorage.setItem(CLAVE_VISTA, VERSION_DEL_AVISO);
         } catch {
             // sin localStorage no se puede recordar: queda el aviso de «yaSalio»
         }
@@ -101,7 +101,7 @@
     );
 
     $effect(() => {
-        if (!enElMapa || yaSalio || versionVista() === VERSION) return;
+        if (!enElMapa || yaSalio || versionVista() === VERSION_DEL_AVISO) return;
         const espera = setTimeout(async () => {
             yaSalio = true;
             await preguntarPorLaMusica(); // hasta 2 s: el aviso sale ya con sus líneas definitivas
@@ -176,7 +176,7 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <div class="hs-velo" onclick={alPulsarFondo}>
         <div class="hs-ventana" role="dialog" aria-modal="true" aria-labelledby="hs-novedades-titulo">
-            <div class="hs-barra"><span>Novedades</span><span>{VERSION}</span></div>
+            <div class="hs-barra"><span>Novedades</span><span>{VERSION_DEL_AVISO}</span></div>
             <div class="hs-cuerpo">
                 <h2 id="hs-novedades-titulo" class="hs-titulo">{TITULO}</h2>
                 <ul class="hs-lista">

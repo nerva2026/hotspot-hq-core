@@ -26,7 +26,7 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
 
 | Ruta | Qué es |
 | --- | --- |
-| `parches/01…13-*.patch` | Cambios sobre WorkAdventure, en orden (tabla en `README.md`). |
+| `parches/01…15-*.patch` | Cambios sobre WorkAdventure, en orden (tabla en `README.md`). |
 | `archivos/` | Archivos propios que se copian encima (estilo retro, letras, marca, muñecos `hs-…`). |
 | `herramientas/retoques.py` | Dibuja los retoques de las letras (`hs-retoques-*.woff`: cifras claras y unas pocas letras de Pixelify Sans que se confundían) y los deja en `archivos/…/fonts/hotspot/` y en `tareas/publico/fuentes/`. Cada retoque lleva el mismo trato de «hinting» que la letra a la que acompaña (tablas `prep` y `gasp` de «sin ajuste»; los de Silkscreen, además, el bit de «tamaño en píxeles enteros»): sin ellas, Chromium en Linux les pasa su ajuste automático y las letras retocadas avanzan distinto que las de al lado (huecos desiguales). Los archivos llevan una fecha fija: volver a generarlos sin cambiar un dibujo no cambia ni un byte. |
 | `.github/workflows/hotspot-imagen.yml` | Construye la imagen `ghcr.io/nerva2026/hotspot-hq-play` (~7 min). |

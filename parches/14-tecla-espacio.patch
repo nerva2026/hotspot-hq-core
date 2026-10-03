@@ -1,0 +1,131 @@
+diff --git a/play/src/front/Components/PopUp/FilePopup.svelte b/play/src/front/Components/PopUp/FilePopup.svelte
+index 7705050..7179f17 100644
+--- a/play/src/front/Components/PopUp/FilePopup.svelte
++++ b/play/src/front/Components/PopUp/FilePopup.svelte
+@@ -3,6 +3,7 @@
+     import type { UserInputManager } from "../../Phaser/UserInput/UserInputManager";
+     import LL from "../../../i18n/i18n-svelte";
+     import Button from "../UI/Button.svelte";
++    import TextoConTeclas from "../Hotspot/TextoConTeclas.svelte";
+     import PopUpContainer from "./PopUpContainer.svelte";
+ 
+     interface Props {
+@@ -23,7 +24,7 @@
+ </script>
+ 
+ <PopUpContainer reduceOnSmallScreen={true}>
+-    {message}
++    <TextoConTeclas texto={message} />
+     {#snippet buttons()}
+         <Button variant="secondary" size="sm" class="w-full max-w-96" onclick={click}>
+             {$LL.mapEditor.properties.openFile.label()}
+diff --git a/play/src/front/Components/PopUp/PopUpJitsi.svelte b/play/src/front/Components/PopUp/PopUpJitsi.svelte
+index 401fac4..bf21b93 100644
+--- a/play/src/front/Components/PopUp/PopUpJitsi.svelte
++++ b/play/src/front/Components/PopUp/PopUpJitsi.svelte
+@@ -2,6 +2,7 @@
+     import { onMount, onDestroy } from "svelte";
+     import type { UserInputManager } from "../../Phaser/UserInput/UserInputManager";
+     import Button from "../UI/Button.svelte";
++    import TextoConTeclas from "../Hotspot/TextoConTeclas.svelte";
+     import PopUpContainer from "./PopUpContainer.svelte";
+ 
+     interface Props {
+@@ -22,7 +23,7 @@
+ </script>
+ 
+ <PopUpContainer reduceOnSmallScreen={true}>
+-    {message}
++    <TextoConTeclas texto={message} />
+     {#snippet buttons()}
+         <Button variant="secondary" size="sm" class="w-full max-w-96" onclick={click}>Enter Jitsi</Button>
+     {/snippet}
+diff --git a/play/src/front/Components/PopUp/PopUpTab.svelte b/play/src/front/Components/PopUp/PopUpTab.svelte
+index 23abb21..eeab30b 100644
+--- a/play/src/front/Components/PopUp/PopUpTab.svelte
++++ b/play/src/front/Components/PopUp/PopUpTab.svelte
+@@ -2,6 +2,7 @@
+     import { onMount, onDestroy } from "svelte";
+     import type { UserInputManager } from "../../Phaser/UserInput/UserInputManager";
+     import Button from "../UI/Button.svelte";
++    import TextoConTeclas from "../Hotspot/TextoConTeclas.svelte";
+     import PopUpContainer from "./PopUpContainer.svelte";
+ 
+     interface Props {
+@@ -22,7 +23,7 @@
+ </script>
+ 
+ <PopUpContainer reduceOnSmallScreen={true}>
+-    {message}
++    <TextoConTeclas texto={message} />
+     {#snippet buttons()}
+         <Button variant="secondary" class="w-1/2 max-w-80 responsive-message" onclick={click}>Open Tab</Button>
+     {/snippet}
+diff --git a/play/src/front/Components/PopUp/PopUpTriggerActionMessage.svelte b/play/src/front/Components/PopUp/PopUpTriggerActionMessage.svelte
+index 44c0780..2abe949 100644
+--- a/play/src/front/Components/PopUp/PopUpTriggerActionMessage.svelte
++++ b/play/src/front/Components/PopUp/PopUpTriggerActionMessage.svelte
+@@ -1,6 +1,7 @@
+ <script lang="ts">
+     import { onMount, onDestroy } from "svelte";
+     import type { UserInputManager } from "../../Phaser/UserInput/UserInputManager";
++    import TextoConTeclas from "../Hotspot/TextoConTeclas.svelte";
+     import PopUpContainer from "./PopUpContainer.svelte";
+ 
+     interface Props {
+@@ -21,5 +22,5 @@
+ </script>
+ 
+ <PopUpContainer reduceOnSmallScreen={true} {onclick}>
+-    {message}
++    <TextoConTeclas texto={message} />
+ </PopUpContainer>
+diff --git a/play/src/front/Components/PopUp/PopupCowebsite.svelte b/play/src/front/Components/PopUp/PopupCowebsite.svelte
+index badc7ce..e9ef1e8 100644
+--- a/play/src/front/Components/PopUp/PopupCowebsite.svelte
++++ b/play/src/front/Components/PopUp/PopupCowebsite.svelte
+@@ -3,6 +3,7 @@
+     import type { UserInputManager } from "../../Phaser/UserInput/UserInputManager";
+     import LL from "../../../i18n/i18n-svelte";
+     import Button from "../UI/Button.svelte";
++    import TextoConTeclas from "../Hotspot/TextoConTeclas.svelte";
+     import PopUpContainer from "./PopUpContainer.svelte";
+ 
+     interface Props {
+@@ -23,7 +24,7 @@
+ </script>
+ 
+ <PopUpContainer reduceOnSmallScreen={true}>
+-    {message}
++    <TextoConTeclas texto={message} />
+     {#snippet buttons()}
+         <Button variant="secondary" size="sm" class="w-full max-w-96" onclick={click}
+             >{$LL.cowebsite.openWebsite()}</Button
+diff --git a/play/src/front/Phaser/Entity/SpeechDomElement.ts b/play/src/front/Phaser/Entity/SpeechDomElement.ts
+index 4e9d6e6..c222b1f 100644
+--- a/play/src/front/Phaser/Entity/SpeechDomElement.ts
++++ b/play/src/front/Phaser/Entity/SpeechDomElement.ts
+@@ -3,6 +3,7 @@ import { get } from "svelte/store";
+ import { marked } from "marked";
+ import LL from "../../../i18n/i18n-svelte";
+ import { sanitizeHtml } from "../../Utils/HtmlSanitizer";
++import { ponerTeclas } from "../../Components/Hotspot/teclas";
+ 
+ import DOMElement = Phaser.GameObjects.DOMElement;
+ 
+@@ -167,11 +168,15 @@ export class SpeechDomElement extends DOMElement {
+             textMarked
+                 .then((resolvedText) => {
+                     span.innerHTML = sanitizeHtml(resolvedText);
++                    // HOT SPOT: la palabra ESPACIO, dibujada como una tecla (sobre lo ya saneado, nodo a nodo)
++                    ponerTeclas(span);
+                     this.wireEscapeHintListener(span);
+                 })
+                 .catch((e) => console.error(e));
+         } else {
+             span.innerHTML = sanitizeHtml(textMarked);
++            // HOT SPOT: la palabra ESPACIO, dibujada como una tecla (sobre lo ya saneado, nodo a nodo)
++            ponerTeclas(span);
+         }
+         span.id = `spanText-${id}`;
+         span.classList.add("characterTriggerAction", "speech-dom-inner", `speech-dom-inner--${type}`);

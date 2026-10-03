@@ -1,0 +1,67 @@
+diff --git a/play/src/front/Components/Modal/Modal.svelte b/play/src/front/Components/Modal/Modal.svelte
+index 635607f..df42323 100644
+--- a/play/src/front/Components/Modal/Modal.svelte
++++ b/play/src/front/Components/Modal/Modal.svelte
+@@ -4,7 +4,7 @@
+     import { iframeListener } from "../../Api/IframeListener";
+     import { modalIframeStore, modalVisibilityStore } from "../../Stores/ModalStore";
+     import { isMediaBreakpointUp } from "../../Utils/BreakpointsUtils";
+-    import { gameManager } from "../../Phaser/Game/GameManager";
++    import { direccionDesdeElMapa } from "../../Url/DireccionDelMapa";
+     import Button from "../UI/Button.svelte";
+     import { IconX, IconArrowsMaximize, IconArrowsMinimize } from "@wa-icons";
+ 
+@@ -51,8 +51,10 @@
+         //}
+     });
+ 
++    // HOT SPOT: como el icono de un botón (Stores/AdditionalItemsMenuStore.ts): la dirección se resuelve contra el mapa
++    // de verdad de la escena y, si no se puede saber, la ventana sale vacía (con su botón de cerrar) en vez de reventar.
+     let modalUrl = $modalIframeStore
+-        ? new URL($modalIframeStore.src, gameManager.currentStartedRoom.mapUrl).toString()
++        ? direccionDesdeElMapa($modalIframeStore.src, "La página de la ventana")
+         : undefined;
+ 
+     let isMobile = $state(isMediaBreakpointUp("md"));
+diff --git a/play/src/front/Stores/AdditionalItemsMenuStore.ts b/play/src/front/Stores/AdditionalItemsMenuStore.ts
+index 671f95b..6cafe3c 100644
+--- a/play/src/front/Stores/AdditionalItemsMenuStore.ts
++++ b/play/src/front/Stores/AdditionalItemsMenuStore.ts
+@@ -1,7 +1,7 @@
+ import type { Readable } from "svelte/store";
+ import { derived, writable } from "svelte/store";
+ import type { AddButtonActionBarEvent, RemoveButtonActionBarEvent } from "../Api/Events/Ui/ButtonActionBarEvent";
+-import { gameManager } from "../Phaser/Game/GameManager";
++import { direccionDesdeElMapa } from "../Url/DireccionDelMapa";
+ import type { CustomButtonActionBarDescriptor } from "./MenuStore";
+ 
+ type AdditionalMenuItem = CustomButtonActionBarDescriptor & {
+@@ -30,15 +30,23 @@ export function getAdditionalMenuItemStore(
+ 
+ export function registerAdditionalMenuItem(button: AddButtonActionBarEvent) {
+     const location = button.location;
+-    additionalMenuItemStores.update((items) => {
+-        let imgSrc: string | undefined = undefined;
+-        if (button.imageSrc) {
+-            imgSrc = new URL(button.imageSrc, gameManager.currentStartedRoom.mapUrl).toString();
++    // HOT SPOT: la dirección del icono se resuelve contra el mapa de verdad de la escena (existe también cuando el mapa
++    // llega por su `.wam`, que es cuando `currentStartedRoom.mapUrl` no existe) y ANTES de tocar el almacén. Si no se
++    // puede saber, el botón sale igual, sin icono y con su `toolTip` como etiqueta: antes, «Invalid URL» saltaba en
++    // mitad de la actualización y el botón no salía (la barra de la v0.4.0, sin los botones del mapa).
++    let imgSrc: string | undefined = undefined;
++    let label: string | undefined = button.label ? button.label : undefined;
++    if (button.imageSrc) {
++        imgSrc = direccionDesdeElMapa(button.imageSrc, `El icono del botón «${button.id}»`);
++        if (imgSrc === undefined && label === undefined) {
++            label = button.toolTip ? button.toolTip : undefined;
+         }
++    }
++    additionalMenuItemStores.update((items) => {
+         items.set(button.id, {
+             location: location ?? "top",
+             id: button.id,
+-            label: button.label ? button.label : undefined,
++            label: label,
+             tooltipTitle: button.toolTip,
+             imageSrc: imgSrc,
+             state: "normal",

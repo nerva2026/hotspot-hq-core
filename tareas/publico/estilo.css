@@ -47,14 +47,14 @@
     src: url("fuentes/hs-retoques-texto.woff") format("woff");
     font-weight: 400 549;
     font-display: swap;
-    unicode-range: U+28-29, U+30-39, U+42-43, U+45, U+47, U+5A, U+61, U+63, U+66, U+6A, U+74, U+C9, U+E0-E1, U+ED, U+20AC;
+    unicode-range: U+28-29, U+30-39, U+42-43, U+45, U+47, U+5A, U+61, U+63, U+65-66, U+6A, U+74, U+C9, U+E0-E1, U+E8-E9, U+ED, U+20AC;
 }
 @font-face {
     font-family: "Pixelify Sans";
     src: url("fuentes/hs-retoques-texto-negra.woff") format("woff");
     font-weight: 550 700;
     font-display: swap;
-    unicode-range: U+28-29, U+30-39, U+42-43, U+45, U+47, U+5A, U+61, U+63, U+66, U+6A, U+74, U+C9, U+E0-E1, U+ED, U+20AC;
+    unicode-range: U+28-29, U+30-39, U+42-43, U+45, U+47, U+5A, U+61, U+63, U+65-66, U+6A, U+74, U+C9, U+E0-E1, U+E8-E9, U+ED, U+20AC;
 }
 
 :root {
