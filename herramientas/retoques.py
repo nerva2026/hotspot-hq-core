@@ -9,6 +9,8 @@ Qué arregla (todo se veía en pantalla y costaba leerlo):
   se leía «disousión»), la Z era el dibujo de un 2, la «j» no tenía punto y los paréntesis parecían llaves.
 - Y la «f» y la «t» dejaban detrás un hueco que parecía un espacio («Caf é», «Ent endido»), y la tilde de la «í» se
   confundía con el punto de la «i» («dias», «Victor»). La E era redonda, casi un € sin rayas.
+- La «e» tenía la barra a medias y se cerraba por la derecha: parecía una «a» o un 8 («jefe», «tele»). Con ella van la
+  «é» y la «è», con las tildes de la «á» y la «à».
 - En Silkscreen (los títulos), el 4 parecía otra letra y el 2 una Z.
 
 Este guion dibuja esos caracteres píxel a píxel, con las mismas medidas que cada letra, y los guarda en cuatro
@@ -65,6 +67,7 @@ TEXTO = {
     'Z': ['#####', '....#', '...#.', '..#..', '.#...', '#....', '#####'],
     'a': ['.###.', '....#', '.####', '#...#', '.####'],
     'c': ['.####', '#....', '#....', '#....', '.####'],
+    'e': ['.###.', '#...#', '#####', '#....', '.####'],   # la barra entera y abierta por la derecha (era casi una «a» o un 8)
     'j': ['.#', '..', '##', '.#', '.#', '.#', '.#', '.#', '#.'],
     'f': ['.##', '#..', '###', '#..', '#..', '#..', '#..'],
     't': ['.#.', '.#.', '###', '.#.', '.#.', '.#.', '.##'],
@@ -73,6 +76,8 @@ TEXTO = {
     ')': ['#.', '.#', '.#', '.#', '.#', '.#', '.#', '.#', '#.'],
     'á': ['...#.', '..#..', '.....', '.###.', '....#', '.####', '#...#', '.####'],
     'à': ['.#...', '..#..', '.....', '.###.', '....#', '.####', '#...#', '.####'],
+    'é': ['...#.', '..#..', '.....', '.###.', '#...#', '#####', '#....', '.####'],   # la tilde, como la de la «á»
+    'è': ['.#...', '..#..', '.....', '.###.', '#...#', '#####', '#....', '.####'],   # como la de la «à»
     '€': ['..###', '.#...', '####.', '.#...', '####.', '.#...', '..###'],
 }
 # Cuántas filas de cada dibujo quedan por debajo de la línea de base (la «j» baja dos, como la «g» o la «y»).
