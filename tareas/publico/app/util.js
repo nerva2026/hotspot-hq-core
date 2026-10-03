@@ -252,7 +252,8 @@ export function colorEtiqueta(nombre) {
     return COLORES_ETIQUETA[n % COLORES_ETIQUETA.length];
 }
 
-export const inicial = (nombre) => (nombre || "?").trim().charAt(0).toUpperCase();
+// La primera letra, entera: un nombre que empieza por un emoji (dos «medias letras» por dentro) no sale como «�».
+export const inicial = (nombre) => ([...(nombre || "?").trim()][0] || "?").toUpperCase();
 
 // Texto claro u oscuro según el fondo.
 export function textoSobre(color) {

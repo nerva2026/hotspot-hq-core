@@ -2359,7 +2359,12 @@ table.lista {
     font-size: 14px;
     animation: entrar-aviso 0.15s steps(3) both;
 }
+.aviso > span {
+    min-width: 0;
+    overflow-wrap: anywhere; /* una palabra larguísima (un título sin espacios) no saca el aviso de la pantalla */
+}
 .aviso .enlace {
+    flex: none;
     color: var(--amarillo);
 }
 .aviso.malo {

@@ -769,7 +769,7 @@ dt .cifra-pixel,
     }
     .selector {
         flex: 1 1 30%;
-        max-width: none;
+        max-width: 100%; /* una categoría de nombre larguísimo no saca el selector de su caja */
     }
     .linea-reparto {
         text-align: left;

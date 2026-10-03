@@ -1013,7 +1013,7 @@ function nuevaTarea(base = {}) {
             entrada.value = "";
             pintarPiezas();
             entrada.focus();
-            aviso(`Creada: «${t.titulo}»`, { accion: "Abrir", alAccion: () => (v.cerrar(), ctx.abrir(t.id)) });
+            aviso(`Creada: «${t.titulo.slice(0, 60)}${t.titulo.length > 60 ? "…" : ""}»`, { accion: "Abrir", alAccion: () => (v.cerrar(), ctx.abrir(t.id)) });
         }
     };
     entrada.addEventListener("keydown", (e) => {
