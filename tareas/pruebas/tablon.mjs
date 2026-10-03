@@ -844,4 +844,12 @@ try {
     assert.match(fuente("libro.js"), /ponerError\(error, v\.tipo === "gasto" \? "Pon en qué se ha gastado\." : "Pon de dónde viene el dinero\.", campos\.concepto\)/);
 }
 
+// ---------- Escape con una subtarea a medio escribir: primero el campo, luego la ficha ----------
+{
+    const ficha = readFileSync(new URL("ficha.js", carpetaApp), "utf8");
+    assert.match(ficha, /e\.target\.closest\?\.\("\.subtarea-nueva, \.subtarea-texto"\)/);
+    assert.match(ficha, /if \(campo && campo\.value !== \(campo\.dataset\.original \?\? ""\)\) \{\s+e\.preventDefault\(\);\s+campo\.value = campo\.dataset\.original \?\? "";\s+return;/);
+    assert.match(ficha, /dataset: \{ original: s\.texto/, "cada subtarea recuerda a qué vuelve con Escape");
+}
+
 console.log("Tablón (notas que no se pisan, y ventanas que no dejan salir el foco y se cierran con «atrás»): bien");

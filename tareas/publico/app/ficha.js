@@ -252,10 +252,17 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
     colocarAvisos(); // los avisos que hubiera a la vista pasan al pie de la ficha, para no taparla
 
     panel.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && !document.querySelector(".menu")) {
-            e.stopPropagation();
-            cerrarFicha();
+        if (e.key !== "Escape" || document.querySelector(".menu")) return;
+        e.stopPropagation();
+        // Con una subtarea a medio escribir, el primer Escape es para el campo (lo vacía, o lo deja como estaba) y no
+        // cierra la ficha: cerrarla tiraba lo escrito. El segundo, ya sin nada a medias, la cierra.
+        const campo = e.target.closest?.(".subtarea-nueva, .subtarea-texto");
+        if (campo && campo.value !== (campo.dataset.original ?? "")) {
+            e.preventDefault();
+            campo.value = campo.dataset.original ?? "";
+            return;
         }
+        cerrarFicha();
     });
 
     // --- propiedades ---
@@ -328,6 +335,7 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
                     h("input", {
                         class: "subtarea-texto",
                         value: s.texto,
+                        dataset: { original: s.texto }, // «original»: a lo que vuelve con Escape
                         maxlength: 300,
                         "aria-label": "Subtarea",
                         onkeydown: (e) => {
