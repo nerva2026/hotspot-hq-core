@@ -873,4 +873,17 @@ try {
     assert.match(ficha, /dataset: \{ original: s\.texto/, "cada subtarea recuerda a qué vuelve con Escape");
 }
 
-console.log("Tablón (notas que no se pisan, y ventanas que no dejan salir el foco y se cierran con «atrás»): bien");
+// ---------- el menú de fecha: una fecha escrita con el teclado (app/menus.js) ----------
+// Una fecha tecleada no se da por elegida con la primera cifra del año (el navegador avisa de un «cambio» con cada
+// cifra: 0002-10-03, 0020-10-03…): se pone con Intro o, si está entera, al pulsar fuera del menú.
+{
+    const { fechaTecleadaVale } = await import(new URL("menus.js", carpetaApp).href);
+    for (const [fecha, vale] of [["2026-10-03", true], ["2000-01-01", true], ["2100-12-31", true], ["0002-10-03", false], ["0202-10-03", false], ["1999-12-31", false], ["2101-01-01", false], ["", false], [null, false], ["03/10/2026", false]]) {
+        assert.equal(fechaTecleadaVale(fecha), vale, String(fecha));
+    }
+    const menus = readFileSync(new URL("menus.js", carpetaApp), "utf8");
+    assert.match(menus, /if \(!tecleando && e\.target\.value\) elegir\(e\.target\.value\);/, "mientras se teclea, un «cambio» del campo de fecha no cierra el menú");
+    assert.match(menus, /motivo === "fuera" && fechaTecleadaVale\(entrada\?\.value\)/);
+}
+
+console.log("Tablón (notas que no se pisan, buscador, quien sale del crew, guardar al cerrar la página, y ventanas que no dejan salir el foco y se cierran con «atrás»): bien");
