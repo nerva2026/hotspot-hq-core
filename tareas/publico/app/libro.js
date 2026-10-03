@@ -477,8 +477,15 @@ function filaMovimiento(m) {
             h("span", { class: "mov-fecha" }, fechaCorta(m.fecha)),
             h("span", { class: "mov-tipo" }, t.nombre),
             h("span", { class: "mov-texto" }, h("strong", null, titulo), h("small", null, detalle)),
-            m.tique ? h("span", { class: "chip mov-tique", title: m.tique.nombre || "Tiene tique" }, "Tique") : null,
-            m.notas ? h("span", { class: "chip mov-nota", title: m.notas }, "Nota") : null,
+            // Las marcas de «lleva tique» y «lleva nota»: con sitio, la palabra; en un móvil, su dibujo debajo de la fecha (libro.css).
+            m.tique || m.notas
+                ? h(
+                      "span",
+                      { class: "mov-marcas" },
+                      m.tique ? h("span", { class: "chip mov-tique", title: m.tique.nombre || "Tiene tique" }, "Tique") : null,
+                      m.notas ? h("span", { class: "chip mov-nota", title: m.notas }, "Nota") : null,
+                  )
+                : null,
             h("span", { class: "mov-importe" }, `${signo}${euros(m.importe)}`),
         ),
     );
