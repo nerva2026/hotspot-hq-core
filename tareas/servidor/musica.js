@@ -300,7 +300,8 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
     // con la música cerrada para todos (dormido) es false. Tampoco cuentan la pausa, un anuncio ni un archivo local.
     function resumen() {
         const dj = datos.cabina ? persona(datos.cabina.dj).nombre : null;
-        return { dj, suena: Boolean(dj && !dormido && actual && actual.reproduciendo && !actual.local) };
+        // «desde»: desde cuándo pincha (el mapa lo usa para avisar una sola vez de cada vez que alguien pincha)
+        return { dj, suena: Boolean(dj && !dormido && actual && actual.reproduciendo && !actual.local), desde: dj ? datos.cabina.desde || null : null };
     }
     let resumenAnterior = JSON.stringify(resumen());
     // Aviso ligero por el canal general, solo cuando cambia quién pincha o empieza o deja de sonar.

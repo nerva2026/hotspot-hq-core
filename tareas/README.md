@@ -293,7 +293,7 @@ ve nadie más ni se guardan (`scope: "world"` sin `persist: true` lo rechaza Wor
 | `hsSesion` | `true` si quien juega ha entrado en el tablón; `false` si no (o si se le ha caducado la sesión). |
 | `hsTareas` | `{ abiertas, hoy, atrasadas }`: sus tareas sin terminar, las que vencen hoy y las atrasadas (como las cuenta la Jefa de Producción). `null` sin sesión. Es lo que necesita el número del botón «Tareas». |
 | `hsCumples` | `{ hoy: "AAAA-MM-DD", cumples: [{ id, nombre }] }`: de quién es el cumple hoy en la oficina. `null` sin sesión. |
-| `hsMusica` | `{ configurado, dj, suena }` (siempre las tres; `null` sin sesión). `configurado`: `true` si el servidor tiene conectado Spotify; el mapa solo pone el botón «Música» si lo es (mientras no llegue la respuesta, no hay botón). `dj`: el nombre de quien pincha, o `null` si la cabina está libre. `suena`: `true` si ahora mismo suena algo que se puede oír; `false` si no (pausa, anuncio, archivo local del DJ, cabina libre… o si no se sabe, ver abajo). |
+| `hsMusica` | `{ configurado, dj, suena, desde }` (siempre las cuatro; `null` sin sesión). `configurado`: `true` si el servidor tiene conectado Spotify; el mapa solo pone el botón «Música» si lo es (mientras no llegue la respuesta, no hay botón). `dj`: el nombre de quien pincha, o `null` si la cabina está libre. `suena`: `true` si ahora mismo suena algo que se puede oír; `false` si no (pausa, anuncio, archivo local del DJ, cabina libre… o si no se sabe, ver abajo). `desde`: desde cuándo pincha (fecha ISO, la de entrar en la cabina; `null` con la cabina libre): el mapa lo usa para avisar una sola vez de cada vez que alguien se pone a pinchar. |
 
 - **Al día:** se actualiza con los avisos en directo del tablón; cada minuto recuenta las tareas (a medianoche
   cambian «hoy» y «atrasadas») y cada 10 minutos vuelve a preguntar qué día es, quién cumple y cómo está la música (y lo vuelve a leer todo al
@@ -301,7 +301,7 @@ ve nadie más ni se guardan (`scope: "world"` sin `persist: true` lo rechaza Wor
   probar cada vez más espaciado (1, 2, 4… hasta 15 minutos) y al momento si se vuelve a la pestaña o se entra en el
   tablón en ese navegador.
 - **`hsMusica` en directo:** el puente la lee de `GET /api/musica` (`configurado`, `cabina.dj.nombre` y `suena`) y
-  la cambia al momento cuando el servidor avisa por el canal general con `{ tipo: "musica-cabina", dj, suena }`: al
+  la cambia al momento cuando el servidor avisa por el canal general con `{ tipo: "musica-cabina", dj, suena, desde }`: al
   entrar o salir alguien de la cabina y cuando empieza o deja de sonar (un cambio de canción no avisa). Si quien pincha
   cambia de nombre, se vuelve a leer. El puente **no** abre el canal de la música: el servidor solo mira el Spotify del
   DJ mientras alguien tiene la música abierta (la cabina o el reproductor pequeño), y por eso `suena` solo se sabe

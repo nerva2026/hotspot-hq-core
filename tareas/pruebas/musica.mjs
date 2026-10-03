@@ -783,13 +783,19 @@ const alCerrarLaPagina = [];
         },
     };
 }
+// Lo que dice hsMusica sin «desde» (que es una fecha: se mira aparte, con desdeEnElPuente()).
+const sinDesde = (m) => (m && typeof m === "object" ? { configurado: m.configurado, dj: m.dj, suena: m.suena } : m);
+const desdeEnElPuente = () => variables.get("hsMusica")?.desde ?? null;
 const enElPuente = async (esperado, que, ms = 5000) => {
     const hasta = Date.now() + ms;
     while (Date.now() < hasta) {
-        if (JSON.stringify(variables.get("hsMusica")) === JSON.stringify(esperado)) return;
+        if (JSON.stringify(sinDesde(variables.get("hsMusica"))) === JSON.stringify(esperado)) break;
         await esperar(40);
     }
-    assert.deepEqual(variables.get("hsMusica"), esperado, que);
+    assert.deepEqual(sinDesde(variables.get("hsMusica")), esperado, que);
+    const m = variables.get("hsMusica");
+    if (m.dj === null) assert.equal(m.desde, null, `${que}: con la cabina libre no hay «desde»`);
+    else assert.ok(typeof m.desde === "string" && !Number.isNaN(Date.parse(m.desde)), `${que}: «desde» es la fecha en la que empezó a pinchar (${m.desde})`);
 };
 try {
     await import("../publico/app/oficina.js");
@@ -802,9 +808,11 @@ try {
     antes = (await control("GET", "estado")).llamadas.sonando.length;
     assert.equal((await diego("POST", "musica/cabina")).estado, 200);
     await enElPuente({ configurado: true, dj: "Diego", suena: false }, "alguien pincha");
+    const desdePrimera = desdeEnElPuente();
+    assert.equal(desdePrimera, (await diego("GET", "musica")).datos.cabina.desde, "«desde» es el de la cabina");
     await sonar("diego", pista("pista-puente"));
     await esperar(900);
-    assert.deepEqual(variables.get("hsMusica"), { configurado: true, dj: "Diego", suena: false }, "sin nadie con la música abierta no se sabe si suena");
+    assert.deepEqual(sinDesde(variables.get("hsMusica")), { configurado: true, dj: "Diego", suena: false }, "sin nadie con la música abierta no se sabe si suena");
     assert.equal((await control("GET", "estado")).llamadas.sonando.length, antes, "el puente no hace que se pregunte a Spotify");
     // Alguien abre la música: ahora sí se sabe que suena
     const ojosAlguien = await diego.escuchar();
@@ -820,12 +828,20 @@ try {
     await enElPuente({ configurado: true, dj: "Diego", suena: true }, "y el de siempre");
     ojosAlguien.cerrar();
     await enElPuente({ configurado: true, dj: "Diego", suena: false }, "se cierra la música: ya no se sabe si suena");
+    assert.equal(desdeEnElPuente(), desdePrimera, "mientras pincha la misma persona, «desde» no cambia (ni al sonar, ni en pausa, ni al cambiar de nombre)");
     assert.equal((await diego("DELETE", "musica/cabina")).estado, 200);
     await enElPuente({ configurado: true, dj: null, suena: false }, "la cabina queda libre");
+    // Vuelve a entrar: es otra vez, y el mapa lo distingue por «desde» (para avisar de nuevo)
+    await esperar(15);
+    assert.equal((await diego("POST", "musica/cabina")).estado, 200);
+    await enElPuente({ configurado: true, dj: "Diego", suena: false }, "vuelve a pinchar");
+    assert.notEqual(desdeEnElPuente(), desdePrimera, "al volver a entrar en la cabina, «desde» es otro");
+    assert.equal((await diego("DELETE", "musica/cabina")).estado, 200);
+    await enElPuente({ configurado: true, dj: null, suena: false }, "y la deja otra vez");
     await sonar("diego", null);
     const deMusica = guardadas.filter(([nombre]) => nombre === "hsMusica").map(([, valor]) => valor);
-    for (const valor of deMusica) assert.deepEqual(Object.keys(valor), ["configurado", "dj", "suena"], "hsMusica tiene siempre la misma forma");
-    assert.ok(deMusica.length <= 12, `el puente solo escribe cuando cambia algo (ha escrito ${deMusica.length} veces)`);
+    for (const valor of deMusica) assert.deepEqual(Object.keys(valor), ["configurado", "dj", "suena", "desde"], "hsMusica tiene siempre la misma forma");
+    assert.ok(deMusica.length <= 14, `el puente solo escribe cuando cambia algo (ha escrito ${deMusica.length} veces)`);
     respuestas.push(JSON.stringify(guardadas));
 } finally {
     for (const f of alCerrarLaPagina) f(); // la página se cierra: el puente para su reloj y su canal
