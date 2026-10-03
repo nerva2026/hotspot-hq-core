@@ -50,10 +50,13 @@ function tramos(desde, dias, tipo) {
         const d = aFecha(f);
         let largo;
         let texto;
+        let mes = null;
         if (tipo === "mes") {
             const siguiente = sumarMeses(f, 1);
             largo = Math.min(dias - i, diasEntre(f, siguiente));
             texto = `${MESES[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+            // por piezas, para que el rótulo se pueda acortar donde no cabe entero (ver rotuloMayor)
+            mes = { largo: MESES[d.getUTCMonth()], corto: MESES_CORTOS[d.getUTCMonth()], anio: d.getUTCFullYear() };
         } else if (tipo === "anio") {
             const siguiente = `${d.getUTCFullYear() + 1}-01-01`;
             largo = Math.min(dias - i, diasEntre(f, siguiente));
@@ -69,10 +72,25 @@ function tramos(desde, dias, tipo) {
             largo = 1;
             texto = `${LETRAS[(d.getUTCDay() + 6) % 7]} ${d.getUTCDate()}`;
         }
-        salida.push({ i, largo, texto, fecha: f, finde: tipo === "dia" && (d.getUTCDay() === 0 || d.getUTCDay() === 6) });
+        salida.push({ i, largo, texto, mes, fecha: f, finde: tipo === "dia" && (d.getUTCDay() === 0 || d.getUTCDay() === 6) });
         i += largo;
     }
     return salida;
+}
+
+// El rótulo de un mes (o de un año) en la fila de arriba de la escala. Va pegado al borde visible mientras su tramo
+// esté a la vista (sticky, en estilo.css), así que siempre se lee entero en qué mes se está. Donde no cabe se acorta en
+// vez de cortarse: «septiembre 2026» → «sep 2026» → «sep» → nada, según lo que mida el tramo (uno de pocos días, en
+// los extremos de la línea de tiempo); y en un móvil (CSS, 600 px o menos) sin el año si es el de ahora.
+const ANCHO_LETRA_MAYOR = 12; // px por letra de Silkscreen a 16 px, tirando por lo alto
+const cabeRotulo = (texto, ancho) => texto.length * ANCHO_LETRA_MAYOR + 12 <= ancho;
+function rotuloMayor(t, ancho) {
+    if (!t.mes) return cabeRotulo(t.texto, ancho) ? h("span", { class: "rotulo-mayor" }, t.texto) : null;
+    const { largo, corto, anio } = t.mes;
+    const forma = cabeRotulo(`${largo} ${anio}`, ancho) ? "entero" : cabeRotulo(`${corto} ${anio}`, ancho) ? "corto" : cabeRotulo(corto, ancho) ? "minimo" : null;
+    if (!forma) return null;
+    const esteAnio = String(anio) === hoy().slice(0, 4);
+    return h("span", { class: ["rotulo-mayor", forma, esteAnio ? "este-anio" : "otro-anio"] }, h("span", { class: "mes-largo" }, largo), h("span", { class: "mes-corto" }, corto), h("span", { class: "anio" }, ` ${anio}`));
 }
 
 export function pintarCronograma(cont, ctx, ev) {
@@ -110,11 +128,16 @@ export function pintarCronograma(cont, ctx, ev) {
             { class: "segmentos" },
             ZOOMS.map((z) => h("button", { type: "button", class: ["segmento", z.id === zoom.id && "activo"], onclick: () => ((ev.zoom = z.id), (ev.centrado = false), ctx.pintar()) }, z.nombre)),
         ),
-        h("span", { class: "tenue solo-ancho" }, "Agrupar"),
+        // La etiqueta y su selector van juntos y no se separan al saltar de línea: sin ella, «Nada» no se sabía de qué.
         h(
-            "div",
-            { class: "segmentos" },
-            AGRUPAR.map((a) => h("button", { type: "button", class: ["segmento", a.id === ev.agrupar && "activo"], onclick: () => ((ev.agrupar = a.id), ctx.pintar()) }, a.nombre)),
+            "span",
+            { class: "con-etiqueta" },
+            h("span", { class: "tenue" }, "Agrupar"),
+            h(
+                "div",
+                { class: "segmentos", role: "group", "aria-label": "Agrupar" },
+                AGRUPAR.map((a) => h("button", { type: "button", class: ["segmento", a.id === ev.agrupar && "activo"], onclick: () => ((ev.agrupar = a.id), ctx.pintar()) }, a.nombre)),
+            ),
         ),
     );
 
@@ -127,7 +150,7 @@ export function pintarCronograma(cont, ctx, ev) {
         h(
             "div",
             { class: "crono-escala-fila" },
-            arriba.map((t) => h("div", { class: "crono-tramo mayor", style: { left: `${t.i * px}px`, width: `${t.largo * px}px` } }, h("span", null, t.texto))),
+            arriba.map((t) => h("div", { class: "crono-tramo mayor", title: t.texto, style: { left: `${t.i * px}px`, width: `${t.largo * px}px` } }, rotuloMayor(t, t.largo * px))),
         ),
         h(
             "div",
@@ -154,7 +177,8 @@ export function pintarCronograma(cont, ctx, ev) {
     if (ev.agrupar === "estado") grupos = ESTADOS.map((e) => ({ nombre: e.nombre, color: e.color, tareas: conFechas.filter((t) => t.estado === e.id) }));
     else if (ev.agrupar === "persona")
         grupos = [
-            ...ctx.activos().map((u) => ({ nombre: u.nombre, color: u.color, tareas: conFechas.filter((t) => t.responsables.includes(u.id)) })),
+            // también quien ha salido del crew y sigue en alguna tarea: sin su grupo, esa tarea no salía en ninguno
+            ...ctx.conTareas(conFechas).map((u) => ({ nombre: u.nombre, fuera: Boolean(u.baja), color: u.color, tareas: conFechas.filter((t) => t.responsables.includes(u.id)) })),
             { nombre: "Sin asignar", color: "#d8cabb", tareas: conFechas.filter((t) => !t.responsables.length) },
         ];
     else grupos = [{ nombre: null, tareas: conFechas }];
@@ -176,7 +200,7 @@ export function pintarCronograma(cont, ctx, ev) {
                 h(
                     "div",
                     { class: "crono-grupo" },
-                    h("div", { class: "crono-grupo-nombre" }, h("span", { class: "punto-estado", style: { background: g.color } }), g.nombre, h("span", { class: "cuenta" }, g.tareas.length), g.ayuda ? h("span", { class: "tenue ayuda" }, g.ayuda) : null),
+                    h("div", { class: "crono-grupo-nombre" }, h("span", { class: "punto-estado", style: { background: g.color } }), g.nombre, g.fuera ? h("span", { class: "fuera-del-crew" }, "fuera del crew") : null, h("span", { class: "cuenta" }, g.tareas.length), g.ayuda ? h("span", { class: "tenue ayuda" }, g.ayuda) : null),
                 ),
             );
         }
@@ -190,12 +214,32 @@ export function pintarCronograma(cont, ctx, ev) {
         h("div", { class: "crono-cabecera" }, h("div", { class: "crono-esquina" }, `${tareas.length} tarea${tareas.length === 1 ? "" : "s"}`), escala),
         cuerpo,
     );
-    const scroll = h("div", { class: "crono", "data-desplazar": `crono-${zoom.id}` }, lienzo);
+    // «--desplazado» es cuánto se ha corrido la línea de tiempo: con él, el título de una barra que empieza antes del
+    // borde izquierdo se pega al borde visible en vez de salir cortado por delante (ver .crono-barra .texto).
+    // Y el rótulo de un mes solo se enseña si cabe entero en lo que se ve de su tramo: el del mes que se va por la
+    // izquierda se quita cuando ya no cabe en lo que queda («…BRE 2026» al lado del mes siguiente) y el del que entra
+    // por la derecha no sale hasta que cabe («OCTUB» contra el borde). Siempre queda uno entero a la vista.
+    const rotulos = arriba.map((t, n) => ({ el: escala.firstElementChild.children[n].querySelector(".rotulo-mayor"), inicio: t.i * px, fin: (t.i + t.largo) * px })).filter((r) => r.el);
+    const alDesplazar = () => {
+        const corrido = Math.round(scroll.scrollLeft);
+        const aLaVista = scroll.clientWidth - (parseFloat(getComputedStyle(scroll).getPropertyValue("--ancho-nombre")) || 240); // lo que se ve de la línea de tiempo
+        const sinSitio = rotulos.map((r) => {
+            const ancho = r.el.offsetWidth;
+            return r.fin - corrido < ancho || Math.max(0, r.inicio - corrido) + ancho > aLaVista;
+        });
+        scroll.style.setProperty("--desplazado", `${corrido}px`);
+        rotulos.forEach((r, n) => r.el.classList.toggle("sin-sitio", sinSitio[n]));
+    };
+    const scroll = h("div", { class: "crono", "data-desplazar": `crono-${zoom.id}`, onscroll: alDesplazar }, lienzo);
     cont.append(barra, scroll);
+    if (typeof ResizeObserver === "function") new ResizeObserver(alDesplazar).observe(scroll); // al girar el móvil o cambiar el panel
+    // pintarYa() recoloca el desplazamiento después de pintar (sin avisar si no cambia): se mira otra vez entonces.
+    requestAnimationFrame(alDesplazar);
     if (!ev.centrado) {
         ev.centrado = true;
         irAHoy(false);
     }
+    alDesplazar();
 }
 
 function fila(t, { px, desde, dias, ancho, x, ctx, sinFechas }) {
@@ -221,7 +265,7 @@ function fila(t, { px, desde, dias, ancho, x, ctx, sinFechas }) {
         "div",
         {
             class: ["crono-barra", t.estado === "hecho" && "hecha", atrasada && "atrasada", !t.inicio && "solo-fin"],
-            style: { left: `${x(a) + 1}px`, width: `${(diasEntre(a, b) + 1) * px - 2}px`, background: prio.color, color: prio.texto },
+            style: { left: `${x(a) + 1}px`, "--izq": `${x(a) + 1}px`, width: `${(diasEntre(a, b) + 1) * px - 2}px`, background: prio.color, color: prio.texto },
             title: `${t.titulo} · ${a === b ? fechaMedia(a) : `${fechaMedia(a)} → ${fechaMedia(b)}`}`,
             tabindex: 0,
             role: "button",
@@ -242,7 +286,9 @@ function fila(t, { px, desde, dias, ancho, x, ctx, sinFechas }) {
     let fuera = null;
     if (anchoBarra < 90) {
         barra.querySelector(".texto").textContent = "";
-        fuera = h("span", { class: ["crono-fuera", t.estado === "hecho" && "hecha"], style: { left: `${x(b) + px + 4}px` } }, t.titulo);
+        // Dónde empieza y cuánto mide la barra, para que el CSS lo ponga justo detrás de lo que mide de verdad (una barra
+        // nunca es más estrecha que --barra-minima: con el zoom de meses, la de pocos días tapaba el principio del título).
+        fuera = h("span", { class: ["crono-fuera", t.estado === "hecho" && "hecha"], style: { "--izq": `${x(a) + 1}px`, "--ancho": `${anchoBarra}px` } }, t.titulo);
         pista.appendChild(fuera);
     }
 
@@ -277,6 +323,7 @@ function fila(t, { px, desde, dias, ancho, x, ctx, sinFechas }) {
             c.na = na;
             c.nb = nb;
             barra.style.left = `${x(na) + 1}px`;
+            barra.style.setProperty("--izq", `${x(na) + 1}px`);
             barra.style.width = `${(diasEntre(na, nb) + 1) * px - 2}px`;
             c.etiqueta.textContent = na === nb ? fechaMedia(na) : `${fechaMedia(na)} → ${fechaMedia(nb)}`;
             c.etiqueta.style.left = `${e.clientX + 12}px`;

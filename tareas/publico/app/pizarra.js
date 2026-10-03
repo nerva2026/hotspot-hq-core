@@ -6,10 +6,13 @@
 // está pintando ahora), para poder pintar encima de todo. Los botones de lo elegido y los lápices de los demás
 // van a tamaño de pantalla, se vea la pizarra grande o pequeña.
 
-import { h, $, vaciar, retrasar, hoy, textoSobre } from "./util.js";
+import { h, $, vaciar, hoy, textoSobre } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion, direccionApi } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
+import { sinSolo } from "./solo.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar } from "./menus.js";
+import { pestanaEnDirecto } from "./libro-pestana.js";
+import { guardadoRetrasado, guardarAlSalir } from "./guardado.js";
 
 aplicacion("PIZARRA", "La pizarra es del crew de HOT SPOT S.L. Entra con tu cuenta de Google.");
 
@@ -46,6 +49,13 @@ const HERRAMIENTAS = [
     { id: "foto", nombre: "Foto", tecla: "F" },
 ];
 const ZOOMS = [1, 1.25, 1.5, 2, 2.5, 3, 4];
+// La letra de las notas mide 26 px de la pizarra (pizarra.css): en pantalla, 26 × la escala. En un móvil, con la
+// pizarra entera (19 %), son 5 px: no se lee lo que se teclea. Si al ponerse a escribir mide menos de LETRA_MINIMA, la
+// pizarra se acerca a la nota hasta LETRA_AL_ESCRIBIR y vuelve a como estaba al terminar (ver acercarALaNota).
+const LETRA_NOTA = 26;
+const LETRA_MINIMA = 11;
+const LETRA_AL_ESCRIBIR = 16;
+const ZOOM_MAXIMO_AL_ESCRIBIR = 8;
 const RADIO_GOMA = 14;
 const MAXIMO_PUNTOS = 4990; // el servidor admite 5000 por trazo: si se pasa, sigue en otro
 
@@ -76,6 +86,12 @@ let escala = 1;
 
 const cajas = new WeakMap();
 const pendientes = new Map(); // id → promesa de lo que aún se está guardando (para no cambiarlo antes de que exista)
+const textos = new Map(); // id de una nota → el guardado retrasado de su texto (guardado.js)
+let acercada = null; // la pizarra está acercada a la nota que se escribe: { zoom, vuelta: { zoom, izquierda, arriba } }
+
+// Al esconderse o irse la página (cerrarla, recargarla, cambiar de aplicación en el móvil) se guarda el texto de la
+// nota que estuviera esperando su turno: antes, recargar justo después de escribir dejaba la nota vacía.
+guardarAlSalir(() => [...textos.values()].filter((g) => g.pendiente() || g.enVuelo()));
 const nuevoId = () => {
     const b = crypto.getRandomValues(new Uint8Array(9));
     return btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -224,9 +240,16 @@ function pintarPiezas() {
             if (E.editando !== e.id && texto.value !== e.texto) texto.value = e.texto;
         }
     }
-    for (const [id, el] of hechas) if (!vistas.has(id)) el.remove();
+    for (const [id, el] of hechas) {
+        if (vistas.has(id)) continue;
+        el.remove();
+        textos.delete(id);
+    }
     if (E.seleccion && !E.elementos.has(E.seleccion)) E.seleccion = null;
-    if (E.editando && !E.elementos.has(E.editando)) E.editando = null;
+    if (E.editando && !E.elementos.has(E.editando)) {
+        E.editando = null;
+        alejarDeLaNota(); // otra persona ha quitado la nota que se escribía: la pizarra vuelve a como estaba
+    }
     pintarEleccion();
 }
 
@@ -383,13 +406,16 @@ function guardarCaja(e, antes) {
 }
 
 // Lo de aquí manda (es lo último que ha hecho esta persona): la respuesta del servidor no se copia encima.
-async function cambiarEnServidor(id, cambios) {
+// «alSalir»: la página se va o se esconde; el envío sale ya (sin esperar a nada) y de manera que la sobreviva.
+async function cambiarEnServidor(id, cambios, { alSalir = false } = {}) {
     try {
-        await pendientes.get(id);
-        await api.cambiarEnPizarra(ID, id, cambios);
+        if (!alSalir) await pendientes.get(id);
+        await api.cambiarEnPizarra(ID, id, cambios, { alSalir });
+        return "ok";
     } catch (err) {
         aviso(err.message, { tipo: "malo" });
         recargar();
+        return "error";
     }
 }
 
@@ -405,10 +431,14 @@ function crearFoto(e) {
 }
 
 function crearNota(e) {
-    const guardarTexto = retrasar(() => {
-        const actual = E.elementos.get(e.id);
-        if (actual) cambiarEnServidor(e.id, { texto: actual.texto });
-    }, 600);
+    // El texto se guarda un rato después de la última letra, al salir de la nota y al cerrar o recargar la página.
+    const guardarTexto = guardadoRetrasado({
+        leer: () => E.elementos.get(e.id)?.texto ?? "",
+        espera: 600,
+        parado: () => !E.elementos.has(e.id),
+        enviar: (texto, _antes, { alSalir }) => cambiarEnServidor(e.id, { texto }, { alSalir }),
+    });
+    textos.set(e.id, guardarTexto);
     const texto = h("textarea", {
         class: "texto-nota",
         maxlength: 1000,
@@ -419,7 +449,7 @@ function crearNota(e) {
             const actual = E.elementos.get(e.id);
             if (!actual) return;
             actual.texto = ev.target.value;
-            guardarTexto();
+            guardarTexto.tocar();
         },
         onblur: () => {
             if (guardarTexto.pendiente()) guardarTexto.ya();
@@ -457,6 +487,7 @@ function editar(id) {
     texto.focus({ preventScroll: true });
     texto.setSelectionRange(texto.value.length, texto.value.length);
     pintarPiezas();
+    acercarALaNota(id);
 }
 
 function dejarDeEditar(id) {
@@ -466,7 +497,60 @@ function dejarDeEditar(id) {
         el.querySelector("textarea").readOnly = true;
     }
     if (E.editando === id) E.editando = null;
+    alejarDeLaNota();
     pintarEleccion();
+}
+
+// ---------- escribir en una pantalla pequeña: la pizarra se acerca a la nota ----------
+
+// El zoom con el que la letra de las notas se lee al escribir, sabiendo a cuánto se ve la pizarra entera.
+const zoomParaEscribir = (entera) => limitar(Math.ceil((LETRA_AL_ESCRIBIR / LETRA_NOTA / entera) * 100) / 100, 1, ZOOM_MAXIMO_AL_ESCRIBIR);
+
+// Al ponerse a escribir una nota: si su letra no se lee (un móvil con la pizarra entera), la pizarra se acerca a esa
+// nota y se apunta cómo estaba, para volver al terminar.
+function acercarALaNota(id) {
+    const e = E.elementos.get(id);
+    const zona = $("#zona-pizarra");
+    if (!e || !zona) return;
+    if (!acercada) {
+        if (LETRA_NOTA * escala >= LETRA_MINIMA) return; // ya se lee
+        const vuelta = { zoom: E.zoom, izquierda: zona.scrollLeft, arriba: zona.scrollTop };
+        E.zoom = Math.max(E.zoom, zoomParaEscribir(escala / E.zoom));
+        acercada = { zoom: E.zoom, vuelta };
+        // sitio de sobra por debajo, para poder subir hasta arriba también una nota del final de la pizarra
+        zona.style.paddingBottom = "75vh";
+        ajustar();
+    }
+    colocarNota(e);
+}
+
+// La nota que se escribe, arriba de lo que se ve (en un móvil el teclado tapa la mitad de abajo), con sitio encima
+// para su barra de colores; centrada a lo ancho si cabe y, si no, desde su borde izquierdo.
+function colocarNota(e) {
+    const zona = $("#zona-pizarra");
+    const marco = $("#mundo-marco");
+    if (!zona || !marco) return;
+    const rz = zona.getBoundingClientRect();
+    const rm = marco.getBoundingClientRect();
+    const x = rm.left - rz.left + zona.scrollLeft + e.x * escala;
+    const y = rm.top - rz.top + zona.scrollTop + e.y * escala;
+    const ancho = e.ancho * escala;
+    zona.scrollLeft = Math.round(ancho <= zona.clientWidth - 24 ? x - (zona.clientWidth - ancho) / 2 : x - 12);
+    zona.scrollTop = Math.round(y - 64);
+}
+
+// Al terminar de escribir, la pizarra vuelve a como estaba; quien ha cambiado el tamaño a mano mientras escribía se
+// queda con el que ha puesto.
+function alejarDeLaNota() {
+    const a = acercada;
+    acercada = null;
+    const zona = $("#zona-pizarra");
+    if (!a) return;
+    if (zona) zona.style.paddingBottom = "";
+    if (E.zoom !== a.zoom) return;
+    E.zoom = a.vuelta.zoom;
+    ajustar();
+    if (zona) [zona.scrollLeft, zona.scrollTop] = [a.vuelta.izquierda, a.vuelta.arriba];
 }
 
 // ---------- acciones, con «Deshacer» y «Rehacer» ----------
@@ -834,6 +918,7 @@ function prepararMarco(marco) {
     let arrastre = null;
     let inicioRecta = null;
     marco.addEventListener("pointerdown", (ev) => {
+        plegarTrazo(false);
         if (ev.button > 0 || ev.target.closest("#barra-eleccion, .aviso-vacia button")) return;
         const [x, y] = aMundo(ev);
         if (E.herramienta === "mover") {
@@ -1006,7 +1091,9 @@ const alejar = () => zoomA([...ZOOMS].reverse().find((z) => z < E.zoom - 0.01) ?
 
 function pintarZoom() {
     const texto = $("#texto-zoom");
-    if (texto) texto.textContent = `${Math.round(E.zoom * 100)} %`;
+    // El tamaño de verdad: a cuánto se ve la pizarra respecto a su tamaño real (1920 × 1200). Entera en un móvil es un
+    // 19 %, no un «100 %».
+    if (texto) texto.textContent = `${Math.round(escala * 100)} %`;
     document.body.classList.toggle("acercada", E.zoom > 1);
 }
 
@@ -1119,7 +1206,10 @@ function pintarCabecera() {
     zona.title = otros.length ? `También tienen la pizarra abierta: ${otros.map((u) => u.nombre).join(", ")}` : "";
     $("#boton-yo")?.replaceChildren(avatar(E.yo), h("span", { class: "nombre-yo" }, E.yo.nombre), h("span", { class: "flecha" }, "▾"));
     const titulo = $("#titulo-pizarra");
-    if (titulo) titulo.textContent = E.pizarra.nombre;
+    if (titulo) {
+        titulo.textContent = E.pizarra.nombre;
+        titulo.title = E.pizarra.nombre;
+    }
     document.title = `${E.pizarra.nombre} · HOT SPOT S.L.`;
 }
 
@@ -1190,15 +1280,16 @@ function montar() {
         h(
             "header",
             { class: "barra" },
-            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app" }, "PIZARRA")),
+            // El nombre es el de ESTA pizarra (la de reuniones, la del despacho…): así se sabe cuál es también en modo solo y en el móvil.
+            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app", id: "titulo-pizarra" }, E.pizarra.nombre)),
             h(
                 "nav",
-                { class: "pestanas", "aria-label": "Aplicaciones" },
-                h("a", { class: "pestana", href: "../" }, "Tareas"),
-                E.yo.libro ? h("a", { class: "pestana", href: "../libro/" }, "Cuentas") : null,
-                h("span", { class: "pestana activa", id: "titulo-pizarra", "aria-current": "page" }, E.pizarra.nombre),
-                h("a", { class: "pestana", href: "../archivo/" }, "Archivo"),
-                h("a", { class: "pestana", href: "../musica/" }, "Música"),
+                { class: "pestanas pantallas otra-pantalla", "aria-label": "Aplicaciones" },
+                h("a", { class: "pestana otra-pantalla", href: "../" }, "Tareas"),
+                E.yo.libro ? h("a", { class: "pestana otra-pantalla", href: "../libro/" }, "Cuentas") : null,
+                h("span", { class: "pestana activa", "aria-current": "page" }, "Pizarra"),
+                h("a", { class: "pestana otra-pantalla", href: "../archivo/" }, "Archivo"),
+                h("a", { class: "pestana otra-pantalla", href: "../musica/" }, "Música"),
             ),
             h("div", { class: "barra-derecha" }, h("div", { class: "presentes", id: "presentes" }), h("button", { type: "button", class: "boton-yo", id: "boton-yo", "aria-label": "Tu cuenta", onclick: (e) => menuYo(e.currentTarget) })),
         ),
@@ -1223,9 +1314,16 @@ function montar() {
                         h("span", { class: "nombre-herramienta" }, t.nombre),
                     ),
                 ),
+                // Solo en el móvil (pizarra.css): el color y el grosor de ahora; al pulsarlo se despliegan los dos.
+                h(
+                    "button",
+                    { type: "button", class: "boton-icono boton-trazo", id: "boton-trazo", title: "Color y grosor", "aria-label": "Color y grosor del lápiz", "aria-expanded": "false", "aria-controls": "trazo-pizarra", onclick: () => plegarTrazo() },
+                    h("span", { class: "muestra-color" }),
+                    h("span", { class: "caja-grosor" }, h("span", { class: "muestra-grosor", id: "muestra-grosor" })),
+                    h("span", { class: "flecha" }, "▾"),
+                ),
             ),
-            colores,
-            grosores,
+            h("div", { class: "trazo-pizarra", id: "trazo-pizarra" }, colores, grosores),
             h(
                 "div",
                 { class: "grupo-herramientas derecha" },
@@ -1239,19 +1337,36 @@ function montar() {
                 h("span", { class: "separador-herramientas" }),
                 botonIcono("deshacer", "Deshacer (Ctrl+Z)", deshacer),
                 botonIcono("rehacer", "Rehacer (Ctrl+Mayús+Z)", rehacer),
-                botonIcono("descargar", "Descargar como imagen", descargar),
+                botonIcono("descargar", "Descargar como imagen", descargar, "boton-descargar"), // en un móvil de 320 px no cabe: queda en el menú de la cuenta
                 botonIcono("vaciar", "Vaciar la pizarra", vaciarPizarra, "peligro"),
-                h("button", { type: "button", class: "boton-icono texto", title: "¿Cómo funciona?", "aria-label": "¿Cómo funciona?", onclick: ayuda }, "?"),
+                h("button", { type: "button", class: "boton-icono texto boton-ayuda", title: "¿Cómo funciona?", "aria-label": "¿Cómo funciona?", onclick: ayuda }, "?"),
             ),
         ),
         zona,
     );
     usar(E.herramienta);
+    pintarMuestraTrazo();
     document.body.style.setProperty("--color-lapiz", E.color);
     observador?.disconnect();
     observador = new ResizeObserver(() => ajustar());
     observador.observe(zona);
     ajustar();
+}
+
+// En el móvil el color y el grosor están plegados detrás de un botón (así las herramientas caben en dos filas); se
+// pliegan otra vez al empezar a pintar.
+function plegarTrazo(abrir) {
+    const panel = $("#trazo-pizarra");
+    if (!panel) return;
+    const abierto = abrir ?? !panel.classList.contains("abierto");
+    panel.classList.toggle("abierto", abierto);
+    $("#boton-trazo")?.setAttribute("aria-expanded", String(abierto));
+}
+
+function pintarMuestraTrazo() {
+    const lado = Math.min(20, Math.round(3 + E.grosor / 1.6));
+    const muestra = $("#muestra-grosor");
+    if (muestra) Object.assign(muestra.style, { width: `${lado}px`, height: `${lado}px` });
 }
 
 function elegirColor(c) {
@@ -1270,6 +1385,7 @@ function elegirGrosor(g) {
         b.classList.toggle("activo", Number(b.dataset.grosor) === g);
         b.setAttribute("aria-pressed", String(Number(b.dataset.grosor) === g));
     }
+    pintarMuestraTrazo();
     if (E.herramienta !== "lapiz") usar("lapiz");
 }
 
@@ -1280,8 +1396,14 @@ function ajustar() {
     if (!zona || !marco) return;
     const estilo = getComputedStyle(zona);
     const ancho = Math.max(100, zona.offsetWidth - parseFloat(estilo.paddingLeft) - parseFloat(estilo.paddingRight));
-    const alto = Math.max(60, zona.offsetHeight - parseFloat(estilo.paddingTop) - parseFloat(estilo.paddingBottom));
-    escala = Math.min(ancho / ANCHO, alto / ALTO) * E.zoom;
+    // (por abajo, el mismo margen que por arriba: mientras se escribe una nota hay más, y ese no cuenta)
+    const alto = Math.max(60, zona.offsetHeight - 2 * parseFloat(estilo.paddingTop));
+    const entera = Math.min(ancho / ANCHO, alto / ALTO);
+    // Mientras se escribe una nota con la pizarra acercada a ella, si cambia el sitio (en un móvil, al salir el teclado
+    // puede encogerse la página) la letra sigue leyéndose y la nota, a la vista.
+    const siguiendoNota = acercada && E.zoom === acercada.zoom && E.editando;
+    if (siguiendoNota) acercada.zoom = E.zoom = Math.max(acercada.vuelta.zoom, zoomParaEscribir(entera));
+    escala = entera * E.zoom;
     marco.style.width = `${Math.floor(ANCHO * escala)}px`;
     marco.style.height = `${Math.floor(ALTO * escala)}px`;
     const mundo = $("#mundo");
@@ -1289,6 +1411,7 @@ function ajustar() {
     mundo.style.setProperty("--inversa", String(1 / escala));
     pintarZoom();
     pintarTodo();
+    if (siguiendoNota && E.elementos.has(E.editando)) colocarNota(E.elementos.get(E.editando));
 }
 
 function menuYo(ancla) {
@@ -1300,15 +1423,16 @@ function menuYo(ancla) {
             h(
                 "div",
                 { class: "opciones" },
-                dentroDeLaOficina() ? h("a", { class: "opcion", href: location.href.split("#")[0], target: "_blank", rel: "noopener", onclick: cerrarMenu }, h("span", { class: "marca" }), "Abrir en pestaña nueva ↗") : null,
+                dentroDeLaOficina() ? h("a", { class: "opcion", href: sinSolo(location.href.split("#")[0]), target: "_blank", rel: "noopener", onclick: cerrarMenu }, h("span", { class: "marca" }), "Abrir en pestaña nueva ↗") : null,
                 h("button", { type: "button", class: "opcion", onclick: () => (cerrarMenu(), descargar()) }, h("span", { class: "marca" }), "Descargar como imagen"),
                 E.puedeRecuperar ? h("button", { type: "button", class: "opcion", onclick: () => (cerrarMenu(), recuperar(true)) }, h("span", { class: "marca" }), "Recuperar lo vaciado") : null,
                 h("button", { type: "button", class: "opcion", onclick: () => (cerrarMenu(), ayuda()) }, h("span", { class: "marca" }), "¿Cómo funciona?"),
-                h("hr"),
-                h("a", { class: "opcion", href: "../" }, h("span", { class: "marca" }), "Tablón de tareas"),
-                E.yo.libro ? h("a", { class: "opcion", href: "../libro/" }, h("span", { class: "marca" }), "Libro de cuentas") : null,
-                h("a", { class: "opcion", href: "../archivo/" }, h("span", { class: "marca" }), "Archivo"),
-                h("a", { class: "opcion", href: "../musica/" }, h("span", { class: "marca" }), "Música"),
+                // «otra-pantalla»: lo que lleva a otra pantalla, con su raya (con ?solo=1 no sale, ver solo.js)
+                h("hr", { class: "otra-pantalla" }),
+                h("a", { class: "opcion otra-pantalla", href: "../" }, h("span", { class: "marca" }), "Tablón de tareas"),
+                E.yo.libro ? h("a", { class: "opcion otra-pantalla", href: "../libro/" }, h("span", { class: "marca" }), "Libro de cuentas") : null,
+                h("a", { class: "opcion otra-pantalla", href: "../archivo/" }, h("span", { class: "marca" }), "Archivo"),
+                h("a", { class: "opcion otra-pantalla", href: "../musica/" }, h("span", { class: "marca" }), "Música"),
                 h("hr"),
                 h("button", { type: "button", class: "opcion", onclick: () => (cerrarMenu(), salir()) }, h("span", { class: "marca" }), "Salir"),
             ),
@@ -1361,7 +1485,11 @@ async function salir() {
 
 // ---------- tiempo real ----------
 
+// La pestaña «Cuentas» aparece o desaparece sola cuando a esa persona le dan o le quitan el libro (libro-pestana.js).
+const pestanaCuentas = pestanaEnDirecto({ pedir: api.yo, estado: E, href: "../libro/" }); // la pone marcada, con «otra-pantalla»
+
 function alRecibir(ev) {
+    pestanaCuentas.alRecibir(ev);
     if (ev.tipo === "usuarios") {
         E.usuarios = ev.usuarios;
         pintarCabecera();
@@ -1454,6 +1582,7 @@ function cargar(datos) {
 async function recargar() {
     try {
         cargar(await api.pizarra(ID));
+        pestanaCuentas.repintar();
         pintarTodo();
     } catch {
         /* sin conexión: ya se avisará */

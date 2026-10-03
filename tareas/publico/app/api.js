@@ -20,7 +20,12 @@ export const cuandoSePierdaLaSesion = (fn) => {
     alPerderSesion = fn;
 };
 
-export async function llamar(metodo, ruta, cuerpo, { binario = false, nombre, extra } = {}) {
+// «alSalir»: la página se está cerrando o escondiendo y el envío tiene que sobrevivirla (fetch con «keepalive»: el
+// navegador lo termina aunque la página ya no esté). Solo cabe si el cuerpo es pequeño (el navegador rechaza los de
+// más de 64 KB): uno mayor sale como un envío corriente, que es lo que había.
+const MAXIMO_AL_SALIR = 60000;
+
+export async function llamar(metodo, ruta, cuerpo, { binario = false, nombre, extra, alSalir = false } = {}) {
     const cabeceras = { "x-tablon": "1", "x-cliente": CLIENTE, ...extra };
     let body;
     if (binario) {
@@ -33,7 +38,9 @@ export async function llamar(metodo, ruta, cuerpo, { binario = false, nombre, ex
     }
     let r;
     try {
-        r = await fetch(new URL(ruta, BASE_API), { method: metodo, headers: cabeceras, body, credentials: "same-origin", cache: "no-store" });
+        const opciones = { method: metodo, headers: cabeceras, body, credentials: "same-origin", cache: "no-store" };
+        if (alSalir && (typeof body !== "string" || new TextEncoder().encode(body).length <= MAXIMO_AL_SALIR)) opciones.keepalive = true;
+        r = await fetch(new URL(ruta, BASE_API), opciones);
     } catch {
         throw new ErrorApi("No hay conexión con el servidor.", 0);
     }
@@ -62,16 +69,18 @@ export const api = {
     anadirCrew: (datos) => llamar("POST", "crew", datos),
     cambiarCrew: (id, datos) => llamar("PATCH", `crew/${id}`, datos),
     cambiarYo: (datos) => llamar("PATCH", "yo", datos),
-    // la oficina: qué día es hoy allí y de quién es el cumple (hoy y los próximos 30 días)
+    // lo propio de quien pregunta ({ yo: { …, libro } }): ¿puede ver el libro de cuentas ahora? (libro-pestana.js)
+    yo: () => llamar("GET", "yo"),
+    // la oficina: qué día es hoy allí y de quién es el cumple (hoy, los próximos 30 días y todos los del crew), y el mío
     oficina: () => llamar("GET", "oficina"),
-    // la música: el estado de la cabina (el puente de la oficina solo mira «configurado»)
+    // la música: el estado de la cabina (el puente de la oficina mira «configurado», quién pincha y «suena»)
     musica: () => llamar("GET", "musica"),
     crear: (tarea) => llamar("POST", "tareas", tarea),
     // «antes»: el texto en el que se basan los cambios de las notas; si ya no es el que hay, el servidor contesta 409
     // (y también si falta y la tarea ya tiene notas). Por eso unas notas no salen nunca de aquí sin «antes».
-    cambiar: (id, cambios, antes) => {
+    cambiar: (id, cambios, antes, { alSalir = false } = {}) => {
         if ("notas" in cambios && typeof antes?.notas !== "string") return Promise.reject(new ErrorApi("Las notas se guardan siempre diciendo en qué texto se basan («antes»).", 400));
-        return llamar("PATCH", `tareas/${id}`, antes ? { ...cambios, antes } : cambios);
+        return llamar("PATCH", `tareas/${id}`, antes ? { ...cambios, antes } : cambios, { alSalir });
     },
     borrar: (id) => llamar("DELETE", `tareas/${id}`),
     restaurar: (id) => llamar("POST", `tareas/${id}/restaurar`),
@@ -89,7 +98,7 @@ export const api = {
     // pizarras
     pizarra: (id) => llamar("GET", `pizarras/${id}`),
     ponerEnPizarra: (id, elemento) => llamar("POST", `pizarras/${id}/elementos`, elemento),
-    cambiarEnPizarra: (id, idElemento, cambios) => llamar("PATCH", `pizarras/${id}/elementos/${idElemento}`, cambios),
+    cambiarEnPizarra: (id, idElemento, cambios, { alSalir = false } = {}) => llamar("PATCH", `pizarras/${id}/elementos/${idElemento}`, cambios, { alSalir }),
     quitarDePizarra: (id, ids) => llamar("POST", `pizarras/${id}/quitar`, { ids }),
     restaurarEnPizarra: (id, ids) => llamar("POST", `pizarras/${id}/restaurar`, { ids }),
     vaciarPizarra: (id) => llamar("POST", `pizarras/${id}/vaciar`),

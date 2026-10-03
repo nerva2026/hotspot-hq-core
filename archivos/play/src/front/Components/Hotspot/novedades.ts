@@ -15,16 +15,19 @@
 /** Una línea del aviso: el texto solo, o el texto con lo que tiene que estar listo en el servidor para enseñarla. */
 export type Novedad = string | { texto: string; requiere: "musica" };
 
-export const VERSION = "v0.3.0-alpha";
+export const VERSION = "v0.4.0";
 
-export const TITULO = "¡Bienvenido a la v0.3.0!";
+export const TITULO = "¡Bienvenido a la v0.4.0!";
 
+// Textos PROVISIONAL-v0.3.1: los repasa el equipo antes de publicar.
 export const NOVEDADES: Novedad[] = [
-    "Sentarse en sillas y sofás, y bailar (botón «Bailar» o la pista del estudio).",
-    { texto: "El estudio de música: escuchar juntos lo que pone el DJ desde su Spotify.", requiere: "musica" },
-    "El archivo de documentos.",
-    "La pizarra de la sala de reuniones.",
-    "El libro de cuentas, con su propia pantalla (Excel y CSV).",
-    "Los cumpleaños: aviso del día y tartas en el calendario.",
-    "El muñeco se guarda con tu cuenta.",
+    "Teclas nuevas: X para sentarte, B para bailar, H para saludar y V para aplaudir. También mientras hablas con alguien.",
+    "Los objetos hacen cosas: la nevera, la cafetera, el timbre, el espejo… y el baño.",
+    "Oficina reformada: mesa larga en reuniones, despacho grande, aseos pequeños y luz que cambia con la hora.",
+    "La calle y la terraza, terminadas. Ya te puedes sentar en ellas.",
+    "Los cumpleaños, en el calendario del hall.",
+    { texto: "Música: suena sola al abrir «Música», también en la terraza, y se nota cuando alguien pincha.", requiere: "musica" },
+    "Cada personaje enseña solo lo suyo.",
+    "Bombo, más gato que nunca.",
+    "Letras y números más claros, y burbujas de decir y pensar nuevas.",
 ];

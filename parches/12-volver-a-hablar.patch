@@ -1,0 +1,46 @@
+diff --git a/play/src/front/Phaser/Game/GameScene.ts b/play/src/front/Phaser/Game/GameScene.ts
+index c9c6f7b..1513361f 100644
+--- a/play/src/front/Phaser/Game/GameScene.ts
++++ b/play/src/front/Phaser/Game/GameScene.ts
+@@ -2596,6 +2596,25 @@ export class GameScene extends DirtyScene {
+             }),
+         );
+ 
++        // HOT SPOT S.L. (parche 12): volver a la conversación. Con estos estados el servidor no deja hablar con nadie y
++        // saca al jugador de la conversación en la que estuviera (son los de «User.silent» del servidor). Al dejar uno
++        // de ellos (salir de una zona silenciosa, pulsar «Activar sonido» cuando el navegador lo había bloqueado, volver
++        // de «No molestar»…) el servidor NO volvía a juntarlo con quien tuviera al lado hasta que alguno se movía: había
++        // que dar un paso para volver a hablar. Ahora, al dejar uno de esos estados, se le vuelve a decir al servidor
++        // dónde está el jugador (quieto, en su sitio), que es lo que le hace mirar con quién juntarlo.
++        const estadosSinHablar = new Set<AvailabilityStatus>([
++            AvailabilityStatus.DENY_PROXIMITY_MEETING,
++            AvailabilityStatus.SILENT,
++            AvailabilityStatus.JITSI,
++            AvailabilityStatus.BBB,
++            AvailabilityStatus.SPEAKER,
++            AvailabilityStatus.DO_NOT_DISTURB,
++            AvailabilityStatus.BACK_IN_A_MOMENT,
++            AvailabilityStatus.LIVEKIT,
++            AvailabilityStatus.LISTENER,
++            AvailabilityStatus.SOUND_BLOCKED,
++        ]);
++        let estadoAnterior: AvailabilityStatus | undefined = undefined;
+         this.unsubscribers.push(
+             availabilityStatusStore.subscribe((availabilityStatus) => {
+                 if (!this.connection) {
+@@ -2606,6 +2625,15 @@ export class GameScene extends DirtyScene {
+                 if (availabilityStatus === AvailabilityStatus.SILENT) {
+                     this.CurrentPlayer.toggleTalk(false);
+                 }
++                if (
++                    estadoAnterior !== undefined &&
++                    estadosSinHablar.has(estadoAnterior) &&
++                    !estadosSinHablar.has(availabilityStatus)
++                ) {
++                    const yo = this.CurrentPlayer;
++                    this.connection.sharePosition(yo.x, yo.y, yo.lastDirection, false, this.getViewport());
++                }
++                estadoAnterior = availabilityStatus;
+             }),
+         );
+ 

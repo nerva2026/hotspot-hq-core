@@ -11,7 +11,12 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
 - Los textos visibles se deciden con el equipo: no inventar cifras, nombres ni contenido.
 - Estilo: pixel art retro (tipo Habbo). Paleta: tinta `#1c1715`, crema `#f3e6d8`, naranja `#e0562a`,
   acento `#c4461f`, amarillo `#ffd84a`. Letras Silkscreen (títulos) y Pixelify Sans (texto), sin ligaduras
-  (Pixelify dibuja «fi» como una A).
+  (Pixelify dibuja «fi» como una A). Las cifras (importes, fechas, horas, contadores), siempre a un tamaño de la
+  rejilla de su letra: Silkscreen a 16 px (8, 24…); Pixelify Sans a 11, 16 o 21–22 px (ver `tareas/README.md`).
+  En `hotspot-retro.css` todo `font-size` es de esa rejilla (11 o 16 px; el de las burbujas lo calcula el parche 13):
+  la hora del chat y el mensaje citado, a 11 px; el mensaje y la franja de avisos (`WA.ui.banner`), a 16 px. Y lo que
+  lleva `letter-spacing: -0.027em` (burbujas y avisos junto al muñeco) lleva también `text-rendering:
+  geometricPrecision`: sin él, con «hinting» (Linux) los huecos entre letras salen desiguales.
 - **El servidor no es accesible desde Claude.** Lo que haya que hacer allí se prepara como un bloque para
   pegar en la consola (escrito a un archivo y ejecutado con `bash`, con copias `*.antes-…` de lo que toca),
   se prueba antes en seco con un `docker` falso y lo ejecuta una persona del equipo.
@@ -21,10 +26,13 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
 
 | Ruta | Qué es |
 | --- | --- |
-| `parches/01…10-*.patch` | Cambios sobre WorkAdventure, en orden (tabla en `README.md`). |
+| `parches/01…13-*.patch` | Cambios sobre WorkAdventure, en orden (tabla en `README.md`). |
 | `archivos/` | Archivos propios que se copian encima (estilo retro, letras, marca, muñecos `hs-…`). |
+| `herramientas/retoques.py` | Dibuja los retoques de las letras (`hs-retoques-*.woff`: cifras claras y unas pocas letras de Pixelify Sans que se confundían) y los deja en `archivos/…/fonts/hotspot/` y en `tareas/publico/fuentes/`. Cada retoque lleva el mismo trato de «hinting» que la letra a la que acompaña (tablas `prep` y `gasp` de «sin ajuste»; los de Silkscreen, además, el bit de «tamaño en píxeles enteros»): sin ellas, Chromium en Linux les pasa su ajuste automático y las letras retocadas avanzan distinto que las de al lado (huecos desiguales). Los archivos llevan una fecha fija: volver a generarlos sin cambiar un dibujo no cambia ni un byte. |
 | `.github/workflows/hotspot-imagen.yml` | Construye la imagen `ghcr.io/nerva2026/hotspot-hq-play` (~7 min). |
-| `tareas/` | Servicio propio (Node sin dependencias): portada `/`, cuentas del crew `/cuentas`, tablón `/tareas` (con el cumpleaños y el personaje de cada uno: `/tareas/api/oficina`, `/tareas/api/yo/personaje`), libro de cuentas `/tareas/libro/`, pizarra `/tareas/pizarra/`, archivo de documentos `/tareas/archivo/`, música `/tareas/musica/` (cabina del DJ con Spotify, «escuchar a la vez» con el reproductor oficial; `musica/mini/` es la barra pequeña de 360×128 para la oficina; hace falta crear la aplicación de Spotify, ver «Música (Spotify)») y el puente invisible de la oficina `/tareas/oficina/` (la abre el mapa y deja las tareas y los cumpleaños de quien juega en las variables privadas `hsSesion`, `hsTareas`, `hsCumples` y `hsMusica`; esta última dice si Spotify está conectado y de ella depende el botón «Música» y la línea de la música en las novedades). Detalles en `tareas/README.md`. |
+| `.github/workflows/hotspot-comprobar.yml` | En las ramas `oficina-v*` y en las PR hacia `hotspot`: parches, tipos (`tsc` y `svelte-check`) e imagen **sin publicar**. Es la forma de saber que una rama compila antes de fusionarla. |
+| `tareas/` | Servicio propio (Node sin dependencias): portada `/`, cuentas del crew `/cuentas`, tablón `/tareas` (con el cumpleaños y el personaje de cada uno: `/tareas/api/oficina`, `/tareas/api/yo/personaje`), libro de cuentas `/tareas/libro/`, pizarra `/tareas/pizarra/`, archivo de documentos `/tareas/archivo/`, música `/tareas/musica/` (cabina del DJ con Spotify, «escuchar a la vez» con el reproductor oficial; `musica/mini/` es la barra pequeña de 360×128 para la oficina; hace falta crear la aplicación de Spotify, ver «Música (Spotify)»), el puente invisible de la oficina `/tareas/oficina/` (la abre el mapa y deja las tareas y los cumpleaños de quien juega en las variables privadas `hsSesion`, `hsTareas`, `hsCumples` y `hsMusica`; esta última, `{ configurado, dj, suena, desde }`, dice si Spotify está conectado, quién pincha, si suena y desde cuándo pincha, en directo: de `configurado` depende el botón «Música» y la línea de la música en las novedades) y el cartel de cumpleaños `/tareas/cumples/` (lo abre el mapa desde el calendario del hall, en un panel: todos los cumpleaños del crew y el propio). Detalles en `tareas/README.md`. |
+| `.github/workflows/hotspot-tareas-comprobar.yml` | En las ramas `oficina-v*` y en las PR hacia `hotspot`, si cambia `tareas/`: pasa las mismas pruebas que `hotspot-tareas.yml` (lee sus pasos y los ejecuta tal cual), **sin construir ni publicar**. |
 | `.github/workflows/hotspot-tareas.yml` | Prueba y construye `ghcr.io/nerva2026/hotspot-hq-tareas` (~1 min): una prueba por pantalla (cada paso con su servidor y su puerto, ver «Las pruebas de `tareas/`») e incluye una con `openid-client` 5 (la librería de WorkAdventure). |
 
 ### Hacer o cambiar un parche
@@ -33,13 +41,14 @@ están en otro repositorio: `nerva2026/hotspot-hq-mapa` (con su propio `CLAUDE.m
 2. Aplicar en orden los parches anteriores y hacer un commit temporal.
 3. Editar, y sacar el parche con `git diff` (o `git add -A && git diff --cached` si hay archivos nuevos).
 4. Comprobar que toda la cadena aplica sobre una copia limpia (`git apply` de 01 a N).
-5. La comprobación de tipos de verdad la hace la construcción en GitHub.
+5. La comprobación de tipos de verdad la hace `hotspot-comprobar.yml` en GitHub al subir una rama `oficina-v*` (la
+   construcción de la imagen no comprueba tipos).
 
 ### Probar `tareas/` en local
 
 ```sh
 cd tareas
-node pruebas/google-falso.mjs &            # Google de mentira en :8412
+node pruebas/google-falso.mjs &            # Google de mentira en :8412 (otro puerto: node pruebas/google-falso.mjs 8422)
 TAREAS_DATOS=/tmp/t TAREAS_PUERTO=8413 TAREAS_URL=http://localhost:8413/tareas/ \
 GOOGLE_CLIENT_ID=cliente-google GOOGLE_CLIENT_SECRET=secreto-google \
 GOOGLE_AUTH_URL=http://localhost:8412/auth GOOGLE_TOKEN_URL=http://localhost:8412/token \
@@ -62,12 +71,35 @@ datos y su puerto, ninguno repetido) y lo para al acabar; los comandos exactos e
 | Probar el tablón | `tablon.mjs` | 3993 |
 | Probar cumpleaños y personaje | `cumple.mjs` (con `TAREAS_HOY` fijo) | 3994 |
 | Probar la música | `musica.mjs` + `spotify-falso.mjs` | 3995 (3996 lo arranca la prueba) y 8614 |
+| Probar el reproductor de la música | `reproductor.mjs` (los estados del reproductor, sin servidor ni navegador) | ninguno |
 | Probar la pizarra | `pizarra.mjs` | 3997 |
+| Probar el modo solo | `solo.mjs` (`?solo=1`, sin navegador) | 3990 |
 | Probar el acceso de la oficina | `oficina-oidc.mjs` + `google-falso.mjs` (instala `openid-client`) | 3998 y 8412 |
 
 Una prueba nueva lleva su puerto, su carpeta de datos y su registro propios. Y una pantalla nueva se enlaza en las
-demás (pestañas de arriba y menú de la cuenta, con los nombres de siempre: «Tablón de tareas», «Libro de cuentas»,
-«Pizarra», «Archivo» y «Música»).
+demás (pestañas de arriba, las mismas en las cinco pantallas, y menú de la cuenta, con los nombres de siempre: «Tablón
+de tareas», «Libro de cuentas», «Pizarra», «Archivo» y «Música»), marcando cada enlace y la fila de pestañas entera con
+la clase `otra-pantalla`: con `?solo=1` (como las abre el mapa desde un personaje o un objeto) no salen. El nombre de
+la pantalla va siempre en la cabecera (`.nombre-app`). Detalles en `tareas/README.md` («Solo lo suyo»); lo vigila
+`pruebas/solo.mjs`.
+La fila de pestañas va en el mismo sitio en las cinco pantallas y el nombre no se corta: con 860 px o más, una fila con
+el nombre a ancho fijo; de 601 a 859 px, dos filas (pestañas arriba, nombre debajo). Quien toque la cabecera la vuelve a
+medir con un navegador de 600 a 1100 px, con y sin `?solo=1` (`tareas/README.md`, «La cabecera con pestañas, por anchos»).
+Una hora dentro de una frase sale siempre de `laHora()` (`publico/app/util.js`): «desde la 1:08», «desde las 13:05».
+Lo que se abre encima de una pantalla (ventanas, la ficha de una tarea, menús) pasa por `publico/app/capas.js`: el foco no
+sale de ahí (el tabulador da la vuelta dentro), lo de detrás de una ventana queda inerte y «atrás» la cierra sin ensuciar el
+historial. Una ventana nueva se hace con `ventana()` (`menus.js`), nunca a mano (lo vigila `pruebas/tablon.mjs`).
+La pestaña «Cuentas» sale solo a quien puede ver el libro, y en directo en las cinco pantallas (`libro-pestana.js`).
+La lista del tablón cabe siempre a lo ancho: de 721 a 1114 px esconde por orden las columnas menos importantes
+(`@container lista` en `estilo.css`); quien añada o ensanche una columna tiene que rehacer esos cortes y volver a medir.
+Nada de lo que escribe la gente (un título, un nombre, una etiqueta, un concepto, un nombre de archivo, con o sin
+espacios) puede ensanchar la página ni empujar a lo de al lado: una caja de ancho fijo dentro de un `flex` lleva
+`min-width: 0` y su texto se corta con «…» (entero en el `title`).
+Un texto que se guarda con retraso (las notas de una tarea, una nota de la pizarra) pasa por `publico/app/guardado.js`:
+se guarda también al cerrar o recargar la página. Un formulario con mensaje de error lo engancha con
+`quitarErrorAlCorregir()` (`util.js`; lo vigila `pruebas/tablon.mjs`). Importar una descarga del propio libro no puede
+cambiar nada (columna escondida «Id»; prueba de ida y vuelta en `pruebas/libro.mjs`).
+El cartel de cumpleaños (`/tareas/cumples/`) y el puente (`/tareas/oficina/`) no se enlazan: solo los abre el mapa.
 
 ## El servidor (VPS en Hostinger)
 

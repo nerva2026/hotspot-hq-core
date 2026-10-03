@@ -12,11 +12,49 @@
     font-weight: 700;
     font-display: swap;
 }
+/* Pixelify Sans (una sola letra variable) va partida en dos tramos de peso para poder retocarla en cada uno. */
 @font-face {
     font-family: "Pixelify Sans";
     src: url("fuentes/pixelify-sans.woff") format("woff");
-    font-weight: 400 700;
+    font-weight: 400 549;
     font-display: swap;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("fuentes/pixelify-sans.woff") format("woff");
+    font-weight: 550 700;
+    font-display: swap;
+}
+/* Los retoques de las letras (herramientas/retoques.py): cifras claras para las dos letras y, en Pixelify Sans, la B,
+   la C, la G, la «a» y el €, que se confundían. Mismo nombre y mismo peso que la letra a la que acompañan, declarados
+   después y con `unicode-range`: el navegador saca de aquí esos caracteres y lo demás de la letra de siempre. */
+@font-face {
+    font-family: "Silkscreen";
+    src: url("fuentes/hs-retoques-titulo.woff") format("woff");
+    font-weight: 400;
+    font-display: swap;
+    unicode-range: U+30-39;
+}
+@font-face {
+    font-family: "Silkscreen";
+    src: url("fuentes/hs-retoques-titulo-negra.woff") format("woff");
+    font-weight: 700;
+    font-display: swap;
+    unicode-range: U+30-39;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("fuentes/hs-retoques-texto.woff") format("woff");
+    font-weight: 400 549;
+    font-display: swap;
+    unicode-range: U+28-29, U+30-39, U+42-43, U+45, U+47, U+5A, U+61, U+63, U+66, U+6A, U+74, U+C9, U+E0-E1, U+ED, U+20AC;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("fuentes/hs-retoques-texto-negra.woff") format("woff");
+    font-weight: 550 700;
+    font-display: swap;
+    unicode-range: U+28-29, U+30-39, U+42-43, U+45, U+47, U+5A, U+61, U+63, U+66, U+6A, U+74, U+C9, U+E0-E1, U+ED, U+20AC;
 }
 
 :root {
@@ -39,6 +77,7 @@
     --sombra: 3px 3px 0 var(--tinta);
     --sombra-p: 2px 2px 0 var(--tinta);
     --ancho-nombre: 250px;
+    --ancho-nombre-app: 136px; /* el nombre de la pantalla en la cabecera con pestañas: «PIZARRA DE» y «REUNIONES» caben, uno por línea */
 }
 
 * {
@@ -75,6 +114,10 @@ button {
     cursor: pointer;
 }
 [hidden] {
+    display: none !important;
+}
+/* «Cada personaje enseña solo lo suyo» (?solo=1, app/solo.js): fuera lo que lleva a las otras pantallas. */
+.solo .otra-pantalla {
     display: none !important;
 }
 .oculto {
@@ -230,6 +273,7 @@ h3 {
 }
 .campo {
     width: 100%;
+    font-size: 16px; /* las fechas y las cifras que se escriben, en rejilla (y en el iPhone, sin ampliar la página al tocar) */
     background: var(--papel);
     border: 2px solid var(--tinta);
     padding: 7px 9px;
@@ -327,16 +371,27 @@ kbd {
     white-space: nowrap;
 }
 
-/* ---------- piezas pequeñas ---------- */
+/* ---------- piezas pequeñas ----------
+   LAS CIFRAS (importes, saldos, fechas, horas, contadores, porcentajes) van siempre a un tamaño que cae en la rejilla
+   de su letra; a otros tamaños salen finas y emborronadas con la pantalla a escala 1:
+     · Silkscreen (--titulo), de rejilla de 8 px: 16 px (o 8, 24, 32…).
+     · Pixelify Sans (--texto), cuyo punto mide 1 px a 10,75 px: 11 px para lo menudo y 16 px (con peso 600 si es un
+       importe) para lo que se mira; 21–22 px para lo grande.
+   Lo que es texto de la gente (títulos, conceptos, notas) no cuenta. */
 .chip {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1;
     padding: 3px 6px;
     background: rgba(28, 23, 21, 0.07);
     white-space: nowrap;
+}
+/* las fechas («Hace 2 días», «9 oct», «Hoy») son lo que más se mira de una tarea */
+.chip.plazo {
+    font-size: 16px;
+    padding: 2px 6px;
 }
 .chip.prioridad {
     font: 400 12px/1 var(--titulo);
@@ -407,6 +462,11 @@ kbd {
 .avatares .avatar + .avatar {
     margin-left: -5px;
 }
+/* Los pequeños (las barras del calendario y los nombres del cronograma) no se montan: con 16 px de lado, el de detrás
+   le tapaba media letra al de delante. */
+.avatares .avatar.mini + .avatar.mini {
+    margin-left: 1px;
+}
 .persona {
     display: inline-flex;
     align-items: center;
@@ -428,9 +488,9 @@ kbd {
     border: 2px solid var(--tinta);
 }
 .cuenta {
-    font: 400 12px/1 var(--titulo);
+    font: 400 16px/1 var(--titulo);
     background: rgba(28, 23, 21, 0.1);
-    padding: 3px 5px 2px;
+    padding: 2px 5px 1px;
     margin-left: 6px;
 }
 .logo {
@@ -461,10 +521,18 @@ kbd {
     display: flex;
     align-items: center;
     gap: 10px;
+    /* si no cabe todo, lo primero que se encoge es el nombre (acaba en «…»), no las pestañas */
+    flex: 0 100 auto;
+    min-width: 0;
 }
 .nombre-app {
     font: 700 16px/1 var(--titulo);
     letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 2px 0; /* la tilde de una mayúscula («MÚSICA») no se corta */
 }
 .pestanas {
     display: flex;
@@ -482,6 +550,10 @@ kbd {
     border: 2px solid transparent;
     padding: 8px 10px 7px;
     white-space: nowrap;
+    text-align: center;
+}
+a.pestana {
+    text-decoration: none;
 }
 .pestana:hover {
     border-color: var(--tinta-suave);
@@ -494,9 +566,144 @@ kbd {
 }
 .barra-derecha {
     margin-left: auto;
+    flex: none;
     display: flex;
     align-items: center;
     gap: 10px;
+}
+/* ---------- cabecera con pestañas (todo menos ?solo=1 y el móvil) ----------
+   Las cinco pantallas llevan la misma fila de pestañas y tiene que estar SIEMPRE en el mismo sitio en las cinco, sin
+   cortar el nombre de ninguna («CUENTAS», «PIZARRA DE REUNIONES») y sin pasar de dos filas. Dos repartos, según el ancho:
+   · 860 px o más: una fila. El nombre ocupa lo mismo en todas (--ancho-nombre-app; uno largo va en dos líneas), así
+     que las pestañas empiezan en el mismo píxel. El tablón añade debajo su línea de vistas.
+   · de 601 a 859 px: dos filas en las cinco. Arriba, lo de toda la oficina (logo, pestañas y la cuenta); debajo, lo
+     de esa pantalla (su nombre entero, las vistas del tablón y su botón o quién más está).
+   Con 600 px o menos manda el bloque del móvil, más abajo; con ?solo=1 no hay pestañas y la cabecera es una fila. */
+@media (min-width: 860px) {
+    html:not(.solo) .marca {
+        flex: none;
+    }
+    html:not(.solo) .nombre-app {
+        width: var(--ancho-nombre-app);
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 16px;
+        margin: -2px 0; /* dos líneas miden lo que la fila (32 px): la cabecera no crece ni se mueven las pestañas */
+    }
+    /* quién más está: sin su rótulo hasta que sobra sitio, y los avatares que no quepan se quedan fuera (el título
+       del grupo dice todos los nombres) antes que cortar una pestaña */
+    html:not(.solo) .presentes {
+        max-width: 124px;
+        overflow: hidden;
+    }
+    html:not(.solo) .presentes .nota {
+        display: none;
+    }
+    /* Las vistas del tablón, en una línea propia debajo de las pestañas. */
+    html:not(.solo) .barra-tablon {
+        flex-wrap: wrap;
+        row-gap: 8px;
+        padding-bottom: 0;
+    }
+    html:not(.solo) .barra-tablon .vistas {
+        order: 5;
+        flex: 1 1 100%;
+        margin: 0 -12px;
+        padding: 6px 12px 7px;
+        background: #2e2622;
+        border-top: 2px solid #000;
+    }
+}
+@media (min-width: 1100px) {
+    html:not(.solo) .presentes {
+        max-width: none;
+    }
+    html:not(.solo) .presentes .nota {
+        display: inline;
+    }
+}
+@media (min-width: 600.02px) and (max-width: 859.98px) {
+    html:not(.solo) .barra {
+        display: grid;
+        /* logo · lo que sobresale el nombre · las vistas · lo que sobresale el botón · la cuenta */
+        grid-template-columns: 30px auto minmax(0, 1fr) auto auto;
+        grid-template-rows: auto minmax(46px, auto);
+        align-items: center;
+        gap: 8px 10px;
+        padding: 8px 12px 0;
+    }
+    /* el fondo de la segunda fila, de lado a lado */
+    html:not(.solo) .barra::before {
+        content: "";
+        grid-area: 2 / 1 / 3 / -1;
+        align-self: stretch;
+        margin: 0 -12px;
+        background: #2e2622;
+        border-top: 2px solid #000;
+    }
+    html:not(.solo) .marca,
+    html:not(.solo) .barra-derecha {
+        display: contents;
+    }
+    html:not(.solo) .marca .logo {
+        grid-area: 1 / 1;
+    }
+    html:not(.solo) .pantallas {
+        grid-area: 1 / 2 / 2 / 5;
+        order: 0;
+        width: auto;
+        margin-left: 0;
+    }
+    html:not(.solo) .boton-yo {
+        grid-area: 1 / 5;
+        justify-self: end;
+    }
+    html:not(.solo) .nombre-app {
+        grid-area: 2 / 1 / 3 / 3;
+        min-width: 0;
+    }
+    html:not(.solo) .vistas {
+        grid-area: 2 / 3;
+        order: 0;
+        width: auto;
+        margin-left: 0;
+    }
+    html:not(.solo) .barra-derecha > :not(.boton-yo) {
+        grid-area: 2 / 4 / 3 / 6;
+        justify-self: end;
+    }
+    html:not(.solo) .barra .pestana {
+        flex: none;
+        padding: 8px 10px 7px;
+    }
+}
+@media (min-width: 600.02px) and (max-width: 659.98px) {
+    /* las cuatro vistas, el nombre y «+ Nueva» en la misma fila */
+    html:not(.solo) .vistas .pestana {
+        padding: 8px 6px 7px;
+    }
+}
+/* El tablón en modo solo (sin pestañas): el nombre, las cuatro vistas y «+ Nueva» no caben en una fila hasta los 730 px,
+   y de 721 a 729 el nombre salía cortado («TAREA…»). Hasta los 740 las vistas bajan a su línea, como con 720 o menos
+   (más abajo, en «pantallas estrechas»). */
+@media (min-width: 720.02px) and (max-width: 739.98px) {
+    .solo .barra-tablon {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .solo .barra-tablon .vistas {
+        order: 3;
+        width: 100%;
+        margin-left: 0;
+    }
+    .solo .barra-tablon .vistas .pestana {
+        flex: 1;
+        padding: 8px 4px 7px;
+    }
 }
 .barra .btn.primario {
     border-color: #000;
@@ -520,6 +727,32 @@ kbd {
 .flecha {
     font-size: 12px;
     opacity: 0.7;
+}
+.nombre-yo {
+    max-width: 240px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+@media (max-width: 1199.98px) {
+    /* un nombre largo no le quita el sitio a las pestañas */
+    .nombre-yo {
+        max-width: 120px;
+    }
+}
+/* Quién más tiene abierta la pizarra o escucha la música: avatares en la cabecera. */
+.presentes {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.presentes .nota {
+    color: var(--crema-mas);
+    font-size: 12px;
+    white-space: nowrap;
+}
+.presentes .avatar {
+    border-color: #000;
 }
 
 /* ---------- filtros ---------- */
@@ -581,6 +814,7 @@ kbd {
     flex-wrap: wrap;
     gap: 8px;
     padding: 8px 12px;
+    font-size: 16px; /* «14 tareas» */
 }
 .segmentos {
     display: inline-flex;
@@ -605,6 +839,13 @@ kbd {
 }
 .separador {
     width: 8px;
+}
+/* una etiqueta («Agrupar») con su selector: saltan de línea juntos */
+.con-etiqueta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
 }
 .vacio-vista {
     padding: 40px 16px;
@@ -763,11 +1004,22 @@ body.arrastrando * {
 }
 
 /* ---------- lista ---------- */
+/* La tabla va en un marco que marca con una sombra el lado por el que sigue, si alguna vez no cabe a lo ancho (lista.js
+   pone la clase, como en el calendario). Con las columnas por anchos de más abajo no debería hacer falta. */
+.lista-marco {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
 .lista-envoltura {
     flex: 1;
     min-height: 0;
     overflow: auto;
     padding: 0 12px 24px;
+    /* las columnas de la tabla dependen de lo que mide esta caja, no la ventana (así cuenta también su barra de desplazar) */
+    container: lista / inline-size;
 }
 table.lista {
     border-collapse: separate;
@@ -817,33 +1069,100 @@ table.lista {
     text-align: center;
 }
 .lista td.col-hecha {
+    /* con relleno, la columna no se encoge por debajo de la casilla aunque la tabla vaya apretada (se montaba sobre la
+       franja de la prioridad) */
+    padding: 0 6px 0 11px;
+}
+.lista td.col-hecha {
     box-shadow: inset 5px 0 0 var(--color-prioridad, transparent);
 }
+/* Las columnas. Cada una tiene su ancho de siempre (con sitio de sobra) y un mínimo, y lo que lleva dentro no la
+   ensancha (.celda, más abajo): así se sabe cuánto mide la tabla y se puede decidir qué cabe. La del título se queda
+   con lo que sobra. */
 .lista .col-titulo {
-    min-width: 300px;
+    min-width: 280px;
 }
 .lista .col-estado {
     width: 120px;
+    min-width: 108px;
 }
 .lista .col-prioridad {
     width: 100px;
+    min-width: 100px; /* «PRIORIDAD ▲», cuando se ordena por ella */
 }
 .lista .col-responsables,
 .lista .col-pedidoPor {
     width: 130px;
+    min-width: 112px;
 }
-.lista .col-fin,
+.lista .col-fin {
+    width: 128px;
+    min-width: 128px;
+}
 .lista .col-inicio {
     width: 110px;
+    min-width: 84px;
+}
+.col-inicio .celda {
+    font-size: 16px;
 }
 .lista .col-etiquetas {
     width: 170px;
+    min-width: 110px;
+}
+/* La lista en un panel estrecho (el de la oficina, una ventana sin maximizar): la tabla cabe SIEMPRE a lo ancho, sin
+   cortar ninguna columna por la mitad. Cuando no caben las ocho, se esconden por orden las menos importantes («Pedido
+   por», «Etiquetas», «Empieza» y, al final, «Prioridad», que sigue viéndose en la franja de color de la fila); título,
+   estado, para quién y para cuándo están siempre, y lo demás, en la ficha de la tarea («Abrir»). Los cortes son lo que
+   mide la caja de la lista (su ancho menos 24 px de márgenes): 4 px del borde + 36 de la casilla + 280 del título + los
+   mínimos de las columnas que quedan (108 + 100 + 112 + 128 + 84 + 110 + 112) + 17 px de la barra de desplazar, que en
+   un ordenador ocupa sitio y aquí aún no se ha descontado (sin ese margen, la tabla se pasaba 7 px justo por encima de
+   cada corte). Con 720 px o menos de ventana manda la lista de fichas (más abajo). Las columnas que quedan miden su
+   mínimo y el título se queda con el resto. */
+@container lista (max-width: 1090.98px) {
+    table.lista {
+        min-width: 0;
+    }
+    .lista .col-estado {
+        width: 108px;
+    }
+    .lista .col-responsables {
+        width: 112px;
+    }
+    .lista .col-inicio {
+        width: 84px;
+    }
+    .lista .col-etiquetas {
+        width: 110px;
+    }
+    .lista .col-pedidoPor {
+        display: none;
+    }
+}
+@container lista (max-width: 978.98px) {
+    .lista .col-etiquetas {
+        display: none;
+    }
+}
+@container lista (max-width: 868.98px) {
+    .lista .col-inicio {
+        display: none;
+    }
+}
+@container lista (max-width: 784.98px) {
+    .lista .col-prioridad {
+        display: none;
+    }
 }
 .titulo-celda {
+    position: relative; /* para «Abrir» mientras no se ve (más abajo) */
     display: flex;
     align-items: center;
     gap: 6px;
     padding-right: 6px;
+}
+.celda-titulo {
+    width: 0; /* mide lo que le deje la columna (flex: 1): su ancho «de fábrica» no la ensancha */
 }
 .celda-titulo,
 .celda-nueva {
@@ -853,6 +1172,9 @@ table.lista {
     border: 2px solid transparent;
     padding: 7px 6px;
     font-size: 15px;
+}
+.celda-titulo {
+    text-overflow: ellipsis; /* un título que no cabe acaba en «…» (entero al editarlo y en la ficha) */
 }
 .celda-titulo:hover {
     border-color: var(--crema-osc);
@@ -870,15 +1192,41 @@ table.lista {
 .celda-nueva::placeholder {
     color: var(--tinta-suave);
 }
+/* «Abrir» sale al pasar el ratón por la fila o al llegar a ella con el teclado. Escondido es transparente, no
+   invisible: así se le puede devolver el foco al cerrar la ficha que abrió (y se ve en cuanto lo tiene). Y mientras no
+   se ve NO ocupa sitio (va fuera de la fila de la celda): el título usa todo el ancho de su columna, en vez de cortarse
+   con «…» al lado de un hueco vacío; al salir, el título le hace sitio. */
 .fila .abrir {
-    visibility: hidden;
+    flex: none;
+    position: absolute;
+    right: 6px;
+    opacity: 0;
+    pointer-events: none;
 }
 .fila:hover .abrir,
 .fila:focus-within .abrir {
-    visibility: visible;
+    position: static;
+    opacity: 1;
+    pointer-events: auto;
+}
+/* Donde no hay ratón (un móvil, una tableta) «Abrir» está siempre a la vista. */
+@media (hover: none) {
+    .fila .abrir {
+        position: static;
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+/* El título como texto y el resumen de la fila son de la lista estrecha (más abajo): en la ancha no salen. */
+.titulo-texto,
+.fila-resumen {
+    display: none;
 }
 .celda {
-    width: 100%;
+    /* ocupa su columna entera, pero no la ensancha: un nombre o una etiqueta largos se cortan dentro de la celda */
+    width: 0;
+    min-width: 100%;
+    overflow: hidden;
     min-height: 36px;
     display: flex;
     align-items: center;
@@ -895,6 +1243,27 @@ table.lista {
 }
 .celda .persona {
     margin-right: 0;
+    white-space: nowrap;
+    max-width: 100%;
+    min-width: 0;
+}
+/* un nombre que no cabe en su columna acaba en «…» (entero, al pasar el ratón y en la ficha) */
+.celda .persona .texto {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* …y una etiqueta más larga que su columna, también */
+.celda .etiqueta {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* El estado, siempre en una línea (el cuadrado y su nombre juntos), aunque la tabla vaya apretada. */
+.col-estado .celda {
+    flex-wrap: nowrap;
+    white-space: nowrap;
 }
 .fila:hover td {
     background: #fff6e8;
@@ -938,16 +1307,65 @@ table.lista {
     gap: 12px;
     padding: 0 12px 12px;
 }
+.cal-marco {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+}
 .cal-principal {
     flex: 1;
     min-width: 0;
     overflow: auto;
 }
+.cal-principal:focus {
+    outline: none;
+}
+/* Por dónde sigue el mes cuando no cabe a lo ancho: una sombra a escalones en ese lado (calendario.js pone la clase). */
+.cal-marco::before,
+.cal-marco::after,
+.lista-marco::before,
+.lista-marco::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 3;
+    width: 15px;
+    pointer-events: none;
+    opacity: 0;
+}
+.cal-marco::before,
+.lista-marco::before {
+    left: 0;
+    background: linear-gradient(90deg, rgba(28, 23, 21, 0.34) 0 5px, rgba(28, 23, 21, 0.2) 5px 10px, rgba(28, 23, 21, 0.09) 10px 15px);
+}
+.cal-marco::after,
+.lista-marco::after {
+    right: 0;
+    background: linear-gradient(270deg, rgba(28, 23, 21, 0.34) 0 5px, rgba(28, 23, 21, 0.2) 5px 10px, rgba(28, 23, 21, 0.09) 10px 15px);
+}
+.cal-marco.sigue-izquierda::before,
+.cal-marco.sigue-derecha::after,
+.lista-marco.sigue-izquierda::before,
+.lista-marco.sigue-derecha::after {
+    opacity: 1;
+}
 .cal-mes {
-    min-width: 700px;
+    /* 7 días de 92 px: cabe entero en el panel de la oficina (896 px) con «Sin fecha» al lado */
+    min-width: 644px;
     background: var(--papel);
     border: 2px solid var(--tinta);
     box-shadow: var(--sombra);
+}
+/* Desde 600 px de ventana el mes se ve SIEMPRE entero, de lunes a domingo: si su hueco mide menos de 644 px (un panel
+   de 600 a 667 px, o la barra de desplazar de un ordenador), los días se estrechan (82 px en el peor caso) en vez de
+   salirse por la derecha. Más estrecho (un móvil) sigue midiendo 644 px y se desplaza, abierto por hoy. */
+@media (min-width: 600px) {
+    .cal-mes {
+        min-width: min(644px, 100%);
+    }
 }
 .cal-cabecera {
     display: grid;
@@ -995,12 +1413,12 @@ table.lista {
     box-shadow: inset 0 0 0 2px var(--tinta);
 }
 .cal-numero {
-    font: 400 12px/1 var(--titulo);
+    font: 400 16px/1 var(--titulo);
 }
 .cal-dia.hoy .cal-numero {
     background: var(--acento);
     color: #fff;
-    padding: 3px 5px 2px;
+    padding: 1px 5px 0;
     box-shadow: 1px 1px 0 var(--tinta);
 }
 .cal-barra {
@@ -1029,6 +1447,17 @@ table.lista {
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
+}
+/* Con el mes desplazado de lado (un móvil), lo de dentro de una barra que empieza más a la izquierda se corre hasta el
+   borde visible: --desplazado lo pone calendario.js, --col es la columna en la que empieza y 100cqw / 7, lo que mide un día. */
+.cal-mes {
+    container-type: inline-size;
+}
+.cal-barra {
+    overflow: hidden; /* lo que se corre no se sale de su barra */
+}
+.cal-barra > :first-child {
+    margin-left: max(0px, calc(var(--desplazado, 0px) + 12px - var(--col, 0) * 100cqw / 7));
 }
 .cal-barra.sigue-antes {
     margin-left: 0;
@@ -1069,12 +1498,15 @@ table.lista {
     background: none;
     border: 0;
     padding: 0 2px;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--naranja-osc);
     text-decoration: underline;
 }
 .cal-sinfecha {
+    /* Su ancho es fijo (240 px; 190 en un panel estrecho): min-width 0 para que un título largo no lo ensanche (con el
+       «auto» de fábrica medía lo que el título más largo en una línea y dejaba al mes sin sitio, o en 0 px). */
     flex: 0 0 240px;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -1113,8 +1545,20 @@ table.lista {
     -webkit-user-select: none;
     -webkit-touch-callout: none;
 }
+.cal-suelta {
+    min-width: 0; /* en la rejilla de 601 a 870 px, un título largo tampoco ensancha su columna */
+}
+/* El título de una tarea sin fecha: hasta dos líneas y, si no cabe, «…» (entero, al pasar el ratón). Una palabra más
+   larga que la caja se parte. */
 .cal-suelta .texto {
     flex: 1;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
 }
 .fantasma-mini {
     position: fixed;
@@ -1133,11 +1577,13 @@ table.lista {
     background: var(--tinta);
     color: var(--crema);
     font-family: var(--titulo);
-    font-size: 12px;
+    font-size: 16px;
+    max-width: 340px;
 }
 
 /* ---------- cronograma ---------- */
 .crono {
+    --barra-minima: 20px; /* lo mínimo que mide una barra: su relleno y su borde (en el móvil, los 44 px del dedo) */
     flex: 1;
     min-height: 0;
     overflow: auto;
@@ -1167,11 +1613,13 @@ table.lista {
     width: var(--ancho-nombre);
     background: var(--tinta);
     border-right: 2px solid #000;
-    font: 400 12px/1 var(--titulo);
+    font: 400 16px/1 var(--titulo);
     text-transform: uppercase;
     display: flex;
     align-items: flex-end;
     padding: 8px;
+    white-space: nowrap;
+    overflow: hidden;
 }
 .crono-escala {
     position: relative;
@@ -1186,7 +1634,7 @@ table.lista {
     top: 0;
     bottom: 0;
     border-left: 1px solid rgba(243, 230, 216, 0.18);
-    font-size: 12px;
+    font-size: 11px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1195,14 +1643,45 @@ table.lista {
 }
 .crono-tramo.mayor {
     justify-content: flex-start;
-    font: 400 12px/1 var(--titulo);
+    font: 400 16px/1 var(--titulo);
     text-transform: uppercase;
     border-left-color: rgba(243, 230, 216, 0.45);
+    /* Sin recortar («hidden» es lo que traen los demás tramos): con «hidden» el tramo pasaba a ser la caja de
+       desplazamiento del rótulo, que entonces no se pegaba al borde y quedaba siempre a --ancho-nombre del principio
+       del mes (en un móvil, cortado por la derecha). No hace falta recortar nada: el rótulo solo se pone si cabe en su
+       tramo y no puede salirse de él. («clip» también valdría, pero un Safari anterior al 16 no lo conoce.) */
+    overflow: visible;
 }
-.crono-tramo.mayor span {
+/* El rótulo del mes (o del año): pegado al borde de la columna de nombres mientras su tramo esté a la vista, así se lee
+   siempre entero en qué mes se está. Donde no cabe, cronograma.js lo acorta (rotuloMayor): «sep 2026», «sep» o nada. */
+.rotulo-mayor {
     position: sticky;
-    left: calc(var(--ancho-nombre) + 6px);
+    left: var(--ancho-nombre);
     padding: 0 6px;
+}
+.rotulo-mayor.sin-sitio {
+    visibility: hidden; /* no cabe entero en lo que se ve de su mes: ni asoma a medias (cronograma.js) */
+}
+.rotulo-mayor .mes-corto,
+.rotulo-mayor.corto .mes-largo,
+.rotulo-mayor.minimo .mes-largo,
+.rotulo-mayor.minimo .anio {
+    display: none;
+}
+.rotulo-mayor.corto .mes-corto,
+.rotulo-mayor.minimo .mes-corto {
+    display: inline;
+}
+@media (max-width: 600px) {
+    /* en el móvil caben poco más de 200 px de línea de tiempo: el mes sin el año si es el de ahora («octubre») y, si
+       es de otro, corto y con él («ene 2027»), como las fechas cortas de las tareas */
+    .rotulo-mayor.este-anio .anio,
+    .rotulo-mayor.otro-anio .mes-largo {
+        display: none;
+    }
+    .rotulo-mayor.otro-anio .mes-corto {
+        display: inline;
+    }
 }
 .crono-tramo.finde {
     color: rgba(243, 230, 216, 0.55);
@@ -1237,7 +1716,7 @@ table.lista {
     bottom: 0;
     width: 0;
     border-left: 2px dashed var(--naranja);
-    z-index: 2;
+    z-index: 0; /* por detrás de las barras: encima cruzaba los títulos */
 }
 .crono-fila {
     display: flex;
@@ -1294,7 +1773,7 @@ table.lista {
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     z-index: 1;
-    min-width: 6px;
+    min-width: var(--barra-minima);
 }
 .crono-barra.solo-fin {
     border-right-width: 5px;
@@ -1310,10 +1789,15 @@ table.lista {
 .crono-barra .texto {
     flex: 1;
     pointer-events: none;
+    /* Si la barra empieza antes del borde izquierdo, el título se corre hasta el borde visible (--desplazado lo pone
+       cronograma.js al desplazar; --izq es dónde empieza la barra): se lee desde el principio y se corta por detrás. */
+    margin-left: max(0px, calc(var(--desplazado, 0px) - var(--izq, 0px)));
 }
 .crono-fuera {
     position: absolute;
     top: 9px;
+    /* justo detrás de la barra, mida lo que mida (--izq y --ancho los pone cronograma.js) */
+    left: calc(var(--izq, 0px) + max(var(--ancho, 0px), var(--barra-minima)) + 5px);
     font-size: 12px;
     white-space: nowrap;
     pointer-events: none;
@@ -1482,7 +1966,7 @@ table.lista {
     border-bottom: 1px solid var(--tenue);
     padding: 6px 8px;
     text-align: left;
-    font-size: 15px;
+    font-size: 16px;
 }
 .propiedad-valor:hover {
     background: var(--crema);
@@ -1498,6 +1982,9 @@ table.lista {
 .ficha-seccion h3 {
     font-size: 12px;
     text-transform: uppercase;
+}
+.ficha-seccion h3 .tenue {
+    font-size: 16px; /* «1/3» */
 }
 .progreso {
     height: 10px;
@@ -1549,6 +2036,12 @@ table.lista {
 .subtarea:focus-within .quitar {
     visibility: visible;
 }
+/* Donde no hay ratón, quitar una subtarea está siempre a la vista (como «Abrir» en la lista). */
+@media (hover: none) {
+    .subtarea .quitar {
+        visibility: visible;
+    }
+}
 .subtarea-nueva {
     box-shadow: none;
     border-style: dashed;
@@ -1582,7 +2075,8 @@ table.lista {
     overflow-wrap: anywhere;
 }
 .ficha-pie {
-    font-size: 13px;
+    font-size: 11px;
+    line-height: 1.5;
     color: var(--tinta-suave);
     border-top: 2px dashed var(--crema-osc);
     padding-top: 10px;
@@ -1600,6 +2094,14 @@ table.lista {
     border: 2px solid var(--tinta);
     box-shadow: 4px 4px 0 var(--tinta);
     padding: 4px;
+}
+@media (max-width: 600px) {
+    /* en el móvil cada opción mide 44 px: el menú de la cuenta no cabía en 420 px y su última opción salía cortada por
+       la mitad, con media pantalla libre debajo. Aquí ocupa lo que necesite, hasta el alto de la pantalla. */
+    .menu {
+        max-height: calc(100vh - 16px);
+        max-height: calc(100dvh - 16px);
+    }
 }
 .menu-titulo {
     font: 400 12px/1 var(--titulo);
@@ -1640,6 +2142,20 @@ table.lista {
     flex: none;
     font-weight: 700;
 }
+/* Quien ya ha salido del crew y sigue puesto en una tarea: sale en sus menús (para poder quitarlo) y en los grupos «por
+   persona», con esta marca detrás del nombre. */
+.fuera-del-crew {
+    flex: none;
+    font: 13px/1 var(--texto);
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--tinta-suave);
+    white-space: nowrap;
+}
+.opcion .nombre-en-menu {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
 .pie-menu {
     border-top: 2px dashed var(--crema-osc);
     margin-top: 4px;
@@ -1657,6 +2173,9 @@ table.lista {
     gap: 6px;
     padding: 4px;
 }
+.menu-fecha .opcion {
+    font-size: 16px; /* «vie 9 oct», «En 2 semanas» */
+}
 .etiquetas-puestas {
     display: flex;
     flex-wrap: wrap;
@@ -1667,23 +2186,36 @@ table.lista {
 }
 
 /* ---------- ventanas y avisos ---------- */
+/* Las capas (app/capas.js) pueden quedarse con el foco si dentro no hay dónde ponerlo: sin marco alrededor. */
+.fondo-ventana:focus,
+.ficha:focus,
+.menu:focus {
+    outline: none;
+}
+/* La ventana nunca es más alta que la pantalla: si su contenido no cabe, se desplaza por dentro (la cabecera se queda
+   arriba). Debajo le queda siempre el hueco de los avisos (.avisos.en-su-sitio), que así no se pintan encima. */
 .fondo-ventana {
     position: fixed;
     inset: 0;
     z-index: 100;
     background: rgba(28, 23, 21, 0.45);
-    display: grid;
-    place-items: start center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: 10vh 12px 12px;
-    overflow-y: auto;
 }
 .ventana {
+    flex: 0 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     background: var(--papel);
     border: 3px solid var(--tinta);
     box-shadow: 6px 6px 0 var(--tinta);
 }
 .ventana header {
+    flex: none;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1692,10 +2224,15 @@ table.lista {
     color: var(--crema);
 }
 .ventana h2 {
-    font-size: 13px;
+    font-size: 16px; /* «Gasto del 2 de octubre de 2026» */
+    line-height: 1.2;
     text-transform: uppercase;
 }
 .cuerpo-ventana {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 16px;
 }
 .cuerpo-ventana h3 {
@@ -1740,6 +2277,25 @@ table.lista {
 .tabla-atajos td:first-child {
     width: 45%;
 }
+/* En el móvil, cada atajo encima de lo que hace: una tecla larga («!urgente !alta !media !baja») no cabía al lado. */
+@media (max-width: 600px) {
+    .tabla-atajos,
+    .tabla-atajos tbody,
+    .tabla-atajos tr,
+    .tabla-atajos td {
+        display: block;
+    }
+    .tabla-atajos td:first-child {
+        width: auto;
+        border-bottom: 0;
+        padding-bottom: 0;
+    }
+    .tabla-atajos kbd {
+        display: inline-block;
+        white-space: normal;
+        line-height: 1.5;
+    }
+}
 .muestras {
     display: flex;
     flex-wrap: wrap;
@@ -1769,6 +2325,28 @@ table.lista {
     width: max-content;
     max-width: calc(100vw - 24px);
 }
+/* Con una ventana o la ficha de una tarea abierta, los avisos van dentro de ella y en su sitio (menus.js,
+   colocarAvisos): debajo de la ventana o al pie de la ficha, sin taparlas. */
+.avisos.en-su-sitio {
+    position: static;
+    transform: none;
+    flex: none;
+    width: auto;
+    max-width: 100%;
+}
+.avisos.en-su-sitio:empty {
+    display: none;
+}
+.fondo-ventana > .avisos.en-su-sitio {
+    margin-top: auto; /* abajo del todo, como siempre */
+    padding-top: 14px;
+}
+.ficha > .avisos.en-su-sitio {
+    align-items: stretch;
+    padding: 8px 10px;
+    background: var(--crema-osc);
+    border-top: 2px solid var(--tinta);
+}
 .aviso {
     display: flex;
     align-items: center;
@@ -1781,7 +2359,12 @@ table.lista {
     font-size: 14px;
     animation: entrar-aviso 0.15s steps(3) both;
 }
+.aviso > span {
+    min-width: 0;
+    overflow-wrap: anywhere; /* una palabra larguísima (un título sin espacios) no saca el aviso de la pantalla */
+}
 .aviso .enlace {
+    flex: none;
     color: var(--amarillo);
 }
 .aviso.malo {
@@ -1848,15 +2431,50 @@ table.lista {
 }
 
 /* ---------- pantallas estrechas (panel de la oficina, móvil) ---------- */
-@media (max-width: 900px) {
+@media (max-width: 959.98px) {
+    /* el nombre de quien ha entrado, al lado de su avatar: sin sitio, queda el avatar (con él, en un panel de 900 px,
+       un nombre largo dejaba sin sitio a las pestañas) */
     .nombre-yo {
         display: none;
     }
+}
+@media (max-width: 900px) {
     .buscar {
         width: 160px;
     }
     .cal-sinfecha {
         flex-basis: 190px;
+    }
+}
+/* El calendario con 870 px o menos: el mes y, DEBAJO, «Sin fecha» (al lado, con sus 190 px, al mes no le quedan los
+   644 que mide: de 721 a 870 px se abría corrido, sin el lunes). Caben los dos en lo que queda de pantalla: el mes se
+   encoge (se desplaza por dentro) para dejarle sitio a la lista, que si no se quedaba debajo del borde de la pantalla
+   sin manera de llegar a ella en un móvil; si ni así caben (un móvil tumbado), se desplaza todo el bloque. */
+@media (max-width: 870px) {
+    .cal-cuerpo {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+    .cal-marco {
+        flex: 0 1 auto;
+        min-height: 200px;
+    }
+    .cal-sinfecha {
+        flex: none;
+        max-height: 40vh;
+    }
+}
+/* …y de 601 a 870 px, donde sobra ancho, las tareas sin fecha van en varias columnas: la lista ocupa menos alto y le
+   deja más al mes. */
+@media (min-width: 600.02px) and (max-width: 870px) {
+    .cal-sinfecha {
+        max-height: 30vh;
+    }
+    .cal-sinfecha-lista {
+        flex: 0 1 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        align-content: start;
     }
 }
 @media (max-width: 720px) {
@@ -1880,32 +2498,107 @@ table.lista {
         flex: 1 1 140px;
     }
     .resumen {
-        width: 100%;
-        margin-left: 0;
+        margin-left: auto; /* comparte línea con «Ocultar hechas» si cabe */
     }
     .columna {
         flex: 0 0 min(290px, 85vw);
         min-width: 0;
-    }
-    .cal-cuerpo {
-        flex-direction: column;
-    }
-    .cal-principal {
-        flex: none;
-        max-height: 70vh;
-    }
-    .cal-sinfecha {
-        flex: none;
-        max-height: 40vh;
-    }
-    .solo-ancho {
-        display: none;
     }
     .propiedades {
         grid-template-columns: 100px 1fr;
     }
     .ficha-cuerpo {
         padding: 14px 14px 30px;
+    }
+
+    /* La lista: sin columnas que se salgan por la derecha. Cada fila enseña el título (entero, hasta tres líneas) y,
+       debajo, lo esencial: estado, prioridad, para quién y fecha. «Abrir» siempre a la vista; un toque en la fila
+       (fuera de la casilla) abre la tarea, que es donde se cambia lo demás. */
+    .lista-envoltura {
+        padding: 0 8px 24px;
+    }
+    table.lista,
+    .lista tbody,
+    .lista td {
+        display: block;
+        min-width: 0;
+    }
+    .lista thead {
+        display: none;
+    }
+    .lista tr {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr);
+    }
+    .lista tr.fila-grupo {
+        display: block;
+    }
+    .lista td.col-hecha {
+        width: auto;
+        display: grid;
+        place-items: start center;
+        padding: 13px 0 0 5px;
+    }
+    .lista .fila td:not(.col-hecha):not(.col-titulo) {
+        display: none;
+    }
+    .lista .col-titulo {
+        min-width: 0;
+    }
+    .fila {
+        cursor: pointer;
+    }
+    .titulo-celda {
+        align-items: flex-start;
+        gap: 8px;
+        padding: 4px 8px 0 0;
+    }
+    .titulo-celda > .chip {
+        display: none; /* las subtareas y las notas van en el resumen */
+    }
+    .celda-titulo {
+        display: none;
+    }
+    .titulo-texto {
+        flex: 1;
+        min-width: 0;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+        padding: 9px 0 4px 6px;
+        font-size: 16px;
+        line-height: 1.25;
+    }
+    .fila.hecha .titulo-texto {
+        text-decoration: line-through;
+        color: var(--tinta-suave);
+    }
+    .fila .abrir {
+        position: static;
+        opacity: 1;
+        pointer-events: auto;
+        margin-top: 4px;
+    }
+    .fila-resumen {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 8px;
+        padding: 2px 8px 10px 6px;
+        font-size: 14px;
+    }
+    .resumen-estado {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+    }
+    .fila-resumen .persona {
+        margin-right: 0;
+        white-space: nowrap;
     }
 }
 
@@ -2069,6 +2762,9 @@ table.lista {
         min-height: 44px;
         cursor: pointer;
     }
+    .lista td.col-hecha {
+        padding: 0 0 0 5px; /* la zona de toque de la casilla ya mide 44 px */
+    }
 }
 
 /* ---------- cumpleaños: aviso del día, confeti, «Mi cuenta», calendario y crew ---------- */
@@ -2176,7 +2872,7 @@ table.lista {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--tinta-suave);
 }
 @media (max-width: 720px) {
@@ -2185,7 +2881,7 @@ table.lista {
         padding-left: 8px;
     }
     .cumple-texto {
-        font-size: 15px;
+        font-size: 16px;
     }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2204,7 +2900,6 @@ table.lista {
 @media (max-width: 1270px) {
     /* con las columnas encogidas, ninguna letra del tablero baja de 12 px (en una ventana ancha todo se queda como siempre) */
     .tablero .chip.prioridad,
-    .tablero .cuenta,
     .tablero .avatar {
         font-size: 12px;
     }
@@ -2261,6 +2956,29 @@ table.lista {
         place-items: start center;
         padding-top: 8px;
     }
+    /* …y como va ENCIMA del punto, el nombre y el número, con el ratón encima no puede llevar fondo (los tapaba y la
+       etiqueta se quedaba en blanco): el fondo de «encima» lo pone la cabecera, que está debajo, y el botón, solo su marco. */
+    .columna.plegable:not(.abierta) .plegar-hecho:hover {
+        background: transparent;
+    }
+    .columna.plegable:not(.abierta) .columna-cabecera:hover {
+        background: #fff;
+    }
+}
+
+/* ---------- móvil (≤ 600 px): en la lista, «Agrupar por» y la cuenta de tareas comparten línea ---------- */
+@media (max-width: 600px) {
+    .barra-lista .segmentos {
+        order: 3;
+    }
+    /* y en el cronograma, ‹ Hoy › y Días · Semanas · Meses caben en la misma */
+    .barra-vista .segmento {
+        padding-left: 6px;
+        padding-right: 6px;
+    }
+    .barra-vista .separador {
+        display: none;
+    }
 }
 
 /* ---------- móvil (≤ 600 px): la cabecera cabe en una línea y los filtros se despliegan con un botón ---------- */
@@ -2274,14 +2992,29 @@ table.lista {
         gap: 6px;
         padding: 8px;
     }
-    .marca,
-    .pestanas {
+    /* Sin pestañas (las otras pantallas están en el menú de la cuenta), pero con el nombre de la pantalla siempre a la
+       vista. En el tablón no cabe al lado de sus botones: va en pequeño dentro del botón de las vistas. */
+    .pestanas,
+    .marca .logo,
+    .barra-tablon .marca {
         display: none;
+    }
+    /* un nombre largo («Pizarra ideas-para-la-fiesta») ocupa dos líneas antes que cortarse */
+    .nombre-app {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.15;
     }
     .boton-vista {
         display: inline-flex;
-        align-items: center;
-        gap: 6px;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 4px;
         min-height: 44px;
         padding: 0 10px;
         color: var(--tinta);
@@ -2292,6 +3025,16 @@ table.lista {
         letter-spacing: 0.03em;
         text-transform: uppercase;
         white-space: nowrap;
+    }
+    .boton-vista-pantalla {
+        font-size: 8px; /* el tamaño para el que se dibujó Silkscreen */
+        letter-spacing: 0.1em;
+        color: var(--tinta-suave);
+    }
+    .boton-vista-nombre {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
     .boton-filtros {
         display: inline-flex;
@@ -2310,6 +3053,40 @@ table.lista {
     }
     .filtros .buscar {
         flex: 1 1 100%;
+    }
+}
+/* Móviles estrechos. La cabecera del tablón (las vistas, «Filtros», «+ Nueva» y la cuenta) mide 390 px con la vista de
+   nombre más largo («Cronograma»): en uno de 360 o 375 px la cuenta salía cortada, y en uno de 320, también «+ Nueva».
+   Con menos de 390 px se quitan las flechas de «Filtros» y de la cuenta y se aprietan los huecos (355 px); con menos de
+   360, además, «+ Nueva» se queda en «+» (311 px). Nada baja de los 44 px que pide el dedo. */
+@media (max-width: 389.98px) {
+    .barra-tablon,
+    .barra-tablon .barra-derecha {
+        gap: 4px;
+    }
+    .boton-vista {
+        padding: 0 8px;
+    }
+    .barra-tablon .boton-filtros .flecha,
+    .barra-tablon .boton-yo .flecha {
+        display: none;
+    }
+    .barra-tablon .boton-yo {
+        justify-content: center;
+        min-width: 44px;
+        padding: 3px 4px;
+    }
+    #boton-nueva {
+        padding-left: 9px;
+        padding-right: 9px;
+    }
+}
+@media (max-width: 359.98px) {
+    #boton-nueva {
+        min-width: 44px;
+    }
+    #boton-nueva .texto-nueva {
+        display: none;
     }
 }
 
@@ -2365,13 +3142,14 @@ table.lista {
     .crono-nombre {
         min-height: 44px;
     }
+    .crono {
+        --barra-minima: 44px; /* la barra de un solo día, también de ancho; el título de al lado se coloca detrás */
+    }
     .crono-barra {
         top: 0;
         height: 44px;
-        min-width: 44px;
     }
     .crono-fuera {
         top: 14px;
-        margin-left: 12px; /* la barra de un día ya no mide 32 px sino 44: el título de al lado no se queda debajo */
     }
 }

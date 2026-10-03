@@ -3,10 +3,12 @@
 // dentro). Aquí está la lista (carpetas, búsqueda, subir y soltar, papelera); el visor de un documento está en
 // archivo-visor.js. Todo lo que hace uno lo ven los demás en directo (el servidor avisa a todos).
 
-import { h, $, vaciar, retrasar, haceCuanto, guardarLocal, leerLocal, MESES_CORTOS } from "./util.js";
+import { h, $, vaciar, retrasar, haceCuanto, guardarLocal, leerLocal, MESES_CORTOS, ponerError, quitarErrorAlCorregir } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion, subirDocumento } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
+import { conSolo, sinSolo } from "./solo.js";
 import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar } from "./menus.js";
+import { pestanaEnDirecto } from "./libro-pestana.js";
 import { tipoDe, tamano, insignia, terminosDe, resaltar } from "./archivo-comun.js";
 import { crearVisor, direccionArchivo, direccionAparte, direccionDescarga } from "./archivo-visor.js";
 
@@ -79,7 +81,7 @@ function aplicar(datos) {
     E.limites = { ...E.limites, ...datos.limites };
 }
 
-const enlaceDoc = (id) => `${location.pathname}?doc=${encodeURIComponent(id)}`;
+const enlaceDoc = (id) => conSolo(`${location.pathname}?doc=${encodeURIComponent(id)}`);
 
 // ---------- cambios sobre los documentos ----------
 
@@ -183,7 +185,7 @@ function editar(doc) {
                 const cambios = { titulo: titulo.value.trim(), descripcion: descripcion.value.trim(), carpeta: carpeta.entrada.value.trim() };
                 if (direccion) cambios.url = direccion.value.trim();
                 if (!cambios.titulo) {
-                    error.textContent = "El documento necesita un título.";
+                    ponerError(error, "El documento necesita un título.", titulo);
                     titulo.focus();
                     return;
                 }
@@ -193,7 +195,7 @@ function editar(doc) {
                     v.cerrar();
                     aviso("Cambios guardados");
                 } catch (err) {
-                    error.textContent = err.message;
+                    ponerError(error, err.message);
                     guardar.disabled = false;
                 }
             },
@@ -205,6 +207,7 @@ function editar(doc) {
         error,
         h("div", { class: "fila-botones" }, h("button", { type: "button", class: "btn", onclick: () => v.cerrar() }, "Cancelar"), guardar),
     );
+    quitarErrorAlCorregir(formulario, error);
     const v = ventana("Editar documento", formulario, { ancho: 480 });
 }
 
@@ -223,7 +226,7 @@ function nuevoEnlace() {
             onsubmit: async (ev) => {
                 ev.preventDefault();
                 if (!direccion.value.trim()) {
-                    error.textContent = "Pega la dirección del enlace.";
+                    ponerError(error, "Pega la dirección del enlace.", direccion);
                     direccion.focus();
                     return;
                 }
@@ -234,7 +237,7 @@ function nuevoEnlace() {
                     v.cerrar();
                     aviso(`«${recortar(doc.titulo)}» añadido`);
                 } catch (err) {
-                    error.textContent = err.message;
+                    ponerError(error, err.message);
                     guardar.disabled = false;
                 }
             },
@@ -247,6 +250,7 @@ function nuevoEnlace() {
         error,
         h("div", { class: "fila-botones" }, h("button", { type: "button", class: "btn", onclick: () => v.cerrar() }, "Cancelar"), guardar),
     );
+    quitarErrorAlCorregir(formulario, error);
     const v = ventana("Añadir enlace", formulario, { ancho: 480 });
 }
 
@@ -305,7 +309,7 @@ async function subirUna(s, carpeta) {
 function fallo(s, mensaje) {
     s.estado = "error";
     s.mensaje = mensaje;
-    refrescarSubida(s);
+    pintarSubidas(); // entera, no solo esta: los fallos pasan a ir los primeros
 }
 
 function quitarSubida(s) {
@@ -330,7 +334,28 @@ function refrescarSubida(s) {
     const quitar = s.el.querySelector("button");
     quitar.setAttribute("aria-label", s.estado === "subiendo" || s.estado === "esperando" ? `Cancelar ${s.nombre}` : `Quitar ${s.nombre} de la lista`);
     $("#subidas-resumen")?.replaceChildren(resumenSubidas());
+    hacerSitioALosAvisos();
 }
+
+// Con el panel de subidas a la vista (abajo a la derecha), los avisos de abajo («… está en la papelera · Deshacer») no
+// se pintan encima: van a su izquierda o, donde el panel ocupa todo el ancho, encima de él (archivo.css). Aquí se dice
+// si está y cuánto mide.
+let subidasVigiladas = null; // el panel al que ya se le mira el tamaño (cambia al girar el móvil o al estrechar la ventana)
+function hacerSitioALosAvisos() {
+    const caja = $("#subidas");
+    const visible = Boolean(caja && !caja.hidden);
+    document.body.classList.toggle("con-subidas", visible);
+    if (visible) document.body.style.setProperty("--alto-subidas", `${caja.offsetHeight}px`);
+    if (caja && subidasVigiladas !== caja && typeof ResizeObserver === "function") {
+        subidasVigiladas = caja;
+        new ResizeObserver(hacerSitioALosAvisos).observe(caja);
+    }
+}
+
+// Lo que no se ha podido subir, lo primero (es lo que hay que mirar y, con varios archivos, quedaba al final, fuera de
+// lo que se ve); luego lo que está subiendo, lo que espera y lo ya subido.
+const ORDEN_SUBIDAS = ["error", "subiendo", "esperando", "listo"];
+const subidasEnOrden = () => [...E.subidas].sort((a, b) => ORDEN_SUBIDAS.indexOf(a.estado) - ORDEN_SUBIDAS.indexOf(b.estado));
 
 function resumenSubidas() {
     const activas = E.subidas.filter((s) => s.estado === "esperando" || s.estado === "subiendo").length;
@@ -344,9 +369,13 @@ function pintarSubidas() {
     const caja = $("#subidas");
     if (!caja) return;
     caja.hidden = E.subidas.length === 0;
-    if (!E.subidas.length) return caja.replaceChildren();
+    if (!E.subidas.length) {
+        caja.replaceChildren();
+        hacerSitioALosAvisos();
+        return;
+    }
     const lista = h("ul", { class: "subidas-lista" });
-    for (const s of E.subidas) {
+    for (const s of subidasEnOrden()) {
         s.el = h(
             "li",
             { class: `subida ${s.estado}` },
@@ -689,7 +718,7 @@ function cerrarDoc() {
         E.docId = null;
         history.back();
     } else {
-        history.replaceState(null, "", location.pathname);
+        history.replaceState(null, "", conSolo(location.pathname));
         mostrarLista();
     }
 }
@@ -697,6 +726,10 @@ function cerrarDoc() {
 window.addEventListener("popstate", () => {
     if (!E.yo) return;
     const id = new URLSearchParams(location.search).get("doc");
+    // Un «atrás» que solo ha cerrado una ventana (capas.js) deja la dirección como estaba: si ya se ve lo que dice,
+    // no se vuelve a abrir el documento (perdería por dónde iba) ni la lista.
+    const viendoVisor = $("#vista-visor")?.hidden === false;
+    if (id ? viendoVisor && visor?.idAbierto() === id : !viendoVisor) return;
     if (id) abrirDoc(id, { empujar: false });
     else mostrarLista();
 });
@@ -706,6 +739,7 @@ window.addEventListener("popstate", () => {
 function menuYo(ancla) {
     const opcion = (texto, fn) => h("button", { type: "button", class: "opcion", onclick: () => (cerrarMenu(), fn()) }, h("span", { class: "marca" }), texto);
     const enlace = (texto, href, extra) => h("a", { class: "opcion", href, ...extra }, h("span", { class: "marca" }), texto);
+    const otra = { class: "opcion otra-pantalla" }; // lo que lleva a otra pantalla, con su raya (con ?solo=1 no sale, ver solo.js)
     abrirMenu(ancla, () =>
         h(
             "div",
@@ -714,13 +748,13 @@ function menuYo(ancla) {
             h(
                 "div",
                 { class: "opciones" },
-                dentroDeLaOficina() ? enlace("Abrir en pestaña nueva ↗", location.href.split("#")[0], { target: "_blank", rel: "noopener", onclick: cerrarMenu }) : null,
-                opcion(`Papelera${E.papelera.length ? ` (${E.papelera.length})` : ""}`, () => elegirCarpeta("papelera")),
-                h("hr"),
-                enlace("Tablón de tareas", "../"),
-                E.yo.libro ? enlace("Libro de cuentas", "../libro/") : null,
-                enlace("Pizarra", "../pizarra/"),
-                enlace("Música", "../musica/"),
+                dentroDeLaOficina() ? enlace("Abrir en pestaña nueva ↗", sinSolo(location.href.split("#")[0]), { target: "_blank", rel: "noopener", onclick: cerrarMenu }) : null,
+                opcion(["Papelera", E.papelera.length ? h("span", { class: "cuenta" }, E.papelera.length) : null], () => elegirCarpeta("papelera")),
+                h("hr", { class: "otra-pantalla" }),
+                enlace("Tablón de tareas", "../", otra),
+                E.yo.libro ? enlace("Libro de cuentas", "../libro/", otra) : null,
+                enlace("Pizarra", "../pizarra/", otra),
+                enlace("Música", "../musica/", otra),
                 h("hr"),
                 opcion("Salir", salir),
             ),
@@ -770,15 +804,15 @@ function montar() {
         h(
             "header",
             { class: "barra" },
-            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("span", { class: "nombre-app" }, "ARCHIVO")),
+            h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app" }, "ARCHIVO")),
             h(
                 "nav",
-                { class: "pestanas", "aria-label": "Aplicaciones" },
-                h("a", { class: "pestana", href: "../" }, "Tareas"),
-                E.yo.libro ? h("a", { class: "pestana", href: "../libro/" }, "Cuentas") : null,
-                h("a", { class: "pestana", href: "../pizarra/" }, "Pizarra"),
+                { class: "pestanas pantallas otra-pantalla", "aria-label": "Aplicaciones" },
+                h("a", { class: "pestana otra-pantalla", href: "../" }, "Tareas"),
+                E.yo.libro ? h("a", { class: "pestana otra-pantalla", href: "../libro/" }, "Cuentas") : null,
+                h("a", { class: "pestana otra-pantalla", href: "../pizarra/" }, "Pizarra"),
                 h("span", { class: "pestana activa", "aria-current": "page" }, "Archivo"),
-                h("a", { class: "pestana", href: "../musica/" }, "Música"),
+                h("a", { class: "pestana otra-pantalla", href: "../musica/" }, "Música"),
             ),
             h("div", { class: "barra-derecha" }, h("button", { type: "button", class: "boton-yo", id: "boton-yo", "aria-label": "Tu cuenta", onclick: (ev) => menuYo(ev.currentTarget) }, avatar(E.yo), h("span", { class: "nombre-yo" }, E.yo.nombre), h("span", { class: "flecha" }, "▾"))),
         ),
@@ -822,7 +856,11 @@ function montar() {
     pintarSubidas();
 }
 
+// La pestaña «Cuentas» aparece o desaparece sola cuando a esa persona le dan o le quitan el libro (libro-pestana.js).
+const pestanaCuentas = pestanaEnDirecto({ pedir: api.yo, estado: E, href: "../libro/" }); // la pone marcada, con «otra-pantalla»
+
 function alRecibir(ev) {
+    pestanaCuentas.alRecibir(ev);
     if (ev.tipo === "archivo") recargarLuego();
     else if (ev.tipo === "usuarios") {
         E.usuarios = ev.usuarios || E.usuarios;
@@ -836,6 +874,7 @@ async function recargar() {
     } catch {
         return; // sin conexión (o sin sesión: ya se ha avisado): se queda como está
     }
+    pestanaCuentas.repintar();
     pintar();
     if (buscando()) lanzarBusqueda();
     if (E.docId) {

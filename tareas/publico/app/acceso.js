@@ -1,7 +1,8 @@
 // Pantallas de entrada: iniciar sesión y crear cuenta (o poner contraseña nueva) desde un enlace.
 
-import { h, vaciar } from "./util.js";
+import { h, vaciar, ponerError, quitarErrorAlCorregir } from "./util.js";
 import { api } from "./api.js";
+import { conSolo } from "./solo.js";
 
 // Nombre de la aplicación en la cabecera de la caja: «TAREAS» en el tablón, «CUENTAS» en el libro…
 let nombreApp = "TAREAS";
@@ -69,6 +70,7 @@ export async function pantallaEntrar(raiz, alEntrar) {
         boton,
         google ? null : h("p", { class: "nota" }, "¿No tienes cuenta o has olvidado la contraseña? Pide un enlace a quien administra el tablón."),
     );
+    quitarErrorAlCorregir(form, error);
     if (!google) {
         vaciar(raiz).appendChild(marco(form));
         nombre.input.focus();
@@ -150,7 +152,7 @@ export async function pantallaAlta(raiz, codigo, alEntrar) {
                         class: "btn ancho",
                         type: "button",
                         onclick: () => {
-                            history.replaceState(null, "", location.pathname);
+                            history.replaceState(null, "", conSolo(location.pathname));
                             location.reload();
                         },
                     },
@@ -198,13 +200,13 @@ export async function pantallaAlta(raiz, codigo, alEntrar) {
                 e.preventDefault();
                 error.textContent = "";
                 if (clave.input.value !== repetir.input.value) {
-                    error.textContent = "Las contraseñas no coinciden.";
+                    ponerError(error, "Las contraseñas no coinciden.");
                     return;
                 }
                 boton.disabled = true;
                 try {
                     const datos = await api.alta({ codigo, nombre: nombre.input.value, clave: clave.input.value, color });
-                    history.replaceState(null, "", location.pathname);
+                    history.replaceState(null, "", conSolo(location.pathname));
                     alEntrar(datos);
                 } catch (err) {
                     error.textContent = err.message;
@@ -228,6 +230,7 @@ export async function pantallaAlta(raiz, codigo, alEntrar) {
         error,
         boton,
     );
+    quitarErrorAlCorregir(form, error);
     vaciar(raiz).appendChild(marco(form));
     (cambiarClave ? clave : nombre).input.focus();
 }

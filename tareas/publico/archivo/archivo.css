@@ -1,8 +1,5 @@
 /* Archivo de documentos de HOT SPOT S.L. · encima de estilo.css (mismas letras, colores y piezas que el tablón, el libro y la pizarra). */
 
-a.pestana {
-    text-decoration: none;
-}
 mark {
     background: var(--amarillo);
     color: inherit;
@@ -118,7 +115,7 @@ mark {
 }
 .carpetas .espacio {
     margin: 14px 4px 0;
-    font-size: 12px;
+    font-size: 11px; /* «Ocupa 3,7 KB de 1 GB»: una cifra, en rejilla (ver estilo.css) */
 }
 .lista-zona {
     flex: 1;
@@ -143,7 +140,8 @@ mark {
     min-width: 0;
 }
 .lista-cab h2 {
-    font-size: 15px;
+    font-size: 16px; /* «3 resultados para…» */
+    line-height: 1.2;
     text-transform: uppercase;
     overflow-wrap: anywhere;
 }
@@ -257,7 +255,7 @@ mark {
 }
 .tarjeta-meta {
     margin-top: 2px;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--tinta-suave);
 }
 .tarjeta-etiquetas {
@@ -306,7 +304,7 @@ mark {
 }
 .coincidencias {
     color: var(--tinta-suave);
-    font-size: 12px;
+    font-size: 11px;
 }
 .tarjeta-pie {
     margin-top: auto;
@@ -322,7 +320,7 @@ mark {
     align-items: center;
     gap: 6px;
     min-width: 0;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--tinta-suave);
 }
 .tarjeta-quien-texto {
@@ -429,7 +427,24 @@ mark {
     border: 3px solid var(--tinta);
     box-shadow: var(--sombra);
 }
+/* Con el panel de subidas a la vista, los avisos de abajo no se pintan encima de él (a 820 px, «… está en la papelera ·
+   Deshacer» tapaba «No se han podido subir…»): se centran en el sitio que queda a su izquierda y, donde no lo hay (el
+   panel ocupa casi todo el ancho), van encima. La clase y lo que mide el panel los pone archivo.js. */
+body.con-subidas > .avisos {
+    left: calc((100vw - 352px) / 2);
+    max-width: calc(100vw - 352px - 24px);
+}
+@media (max-width: 760px) {
+    body.con-subidas > .avisos {
+        left: 50%;
+        max-width: calc(100vw - 24px);
+        bottom: calc(var(--alto-subidas, 0px) + 24px);
+    }
+}
 .subidas-cab {
+    position: sticky; /* el resumen («No se han podido subir 2 archivos») no se va al desplazar la lista */
+    top: 0;
+    z-index: 1;
     padding: 8px 12px;
     font: 400 12px/1 var(--titulo);
     letter-spacing: 0.04em;
@@ -483,7 +498,7 @@ mark {
 }
 .subida-estado {
     margin-top: 3px;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--tinta-suave);
     overflow-wrap: anywhere;
 }
@@ -560,7 +575,7 @@ mark {
     gap: 4px 8px;
 }
 .visor-meta {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--tinta-suave);
 }
 .visor-acciones {
@@ -597,7 +612,7 @@ mark {
 }
 .cuenta-hallazgos {
     min-width: 5em;
-    font-size: 13px;
+    font-size: 16px;
     color: var(--tinta-suave);
     white-space: nowrap;
 }
@@ -938,6 +953,14 @@ mark.hallazgo.actual {
 }
 
 /* ---------- pantallas estrechas (el móvil, o el panel de la oficina muy comprimido) ---------- */
+/* De 721 a 779 px los cuatro controles no caben en una fila y «Añadir enlace» se quedaba solo en la segunda. Ahí van
+   de dos en dos: arriba buscar y ordenar, debajo los dos botones (la búsqueda ocupa su fila menos el sitio del orden). */
+@media (min-width: 720.02px) and (max-width: 779.98px) {
+    .buscar-archivo {
+        flex: 1 1 calc(100% - 230px);
+        max-width: none;
+    }
+}
 @media (max-width: 720px) {
     .herramientas-archivo {
         padding: 8px;
@@ -1041,7 +1064,7 @@ mark.hallazgo.actual {
         justify-content: space-between;
         width: 100%;
         padding: 10px 12px;
-        font: 400 12px/1 var(--titulo);
+        font: 400 16px/1 var(--titulo); /* «Contenido (3)» */
         letter-spacing: 0.04em;
         text-align: left;
         text-transform: uppercase;
@@ -1099,5 +1122,21 @@ mark.hallazgo.actual {
 @media (max-width: 600px) {
     .carpeta-item {
         min-height: 44px;
+    }
+}
+/* El visor en un móvil. Cinco botones (fijar, editar, descargar, abrir y papelera) no caben en una fila con menos de
+   412 px y «Papelera» se quedaba sola en la segunda: ahí van tres arriba y dos debajo, repartiéndose el ancho. Con
+   cuatro (un enlace no se descarga) caben en una fila desde 320 px y se quedan como están. */
+@media (max-width: 419.98px) {
+    .visor-acciones > :first-child:nth-last-child(5),
+    .visor-acciones > :first-child:nth-last-child(5) ~ * {
+        flex: 1 1 30%;
+    }
+}
+/* …y en uno de 320 px, en el buscador del documento, «↓» se quedaba solo en una segunda fila: el hueco de la cuenta
+   («3 de 12») es un poco más estrecho. */
+@media (max-width: 339.98px) {
+    .cuenta-hallazgos {
+        min-width: 3.5em;
     }
 }

@@ -5,9 +5,11 @@
 //   node pruebas/cumple.mjs http://127.0.0.1:3994/tareas <código de alta del registro>
 //
 // Primero comprueba las cuentas de fechas de servidor/perfil.js (zonas horarias, 29 de febrero, cambio de año…) y
-// luego la API: poner, quitar y comprobar el cumpleaños, «hoy en la oficina» (/api/oficina), el personaje
-// (/api/yo/personaje), que sin sesión no se ve nada y la página del puente de la oficina (/tareas/oficina/).
-// (El puente en funcionamiento, con una oficina de mentira —window.WA—, necesita un navegador y no se prueba aquí.)
+// luego la API: poner, quitar y comprobar el cumpleaños, «hoy en la oficina» (/api/oficina, con todos los cumpleaños
+// del crew y el de quien pregunta), el personaje (/api/yo/personaje), que sin sesión no se ve nada, la página del
+// puente de la oficina (/tareas/oficina/) y lo que sirve el cartel de cumpleaños (/tareas/cumples/).
+// (El puente en funcionamiento, con una oficina de mentira —window.WA—, y el cartel en pantalla necesitan un
+// navegador y no se prueban aquí.)
 
 import assert from "node:assert/strict";
 import * as perfil from "../servidor/perfil.js";
@@ -55,7 +57,9 @@ const gente = [
     { id: "h", nombre: "Fede" },
     { id: "i", nombre: "Alba", cumple: "03-01" },
 ];
-assert.deepEqual(perfil.resumenOficina(gente, "2027-02-28"), {
+for (const [i, u] of gente.entries()) u.color = `#00000${i}`;
+const resumen = perfil.resumenOficina(gente, "2027-02-28");
+assert.deepEqual(resumen, {
     hoy: "2027-02-28",
     cumples: [
         { id: "b", nombre: "Ana" },
@@ -66,8 +70,36 @@ assert.deepEqual(perfil.resumenOficina(gente, "2027-02-28"), {
         { id: "c", nombre: "Diego", dia: "03-01", fecha: "2027-03-01", enDias: 1 },
         { id: "e", nombre: "Carla", dia: "03-30", fecha: "2027-03-30", enDias: 30 },
     ],
+    // todos los del crew, los que antes llegan primero (y, el mismo día, por nombre): los de hoy, los próximos y los
+    // que quedan más allá de los 30 días; cada uno con su día, la próxima vez que se celebra y su color
+    todos: [
+        { id: "b", nombre: "Ana", dia: "02-28", fecha: "2027-02-28", enDias: 0, color: "#000001" },
+        { id: "a", nombre: "Víctor", dia: "02-29", fecha: "2027-02-28", enDias: 0, color: "#000000" },
+        { id: "i", nombre: "Alba", dia: "03-01", fecha: "2027-03-01", enDias: 1, color: "#000008" },
+        { id: "c", nombre: "Diego", dia: "03-01", fecha: "2027-03-01", enDias: 1, color: "#000002" },
+        { id: "e", nombre: "Carla", dia: "03-30", fecha: "2027-03-30", enDias: 30, color: "#000004" },
+        { id: "f", nombre: "Dani", dia: "03-31", fecha: "2027-03-31", enDias: 31, color: "#000005" },
+    ],
 });
 assert.deepEqual(perfil.resumenOficina(gente, "2028-02-28").cumples, [{ id: "b", nombre: "Ana" }], "en 2028 Víctor lo celebra el 29");
+// Al día siguiente del cumple, queda un año entero (el último de la lista); y el del 29 de febrero, a su día de 2028
+const despues = perfil.resumenOficina(gente, "2027-03-01");
+assert.deepEqual(
+    despues.todos.map((c) => [c.nombre, c.fecha, c.enDias]),
+    [
+        ["Alba", "2027-03-01", 0],
+        ["Diego", "2027-03-01", 0],
+        ["Carla", "2027-03-30", 29],
+        ["Dani", "2027-03-31", 30],
+        ["Ana", "2028-02-28", 364],
+        ["Víctor", "2028-02-29", 365],
+    ],
+);
+// Quien pregunta: su cumpleaños, o null si no lo ha puesto (o si lo guardado no vale)
+assert.deepEqual(perfil.oficinaPara(gente, "2027-02-28", gente[0]), { ...resumen, yo: { id: "a", cumple: "02-29" } });
+assert.deepEqual(perfil.oficinaPara(gente, "2027-02-28", gente[7]).yo, { id: "h", cumple: null }, "Fede no lo ha puesto");
+assert.deepEqual(perfil.oficinaPara(gente, "2027-02-28", gente[6]).yo, { id: "g", cumple: null }, "una fecha rara no cuenta");
+assert.deepEqual(perfil.resumenOficina([], "2027-02-28"), { hoy: "2027-02-28", cumples: [], proximos: [], todos: [] });
 
 // Hoy en la oficina: el día de Madrid, no el del servidor (que va en UTC)
 const tardeUtc = new Date("2027-02-27T23:30:00Z");
@@ -212,7 +244,7 @@ const idBea = await invitar(bea, "Bea", "#8e5cc4");
 r = await diego("GET", "oficina");
 assert.equal(r.estado, 200, JSON.stringify(r.datos));
 assert.equal(r.datos.hoy, "2027-02-28", `El servidor tiene que arrancar con TAREAS_HOY=2027-02-27T23:30:00Z (y la zona de Madrid); dice que hoy es ${r.datos.hoy}`);
-assert.deepEqual(r.datos, { hoy: "2027-02-28", cumples: [], proximos: [] }, "nadie ha puesto su cumpleaños");
+assert.deepEqual(r.datos, { hoy: "2027-02-28", cumples: [], proximos: [], todos: [], yo: { id: idDiego, cumple: null } }, "nadie ha puesto su cumpleaños");
 
 // Poner el cumpleaños (y verlo en los datos de la cuenta y en directo en los demás)
 const oyente = await victor.escuchar();
@@ -269,12 +301,34 @@ assert.deepEqual(r.datos, {
         { id: idBea, nombre: "Bea", dia: "03-01", fecha: "2027-03-01", enDias: 1 },
         { id: idDiego, nombre: "Diego", dia: "03-01", fecha: "2027-03-01", enDias: 1 },
     ],
+    // el cartel de cumpleaños: todos, los que antes llegan primero, con el color de cada uno; y el de quien pregunta
+    todos: [
+        { id: idAna, nombre: "Ana", dia: "02-28", fecha: "2027-02-28", enDias: 0, color: "#3a9d5d" },
+        { id: idVictor, nombre: "Víctor", dia: "02-29", fecha: "2027-02-28", enDias: 0, color: "#3b82c4" },
+        { id: idBea, nombre: "Bea", dia: "03-01", fecha: "2027-03-01", enDias: 1, color: "#8e5cc4" },
+        { id: idDiego, nombre: "Diego", dia: "03-01", fecha: "2027-03-01", enDias: 1, color: "#e0562a" },
+    ],
+    yo: { id: idAna, cumple: "02-28" },
 });
+// Lo mismo para todos, menos «yo»; y sin año de nacimiento en ningún sitio (el día es «MM-DD»; «fecha», la próxima vez)
+const paraVictor = await victor("GET", "oficina");
+assert.deepEqual(paraVictor.datos, { ...r.datos, yo: { id: idVictor, cumple: "02-29" } });
+for (const c of r.datos.todos) {
+    assert.deepEqual(Object.keys(c), ["id", "nombre", "dia", "fecha", "enDias", "color"]);
+    assert.match(c.dia, /^\d{2}-\d{2}$/);
+    assert.ok(c.fecha >= r.datos.hoy, "la próxima vez que cae, nunca una fecha pasada");
+}
+// Cambia el color o el nombre de alguien: el cartel lo enseña
+assert.equal((await ana("PATCH", "yo", { color: "#1f9e98" })).estado, 200);
+r = await victor("GET", "oficina");
+assert.equal(r.datos.todos.find((c) => c.id === idAna).color, "#1f9e98");
+assert.equal((await ana("PATCH", "yo", { color: "#3a9d5d" })).estado, 200);
 
 // Quien sale del crew no cuenta (y su cumpleaños deja de enseñarse)
 assert.equal((await diego("PATCH", `crew/${idBea}`, { baja: true })).estado, 200);
 r = await ana("GET", "oficina");
 assert.ok(!r.datos.proximos.some((p) => p.id === idBea), "Bea ya no está");
+assert.deepEqual(r.datos.todos.map((c) => c.nombre), ["Ana", "Víctor", "Diego"], "ni en la lista de todos");
 r = await ana("GET", "datos");
 assert.equal(r.datos.usuarios.find((u) => u.id === idBea).cumple, null);
 r = await bea("GET", "oficina");
@@ -289,6 +343,17 @@ assert.deepEqual(r.datos.proximos, [{ id: idDiego, nombre: "Diego", dia: "03-30"
 await diego("PATCH", "yo", { cumple: "03-31" });
 r = await diego("GET", "oficina");
 assert.deepEqual(r.datos.proximos, []);
+assert.deepEqual(r.datos.todos.at(-1), { id: idDiego, nombre: "Diego", dia: "03-31", fecha: "2027-03-31", enDias: 31, color: "#e0562a" }, "pero en «todos» sigue, sin límite de días");
+assert.deepEqual(r.datos.yo, { id: idDiego, cumple: "03-31" });
+// El que ya ha pasado este año queda para el siguiente, al final de la lista
+await diego("PATCH", "yo", { cumple: "02-27" });
+r = await diego("GET", "oficina");
+assert.deepEqual(r.datos.todos.at(-1), { id: idDiego, nombre: "Diego", dia: "02-27", fecha: "2028-02-27", enDias: 364, color: "#e0562a" });
+// Quitarlo: sale de la lista y «yo» lo dice
+await diego("PATCH", "yo", { cumple: null });
+r = await diego("GET", "oficina");
+assert.ok(!r.datos.todos.some((c) => c.id === idDiego));
+assert.deepEqual(r.datos.yo, { id: idDiego, cumple: null });
 await diego("PATCH", "yo", { cumple: "03-01" });
 
 // Personaje de la oficina: lo de cada uno, para tenerlo igual en todos sus aparatos
@@ -374,4 +439,84 @@ assert.equal(textoCumples([cDiego, cVictor, cAna], "x"), "¡Hoy es el cumple de 
 assert.equal(textoCumples([cDiego], "d"), "¡Feliz cumpleaños, Diego!", "a quien cumple se le felicita");
 assert.equal(textoCumples([cDiego, cVictor], "d"), "¡Feliz cumpleaños, Diego! Hoy también es el cumple de Víctor.");
 
-console.log("Cumpleaños, personaje y puente de la oficina: bien");
+// ---------- 5. el cartel de cumpleaños (/tareas/cumples/) ----------
+// Lo abre el mapa en un panel (el calendario de la pared del hall). Aquí, lo que sirve el servidor y las cuentas y
+// textos del cartel; en pantalla se mira con un navegador.
+const cartel = await fetch(`${base}/cumples/`);
+assert.equal(cartel.status, 200);
+assert.match(cartel.headers.get("content-type") || "", /^text\/html/);
+const cspCartel = cartel.headers.get("content-security-policy") || "";
+assert.equal(cspCartel, csp, "la misma CSP que las demás pantallas");
+assert.match(cspCartel, /script-src 'self'(;|$)/);
+assert.match(cspCartel, /frame-ancestors 'self'/, "solo la oficina (la misma web) puede meterlo en un panel");
+assert.equal(cartel.headers.get("x-content-type-options"), "nosniff");
+const htmlCartel = await cartel.text();
+assert.match(htmlCartel, /<script type="module" src="\.\.\/app\/cumples\.js"><\/script>/);
+assert.doesNotMatch(htmlCartel, /<script(?![^>]*src=)[^>]*>/, "sin guiones en línea (la CSP no los deja)");
+assert.doesNotMatch(htmlCartel, /<style|\sstyle=|\son\w+=/, "ni estilos ni manejadores en línea");
+assert.match(htmlCartel, /<link rel="stylesheet" href="\.\.\/estilo\.css">/, "el estilo común (letras y colores)");
+assert.match(htmlCartel, /<link rel="stylesheet" href="cumples\.css">/);
+assert.doesNotMatch(htmlCartel, /<a\s/, "es un cartel: sin enlaces a las otras pantallas");
+const servido = async (ruta, tipo) => {
+    const r = await fetch(`${base}/${ruta}`);
+    assert.equal(r.status, 200, ruta);
+    assert.match(r.headers.get("content-type") || "", tipo, ruta);
+    return r.text();
+};
+const cssCartel = await servido("cumples/cumples.css", /^text\/css/);
+assert.match(cssCartel, /prefers-reduced-motion/);
+assert.doesNotMatch(cssCartel, /font-size:\s*(\d|1[01])px/, "ninguna letra de menos de 12 px");
+const codigoCartel = await servido("app/cumples.js", /^text\/javascript/);
+for (const dependencia of ["util.js", "api.js", "conexion.js", "acceso.js", "solo.js", "cumple.js", "confeti.js"]) await servido(`app/${dependencia}`, /^text\/javascript/);
+for (const m of codigoCartel.matchAll(/from "\.\/([\w-]+\.js)"/g)) await servido(`app/${m[1]}`, /^text\/javascript/);
+for (const letra of ["pixelify-sans.woff", "silkscreen-regular.woff", "silkscreen-bold.woff", "hs-retoques-texto.woff", "hs-retoques-texto-negra.woff", "hs-retoques-titulo.woff", "hs-retoques-titulo-negra.woff"]) await servido(`fuentes/${letra}`, /^font\/woff/);
+await servido("tarta.svg", /^image\/svg/);
+// Reutiliza lo que ya había: la entrada de siempre, los textos y cuentas de los cumpleaños y el confeti
+assert.match(codigoCartel, /import \{[^}]*pantallaEntrar[^}]*\} from "\.\/acceso\.js"/);
+assert.match(codigoCartel, /import \{[^}]*textoCumples[^}]*\} from "\.\/cumple\.js"/);
+assert.match(codigoCartel, /import \{[^}]*lanzarConfeti[^}]*\} from "\.\/confeti\.js"/);
+assert.match(codigoCartel, /api\.oficina\(\)/);
+assert.match(codigoCartel, /api\.cambiarYo\(\{ cumple \}\)/, "pone y quita el cumpleaños con PATCH /api/yo");
+assert.match(codigoCartel, /escuchar\(alRecibir, recargar\)/, "se pone al día con los avisos en directo");
+assert.match(codigoCartel, /ev\.tipo === "usuarios"/);
+assert.match(codigoCartel, /setInterval\(alVolver, MINUTO\)/, "y pregunta cada minuto (la medianoche de la oficina)");
+// Es un cartel: ni enlaza las otras pantallas ni las otras lo enlazan (se abre desde el mapa, como el puente)
+assert.doesNotMatch(codigoCartel, /["'`](\.\.\/)+(libro|pizarra|archivo|musica)?\/?["'`]|otra-pantalla/, "sin enlaces a las otras pantallas");
+const { readdirSync, readFileSync } = await import("node:fs");
+const carpetaApp = new URL("../publico/app/", import.meta.url);
+for (const f of readdirSync(carpetaApp).filter((f) => f.endsWith(".js") && f !== "cumples.js")) {
+    // (una dirección entre comillas; los comentarios que lo nombran no cuentan)
+    assert.doesNotMatch(readFileSync(new URL(f, carpetaApp), "utf8"), /["'`][^"'`\n]*cumples\/[^"'`\n]*["'`]/, `${f} enlaza el cartel de cumpleaños`);
+}
+// Sin la barra, se redirige a la carpeta sin perder lo que venga detrás
+const cartelSinBarra = await fetch(`${base}/cumples?solo=1`, { redirect: "manual" });
+assert.equal(cartelSinBarra.status, 301);
+assert.equal(new URL(cartelSinBarra.headers.get("location"), base).pathname + new URL(cartelSinBarra.headers.get("location"), base).search, `${new URL(`${base}/cumples/`).pathname}?solo=1`);
+// Sin sesión el cartel se sirve igual (enseña la pantalla de entrada); lo que no se ve es la API
+assert.equal((await anonimo("GET", "oficina")).estado, 401);
+// Al entrar se vuelve aquí: la entrada de siempre (acceso.js) manda como vuelta la dirección en la que está
+assert.match(await servido("app/acceso.js", /^text\/javascript/), /const vuelta = location\.pathname \+ location\.search;/);
+
+// Las cuentas y los textos del cartel (publico/app/cumple.js), con «todos» de /api/oficina
+const { cuantoFalta, elSiguiente, porMeses, fechaCumple } = await import("../publico/app/cumple.js");
+assert.equal(cuantoFalta(1), "mañana");
+assert.equal(cuantoFalta(2), "en 2 días");
+assert.equal(cuantoFalta(5), "en 5 días");
+assert.equal(cuantoFalta(365), "en 365 días");
+const todos = resumen.todos; // Ana y Víctor hoy; Alba y Diego mañana; Carla y Dani a finales de marzo
+assert.deepEqual(elSiguiente(todos), { fecha: "2027-03-01", enDias: 1, personas: [todos[2], todos[3]] }, "el siguiente no cuenta los de hoy, y trae a todos los de ese día");
+assert.equal(elSiguiente(todos.slice(0, 2)), null, "si solo quedan los de hoy, no hay siguiente");
+assert.equal(elSiguiente([]), null);
+assert.equal(elSiguiente(despues.todos).fecha, "2027-03-30");
+assert.equal(fechaCumple(elSiguiente(perfil.resumenOficina(gente, "2027-02-27").todos).fecha.slice(5)), "28 de febrero", "en 2027 el del 29 se celebra (y se anuncia) el 28");
+const meses = porMeses(todos, 2);
+assert.deepEqual(meses.map((m) => m.mes), [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1], "doce meses seguidos, empezando por el de ahora");
+assert.deepEqual(meses[0].cumples.map((c) => `${c.dia} ${c.nombre}`), ["02-28 Ana", "02-29 Víctor"], "cada uno en su mes y con su día de verdad (el 29 de febrero también)");
+assert.deepEqual(meses[1].cumples.map((c) => `${c.dia} ${c.nombre}`), ["03-01 Alba", "03-01 Diego", "03-30 Carla", "03-31 Dani"], "por día y, el mismo día, por nombre");
+assert.equal(meses.slice(2).reduce((n, m) => n + m.cumples.length, 0), 0);
+const desdeMarzo = porMeses(despues.todos, 3);
+assert.deepEqual([desdeMarzo[0].mes, desdeMarzo[0].cumples.length], [3, 4]);
+assert.deepEqual([desdeMarzo.at(-1).mes, desdeMarzo.at(-1).cumples.length], [2, 2], "el mes que acaba de pasar queda el último");
+assert.deepEqual(porMeses([]).map((m) => m.mes), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+
+console.log("Cumpleaños, personaje, puente de la oficina y cartel de cumpleaños: bien");

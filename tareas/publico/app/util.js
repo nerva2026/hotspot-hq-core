@@ -58,6 +58,56 @@ export const normalizar = (s) =>
         .toLowerCase()
         .trim();
 
+// ---------- los errores de los formularios ----------
+
+// El mensaje de error de un formulario se quita solo en cuanto se corrige: si se puso con ponerError(error, texto, campo),
+// al escribir o elegir algo en ESE campo; si no es de ningún campo (lo que contesta el servidor), al tocar cualquier
+// cosa de «zona» (el formulario). Antes seguía en rojo, con el campo ya bien, hasta volver a pulsar el botón.
+const campoDelError = new WeakMap(); // error → { campo, texto }
+const ELECCIONES = "[role=radio], [role=checkbox], [aria-pressed], select";
+
+export function ponerError(error, texto, campo = null) {
+    error.textContent = texto;
+    if (campo) campoDelError.set(error, { campo, texto });
+    else campoDelError.delete(error);
+}
+
+// ¿Quita el error este gesto? «suyo»: { campo, texto } si el error se puso para un campo; «dentro(campo)»: si el gesto
+// ha sido en ese campo. Un clic solo cuenta si es en algo que se elige (una opción), no en cualquier botón.
+export function corrigeElError({ texto, suyo, tipo, enEleccion, dentro }) {
+    if (!texto) return false;
+    if (tipo === "click" && !enEleccion) return false;
+    // el campo solo manda mientras el error sea el que se puso para él y el campo siga en la página
+    if (suyo && suyo.texto === texto && suyo.campo.isConnected && !dentro(suyo.campo)) return false;
+    return true;
+}
+
+// Devuelve el error, para ponerlo donde vaya.
+export function quitarErrorAlCorregir(zona, error) {
+    const quitar = (e) => {
+        const corrige = corrigeElError({
+            texto: error.textContent,
+            suyo: campoDelError.get(error),
+            tipo: e.type,
+            enEleccion: Boolean(e.target.closest?.(ELECCIONES)),
+            dentro: (campo) => campo.contains(e.target),
+        });
+        if (!corrige) return;
+        error.textContent = "";
+        campoDelError.delete(error);
+    };
+    for (const tipo of ["input", "change", "click"]) zona.addEventListener(tipo, quitar);
+    return error;
+}
+
+// El campo de «nueva tarea» se vacía al pulsar Intro, antes de que conteste el servidor (para seguir con la siguiente);
+// si la tarea no se crea, lo escrito vuelve al campo (el de ahora: la vista puede haberse repintado), salvo que ya
+// tenga otra cosa.
+export function devolverLoEscrito(clave, escrito) {
+    const campo = document.querySelector(`[data-foco="${CSS.escape(clave)}"]`);
+    if (campo && !campo.value) campo.value = escrito;
+}
+
 export function retrasar(fn, ms) {
     let t = null;
     const envuelta = (...args) => {
@@ -128,6 +178,21 @@ export function fechaLarga(iso) {
     return `${DIAS[diaSemana(iso)]} ${f.getUTCDate()} de ${MESES[f.getUTCMonth()]} de ${f.getUTCFullYear()}`;
 }
 
+// ---------- horas (la del navegador de cada uno) ----------
+
+// «1:08», «13:05».
+export function horaCorta(iso) {
+    const d = new Date(iso);
+    return `${d.getHours()}:${dos(d.getMinutes())}`;
+}
+
+// La hora con su artículo, para escribirla detrás de «a», «desde» o «hasta»: «la 1:08» (la una), «las 13:05»,
+// «las 0:15». Toda hora que vaya dentro de una frase sale de aquí: nunca «las ${…}» escrito a mano (lo vigila
+// pruebas/musica.mjs), que entre la 1:00 y la 1:59 decía «desde las 1:08».
+export function laHora(iso) {
+    return `${new Date(iso).getHours() === 1 ? "la" : "las"} ${horaCorta(iso)}`;
+}
+
 // Cómo de cerca queda una fecha límite: texto corto y clase para el color.
 export function plazo(iso, hecha = false) {
     if (!iso) return null;
@@ -187,7 +252,8 @@ export function colorEtiqueta(nombre) {
     return COLORES_ETIQUETA[n % COLORES_ETIQUETA.length];
 }
 
-export const inicial = (nombre) => (nombre || "?").trim().charAt(0).toUpperCase();
+// La primera letra, entera: un nombre que empieza por un emoji (dos «medias letras» por dentro) no sale como «�».
+export const inicial = (nombre) => ([...(nombre || "?").trim()][0] || "?").toUpperCase();
 
 // Texto claro u oscuro según el fondo.
 export function textoSobre(color) {

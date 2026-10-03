@@ -3,10 +3,13 @@
 // Pensado para quien no usa Excel: se apunta con un formulario, el reparto y quién debe a quién salen solos, y
 // si hace falta se descarga en Excel o en CSV. Los importes van en céntimos, como en el servidor (servidor/libro.js).
 
-import { h, $, vaciar, normalizar, hoy, sumarDias, fechaCorta, fechaLarga, MESES, MESES_CORTOS, haceCuanto, retrasar } from "./util.js";
+import { h, $, vaciar, hoy, sumarDias, fechaCorta, fechaLarga, MESES, MESES_CORTOS, haceCuanto, retrasar, ponerError, quitarErrorAlCorregir } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion, direccionApi } from "./api.js";
 import { pantallaEntrar, aplicacion } from "./acceso.js";
-import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar } from "./menus.js";
+import { sinSolo } from "./solo.js";
+import { esperarAcceso } from "./libro-espera.js";
+import { coincide, prepararConsulta } from "./libro-buscar.js";
+import { abrirMenu, cerrarMenu, hayMenu, aviso, colocarAvisos, ventana, avatar } from "./menus.js";
 
 aplicacion("CUENTAS", "El libro de cuentas es de los socios de HOT SPOT S.L. Entra con tu cuenta de Google.");
 
@@ -54,12 +57,14 @@ const E = {
 
 const raiz = document.getElementById("app");
 let dejarDeEscuchar = null;
+let espera = null; // quien ve «Solo para los socios» sigue escuchando por si le dan parte (libro-espera.js)
 
 // ---------- dinero ----------
 
 const formato = new Intl.NumberFormat("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const euros = (c) => `${formato.format((c || 0) / 100)} €`;
-const porcentaje = (n) => `${String(Math.round(n * 100) / 100).replace(".", ",")} %`;
+// con un espacio que no se parte: «(50 %)» no se queda con el «%)» solo en la línea de abajo
+const porcentaje = (n) => `${String(Math.round(n * 100) / 100).replace(".", ",")}\u00a0%`;
 // Las cifras van con la letra de los títulos: en la del texto el 5 parece una S y el € un 0.
 const cifra = (texto) => h("span", { class: "cifra-pixel" }, texto);
 const sumar = (lista) => lista.reduce((s, m) => s + m.importe, 0);
@@ -175,7 +180,7 @@ function montar() {
             "header",
             { class: "barra" },
             h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app" }, "CUENTAS")),
-            h("nav", { class: "pestanas", "aria-label": "Aplicaciones" }, h("a", { class: "pestana", href: "../" }, "Tareas"), h("span", { class: "pestana activa", "aria-current": "page" }, "Cuentas"), h("a", { class: "pestana", href: "../pizarra/" }, "Pizarra"), h("a", { class: "pestana", href: "../archivo/" }, "Archivo"), h("a", { class: "pestana", href: "../musica/" }, "Música")),
+            h("nav", { class: "pestanas pantallas otra-pantalla", "aria-label": "Aplicaciones" }, h("a", { class: "pestana otra-pantalla", href: "../" }, "Tareas"), h("span", { class: "pestana activa", "aria-current": "page" }, "Cuentas"), h("a", { class: "pestana otra-pantalla", href: "../pizarra/" }, "Pizarra"), h("a", { class: "pestana otra-pantalla", href: "../archivo/" }, "Archivo"), h("a", { class: "pestana otra-pantalla", href: "../musica/" }, "Música")),
             h(
                 "div",
                 { class: "barra-derecha" },
@@ -376,13 +381,14 @@ function tarjetaPersona(p) {
 
 function filtrados() {
     const f = E.filtros;
-    const texto = normalizar(f.texto);
+    // El buscador encuentra también por importe, por fecha y por tipo (libro-buscar.js).
+    const palabras = prepararConsulta(f.texto);
     return E.movimientos.filter((m) => {
         if (f.tipo !== "todos" && m.tipo !== f.tipo) return false;
         if (f.persona !== "todas" && m.persona !== f.persona && m.para !== f.persona) return false;
         if (f.categoria !== null && (m.categoria || "") !== f.categoria) return false;
         if (f.mes && m.fecha.slice(0, 7) !== f.mes) return false;
-        if (texto && !normalizar(`${m.concepto} ${m.categoria} ${m.notas} ${nombre(m.persona)} ${m.para ? nombre(m.para) : ""}`).includes(texto)) return false;
+        if (palabras.length && !coincide(m, palabras, { nombre })) return false;
         return true;
     });
 }
@@ -474,8 +480,15 @@ function filaMovimiento(m) {
             h("span", { class: "mov-fecha" }, fechaCorta(m.fecha)),
             h("span", { class: "mov-tipo" }, t.nombre),
             h("span", { class: "mov-texto" }, h("strong", null, titulo), h("small", null, detalle)),
-            m.tique ? h("span", { class: "chip mov-tique", title: m.tique.nombre || "Tiene tique" }, "Tique") : null,
-            m.notas ? h("span", { class: "chip mov-nota", title: m.notas }, "Nota") : null,
+            // Las marcas de «lleva tique» y «lleva nota»: con sitio, la palabra; en un móvil, su dibujo debajo de la fecha (libro.css).
+            m.tique || m.notas
+                ? h(
+                      "span",
+                      { class: "mov-marcas" },
+                      m.tique ? h("span", { class: "chip mov-tique", title: m.tique.nombre || "Tiene tique" }, "Tique") : null,
+                      m.notas ? h("span", { class: "chip mov-nota", title: m.notas }, "Nota") : null,
+                  )
+                : null,
             h("span", { class: "mov-importe" }, `${signo}${euros(m.importe)}`),
         ),
     );
@@ -623,7 +636,7 @@ function formulario({ movimiento = null, tipo = "gasto", persona, para, importe 
             guardar();
         },
     });
-    const error = h("p", { class: "error", role: "alert" });
+    const error = quitarErrorAlCorregir(cuerpo, h("p", { class: "error", role: "alert" })); // se quita al corregir su campo
     const previo = h("div", { class: "previo-libro", "aria-live": "polite" });
     const boton = h("button", { class: "btn primario", type: "submit" });
     const campos = {};
@@ -661,6 +674,7 @@ function formulario({ movimiento = null, tipo = "gasto", persona, para, importe 
 
     function construir() {
         const t = TIPOS[v.tipo];
+        ponerError(error, ""); // al cambiar de tipo, el error del tipo anterior ya no pinta nada
         if (v.tipo === "pago" && (!v.para || v.para === v.persona)) v.para = otros(v.persona)[0]?.id || null;
         const tipos = h(
             "div",
@@ -918,22 +932,23 @@ function formulario({ movimiento = null, tipo = "gasto", persona, para, importe 
         pintarPrevio();
         campos.importe = campoImporte;
         campos.concepto = campoConcepto;
+        campos.para = elegirPara.el;
     }
 
     async function guardar() {
-        error.textContent = "";
+        ponerError(error, "");
         if (!v.importe) {
-            error.textContent = "Escribe cuánto, por ejemplo 12,50.";
+            ponerError(error, "Escribe cuánto, por ejemplo 12,50.", campos.importe);
             campos.importe.focus();
             return;
         }
         if (v.tipo !== "pago" && !v.concepto.trim()) {
-            error.textContent = v.tipo === "gasto" ? "Pon en qué se ha gastado." : "Pon de dónde viene el dinero.";
+            ponerError(error, v.tipo === "gasto" ? "Pon en qué se ha gastado." : "Pon de dónde viene el dinero.", campos.concepto);
             campos.concepto.focus();
             return;
         }
         if (v.tipo === "pago" && (!v.para || v.para === v.persona)) {
-            error.textContent = "Elige a quién se le paga.";
+            ponerError(error, "Elige a quién se le paga.", campos.para);
             return;
         }
         const datos = {
@@ -1127,6 +1142,7 @@ function ajustes() {
         ),
         { ancho: 480 },
     );
+    quitarErrorAlCorregir(v.caja, error); // lo que contesta el servidor se quita al cambiar una parte o una categoría
 }
 
 function ayuda() {
@@ -1154,7 +1170,16 @@ function importar() {
         try {
             const r = await api.importarLibro(archivo);
             await recargar();
-            const extra = [r.repetidos ? `${r.repetidos} ya estaban` : "", r.sinPersona ? `${r.sinPersona} sin una persona del crew en «Pagado por»` : ""].filter(Boolean).join("; ");
+            const extra = [
+                r.repetidos ? `${r.repetidos} ya estaban` : "",
+                // PROVISIONAL-v0.3.1: filas de una descarga de este libro cuyo movimiento se borró después; no se vuelven a apuntar
+                r.borrados ? `${r.borrados} borrado${r.borrados > 1 ? "s" : ""} después de la descarga` : "",
+                r.sinPersona ? `${r.sinPersona} sin una persona del crew en «Pagado por»` : "",
+                // PROVISIONAL-v0.3.1: filas con concepto que no se han apuntado (antes se saltaban sin decir nada)
+                r.sinLeer ? `${r.sinLeer} que no se han podido leer` : "",
+            ]
+                .filter(Boolean)
+                .join("; ");
             aviso(
                 r.importados
                     ? `Importados ${r.importados} movimiento${r.importados > 1 ? "s" : ""} de la hoja «${r.hoja}»${extra ? ` (${extra})` : ""}.`
@@ -1183,7 +1208,7 @@ function opcionesMenu(opciones) {
             h(
                 o.href ? "a" : "button",
                 {
-                    class: "opcion",
+                    class: ["opcion", o.otra && "otra-pantalla"],
                     type: o.href ? null : "button",
                     href: o.href,
                     download: o.download,
@@ -1209,17 +1234,18 @@ function menuYo(ancla) {
             null,
             h("div", { class: "menu-titulo" }, `Hola, ${E.yo.nombre}`),
             opcionesMenu([
-                dentroDeLaOficina() ? { contenido: "Abrir en pestaña nueva ↗", href: location.href.split("#")[0], target: "_blank" } : null,
+                dentroDeLaOficina() ? { contenido: "Abrir en pestaña nueva ↗", href: sinSolo(location.href.split("#")[0]), target: "_blank" } : null,
                 { contenido: "Descargar en Excel", href: direccionApi("libro/excel"), download: "" },
                 { contenido: "Descargar en CSV", href: direccionApi("libro/csv"), download: "" },
                 { contenido: "Importar desde Excel…", accion: importar },
                 "-",
                 E.yo.admin ? { contenido: "Reparto y categorías…", accion: ajustes } : null,
                 { contenido: "¿Cómo funciona?", accion: ayuda },
-                { contenido: "Tablón de tareas", href: "../" },
-                { contenido: "Pizarra", href: "../pizarra/" },
-                { contenido: "Archivo", href: "../archivo/" },
-                { contenido: "Música", href: "../musica/" },
+                // «otra»: lleva a otra pantalla (con ?solo=1 no sale, ver solo.js)
+                { contenido: "Tablón de tareas", href: "../", otra: true },
+                { contenido: "Pizarra", href: "../pizarra/", otra: true },
+                { contenido: "Archivo", href: "../archivo/", otra: true },
+                { contenido: "Música", href: "../musica/", otra: true },
                 "-",
                 { contenido: "Salir", accion: salir },
             ]),
@@ -1250,6 +1276,7 @@ function cargar(datos) {
 }
 
 async function recargar() {
+    if (espera) return espera.probar(); // en «Solo para los socios» no hay libro que repintar: se prueba a entrar
     try {
         cargar(await api.libro());
     } catch (err) {
@@ -1263,6 +1290,7 @@ function alRecibir(ev) {
 }
 
 function empezar(datos) {
+    espera = null;
     cargar(datos);
     montar();
     dejarDeEscuchar?.();
@@ -1283,9 +1311,11 @@ async function entrarYEmpezar() {
 function sinSesion() {
     dejarDeEscuchar?.();
     dejarDeEscuchar = null;
+    espera = null;
     E.yo = null;
     cerrarMenu();
     document.querySelector(".fondo-ventana")?.remove();
+    colocarAvisos();
     pantallaEntrar(raiz, entrarYEmpezar);
 }
 cuandoSePierdaLaSesion(() => {
@@ -1309,8 +1339,16 @@ function caja(...contenido) {
 
 function sinAcceso(mensaje) {
     dejarDeEscuchar?.();
-    dejarDeEscuchar = null;
-    caja(h("h1", null, "Solo para los socios"), h("p", null, mensaje), h("a", { class: "btn primario ancho", href: "../" }, "Ir al tablón de tareas"));
+    // Ya no hay libro que enseñar: fuera también lo que hubiera abierto encima (un menú, el formulario de apuntar) y
+    // los atajos del teclado (sin E.yo no hacen nada).
+    E.yo = null;
+    cerrarMenu();
+    document.querySelector(".fondo-ventana")?.remove();
+    colocarAvisos();
+    caja(h("h1", null, "Solo para los socios"), h("p", null, mensaje), h("a", { class: "btn primario ancho otra-pantalla", href: "../" }, "Ir al tablón de tareas"));
+    // La pantalla sigue escuchando: si le dan parte en el reparto (o pasa a administrar), el libro se abre solo.
+    espera = esperarAcceso({ escuchar, pedir: api.libro, alEntrar: empezar, alPerderSesion: sinSesion });
+    dejarDeEscuchar = espera.parar;
 }
 
 function sinConexion(mensaje) {
@@ -1336,6 +1374,7 @@ let oculta = 0;
 document.addEventListener("visibilitychange", () => {
     if (document.hidden) oculta = Date.now();
     else if (E.yo && oculta && Date.now() - oculta > 60000) recargar();
+    else if (espera && oculta && Date.now() - oculta > 60000) espera.probar();
 });
 
 // ---------- inicio ----------

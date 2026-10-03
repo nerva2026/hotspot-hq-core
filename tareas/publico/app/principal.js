@@ -1,9 +1,14 @@
 // Tablón de tareas de HOT SPOT S.L. · arranque, estado compartido, barra superior y filtros.
 
-import { h, $, vaciar, normalizar, hoy, plazo, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, pesoPrioridad, guardarLocal, leerLocal, fechaMedia, retrasar, MESES } from "./util.js";
+import { h, $, vaciar, quitarErrorAlCorregir, hoy, plazo, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, pesoPrioridad, guardarLocal, leerLocal, fechaMedia, retrasar, MESES } from "./util.js";
 import { api, escuchar, cuandoSePierdaLaSesion } from "./api.js";
 import { pantallaEntrar, pantallaAlta } from "./acceso.js";
-import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar, chipEtiqueta } from "./menus.js";
+import { sinSolo, conSolo } from "./solo.js";
+import { BUSQUEDA_AL_CARGAR } from "./capas.js";
+import { pestanaEnDirecto } from "./libro-pestana.js";
+import { coincide, prepararBusqueda } from "./tablon-buscar.js";
+import { paraElegir, conTareas } from "./personas.js";
+import { abrirMenu, cerrarMenu, hayMenu, aviso, ventana, avatar, chipEtiqueta, personaEnMenu } from "./menus.js";
 import { hayArrastre } from "./arrastre.js";
 import { interpretar } from "./rapida.js";
 import { pintarTablero } from "./tablero.js";
@@ -41,6 +46,10 @@ const E = {
 if (!VISTAS.some((v) => v.id === E.vista)) E.vista = enMovil() ? "lista" : "tablero";
 
 const raiz = document.getElementById("app");
+// La pestaña «Cuentas» aparece o desaparece sola cuando a esa persona le dan o le quitan el libro (libro-pestana.js).
+const pestanaCuentas = pestanaEnDirecto({ pedir: api.yo, estado: E, href: "libro/" }); // la pone marcada, con «otra-pantalla»
+// La tarea que pide la dirección al cargar («?tarea=…»), leída antes de que nadie toque el historial.
+let tareaPedida = new URLSearchParams(BUSQUEDA_AL_CARGAR).get("tarea");
 let dejarDeEscuchar = null;
 let pintura = null;
 let pintarAlSoltarFoco = false;
@@ -52,6 +61,12 @@ const ctx = {
     usuario: (id) => E.usuarios.find((u) => u.id === id) || null,
     // Las personas que siguen en el crew (las que se fueron siguen saliendo en sus tareas antiguas).
     activos: () => E.usuarios.filter((u) => !u.baja),
+    // Para los menús «Para quién» y «Pedido por» de una tarea: el crew de ahora y, además, quien ya está puesto en ella
+    // aunque haya salido del crew (el menú lo marca «fuera del crew»): si no saliera, no habría manera de quitarlo.
+    paraElegir: (...ids) => paraElegir(E.usuarios, ...ids),
+    // El crew de ahora y quien ha salido pero sigue siendo responsable de alguna de esas tareas: para agrupar o filtrar
+    // por persona sin que esas tareas se queden sin sitio.
+    conTareas: (tareas) => conTareas(E.usuarios, tareas),
     todasEtiquetas() {
         const cuenta = new Map();
         for (const t of E.tareas.values()) for (const e of t.etiquetas) cuenta.set(e, (cuenta.get(e) || 0) + 1);
@@ -60,7 +75,9 @@ const ctx = {
     // Tareas que pasan los filtros. «incluirHechas» ignora el filtro de ocultar hechas.
     visibles({ incluirHechas = false } = {}) {
         const f = E.filtros;
-        const q = normalizar(f.texto);
+        // El buscador encuentra también por etiqueta («#bolos»), por persona («@víctor»), por prioridad y por estado (tablon-buscar.js).
+        const palabras = prepararBusqueda(f.texto);
+        const ayudas = { nombre: (id) => ctx.usuario(id)?.nombre || "" };
         return [...E.tareas.values()].filter((t) => {
             if (f.ocultarHechas && !incluirHechas && t.estado === "hecho") return false;
             if (f.persona === "yo" && !t.responsables.includes(E.yo.id)) return false;
@@ -68,11 +85,7 @@ const ctx = {
             if (!["todos", "yo", "nadie"].includes(f.persona) && !t.responsables.includes(f.persona)) return false;
             if (f.prioridades.length && !f.prioridades.includes(t.prioridad || "ninguna")) return false;
             if (f.etiqueta && !t.etiquetas.includes(f.etiqueta)) return false;
-            if (q) {
-                const donde = normalizar(`${t.titulo} ${t.notas} ${t.etiquetas.join(" ")} ${t.subtareas.map((s) => s.texto).join(" ")}`);
-                if (!q.split(/\s+/).every((p) => donde.includes(p))) return false;
-            }
-            return true;
+            return coincide(t, palabras, ayudas);
         });
     },
     abrir: (id, opciones) => abrirFicha(id, ctx, opciones),
@@ -113,7 +126,7 @@ const ctx = {
         pintar();
         actualizarFicha(ctx);
         try {
-            const nueva = await api.cambiar(id, c, opciones.antes);
+            const nueva = await api.cambiar(id, c, opciones.antes, { alSalir: opciones.alSalir });
             // Solo se copian los campos que se han pedido: si mientras tanto se ha seguido escribiendo, no se pisa.
             const actual = E.tareas.get(id);
             if (actual) {
@@ -130,6 +143,14 @@ const ctx = {
                 return "conflicto";
             }
             aviso(`No se ha guardado: ${err.message}`, { tipo: "malo" });
+            // Lo que se había puesto en pantalla sin esperar al servidor vuelve a como estaba: si no, sin conexión la
+            // tarea se quedaba a la vista como «hecha» (o movida) sin estarlo, hasta que al volver se deshacía sola.
+            // (Si mientras tanto ha llegado otra versión del servidor, esa es la buena y no se toca.)
+            if (E.tareas.get(id) === t) {
+                Object.assign(t, antes);
+                pintar();
+                actualizarFicha(ctx);
+            }
             await recargar();
             return "error";
         }
@@ -240,11 +261,22 @@ function montar() {
     raiz.append(
         h(
             "header",
-            { class: "barra" },
+            { class: "barra barra-tablon" },
             h("div", { class: "marca" }, h("span", { class: "logo" }, "HS"), h("h1", { class: "nombre-app" }, "TAREAS")),
+            // Las pestañas a las otras pantallas, las mismas que en todas («otra-pantalla»: con ?solo=1 no salen, ver solo.js).
             h(
                 "nav",
-                { class: "pestanas", "aria-label": "Vistas" },
+                { class: "pestanas pantallas otra-pantalla", "aria-label": "Aplicaciones" },
+                h("span", { class: "pestana activa", "aria-current": "page" }, "Tareas"),
+                E.yo.libro ? h("a", { class: "pestana otra-pantalla", href: "libro/" }, "Cuentas") : null,
+                h("a", { class: "pestana otra-pantalla", href: "pizarra/" }, "Pizarra"),
+                h("a", { class: "pestana otra-pantalla", href: "archivo/" }, "Archivo"),
+                h("a", { class: "pestana otra-pantalla", href: "musica/" }, "Música"),
+            ),
+            // Las vistas del tablón: al lado del nombre en modo solo y en su propia línea cuando están las pestañas de arriba.
+            h(
+                "nav",
+                { class: "pestanas vistas", "aria-label": "Vistas" },
                 VISTAS.map((v) =>
                     h(
                         "button",
@@ -262,7 +294,13 @@ function montar() {
             // Solo en el móvil (≤ 600 px): las vistas en un botón y los filtros plegados detrás de otro, para que la cabecera quepa en una línea.
             h("button", { type: "button", class: "boton-vista", id: "boton-vista", "aria-haspopup": "menu", title: "Vistas", onclick: (e) => menuVistas(e.currentTarget) }),
             h("button", { type: "button", class: "filtro boton-filtros", id: "boton-filtros", "aria-controls": "filtros", "aria-expanded": "false", onclick: () => alternarFiltros() }, "Filtros", h("span", { class: "flecha" }, "▾")),
-            h("div", { class: "barra-derecha" }, h("button", { type: "button", class: "btn primario", id: "boton-nueva", title: "Nueva tarea (N)", onclick: () => nuevaTarea() }, "+ Nueva"), h("button", { type: "button", class: "boton-yo", id: "boton-yo", onclick: (e) => menuYo(e.currentTarget) })),
+            h(
+                "div",
+                { class: "barra-derecha" },
+                // «+ Nueva»: en un móvil de menos de 360 px no cabe entero y se queda en «+» (estilo.css); qué es lo dice «aria-label».
+                h("button", { type: "button", class: "btn primario", id: "boton-nueva", title: "Nueva tarea (N)", "aria-label": "Nueva tarea", onclick: () => nuevaTarea() }, h("span", { "aria-hidden": "true" }, "+"), h("span", { class: "texto-nueva" }, "Nueva")),
+                h("button", { type: "button", class: "boton-yo", id: "boton-yo", onclick: (e) => menuYo(e.currentTarget) }),
+            ),
         ),
         h("div", { id: "cumple-aviso", class: "cumple-zona", hidden: true }),
         h(
@@ -378,7 +416,7 @@ setInterval(() => {
 }, 10 * 60 * 1000);
 
 function pintarBarra() {
-    for (const b of document.querySelectorAll(".pestana")) {
+    for (const b of document.querySelectorAll(".vistas .pestana")) {
         b.classList.toggle("activa", b.dataset.vista === E.vista);
         b.setAttribute("aria-current", b.dataset.vista === E.vista ? "page" : "false");
     }
@@ -388,7 +426,8 @@ function pintarBarra() {
     const f = E.filtros;
     const vistaActual = VISTAS.find((v) => v.id === E.vista);
     const botonVista = $("#boton-vista");
-    if (botonVista) botonVista.replaceChildren(vistaActual.nombre, h("span", { class: "flecha" }, "▾"));
+    // En el móvil no cabe el nombre de la pantalla al lado: va en pequeño dentro del botón, encima de la vista.
+    if (botonVista) botonVista.replaceChildren(h("span", { class: "boton-vista-pantalla" }, "Tareas"), h("span", { class: "boton-vista-nombre" }, vistaActual.nombre, h("span", { class: "flecha" }, "▾")));
     const hayFiltros = Boolean(f.texto || f.persona !== "todos" || f.prioridades.length || f.etiqueta || f.ocultarHechas);
     $("#boton-filtros")?.classList.toggle("activo", hayFiltros);
     const persona = $("#filtro-persona");
@@ -478,6 +517,8 @@ function cambiarVista(id) {
     E.vista = id;
     guardarLocal("vista", id);
     cerrarMenu();
+    // Al volver a una vista se pinta de nuevas: que se coloque otra vez en hoy (el calendario y el cronograma).
+    if (E.porVista[id]) E.porVista[id].centrado = false;
     pintarYa();
 }
 
@@ -493,7 +534,7 @@ function opcionesMenu(opciones) {
             h(
                 o.href ? "a" : "button",
                 {
-                    class: ["opcion", o.marcado && "marcada"],
+                    class: ["opcion", o.marcado && "marcada", o.otra && "otra-pantalla"],
                     type: o.href ? null : "button",
                     href: o.href,
                     download: o.download,
@@ -523,7 +564,7 @@ function menuFiltroPersona(ancla) {
             { contenido: "Todos", marcado: E.filtros.persona === "todos", accion: elegir("todos") },
             { contenido: "Mis tareas", marcado: E.filtros.persona === "yo", accion: elegir("yo") },
             "-",
-            ...ctx.activos().filter((u) => u.id !== E.yo.id).map((u) => ({ contenido: [avatar(u), u.nombre], marcado: E.filtros.persona === u.id, accion: elegir(u.id) })),
+            ...ctx.conTareas([...E.tareas.values()]).filter((u) => u.id !== E.yo.id).map((u) => ({ contenido: personaEnMenu(u), marcado: E.filtros.persona === u.id, accion: elegir(u.id) })),
             { contenido: [avatar(null), "Sin asignar"], marcado: E.filtros.persona === "nadie", accion: elegir("nadie") },
         ]),
     );
@@ -577,14 +618,15 @@ function menuYo(ancla) {
             null,
             h("div", { class: "menu-titulo" }, `Hola, ${E.yo.nombre}`),
             opcionesMenu([
-                enOficina ? { contenido: "Abrir en pestaña nueva ↗", href: location.href.split("#")[0], target: "_blank" } : null,
+                enOficina ? { contenido: "Abrir en pestaña nueva ↗", href: sinSolo(location.href.split("#")[0]), target: "_blank" } : null,
                 { contenido: "Descargar en Excel", href: "api/excel", download: "" },
                 { contenido: "Importar desde Excel…", accion: importarExcel },
                 "-",
-                E.yo.libro ? { contenido: "Libro de cuentas", href: "libro/" } : null,
-                { contenido: "Pizarra", href: "pizarra/" },
-                { contenido: "Archivo", href: "archivo/" },
-                { contenido: "Música", href: "musica/" },
+                // «otra»: lleva a otra pantalla (con ?solo=1 no sale, ver solo.js)
+                E.yo.libro ? { contenido: "Libro de cuentas", href: "libro/", otra: true } : null,
+                { contenido: "Pizarra", href: "pizarra/", otra: true },
+                { contenido: "Archivo", href: "archivo/", otra: true },
+                { contenido: "Música", href: "musica/", otra: true },
                 E.yo.admin ? { contenido: "Crew: quién puede entrar…", accion: panelCrew } : null,
                 { contenido: "Mi cuenta…", accion: ajustesYo },
                 { contenido: "Atajos de teclado", accion: atajos },
@@ -622,32 +664,30 @@ async function panelCrew() {
         const nombre = h("input", { class: "campo", value: persona.nombre, maxlength: 24 });
         const correo = h("input", { class: "campo", type: "email", value: persona.email || "", placeholder: "correo@gmail.com", maxlength: 120 });
         const error = h("p", { class: "error" });
-        abrirMenu(
-            ancla,
-            h(
-                "form",
-                {
-                    class: "menu-fecha",
-                    onsubmit: async (e) => {
-                        e.preventDefault();
-                        try {
-                            await api.cambiarCrew(persona.id, { nombre: nombre.value, email: correo.value });
-                            cerrarMenu();
-                            await recargarCrew();
-                        } catch (err) {
-                            error.textContent = err.message;
-                        }
-                    },
+        const formulario = h(
+            "form",
+            {
+                class: "menu-fecha",
+                onsubmit: async (e) => {
+                    e.preventDefault();
+                    try {
+                        await api.cambiarCrew(persona.id, { nombre: nombre.value, email: correo.value });
+                        cerrarMenu();
+                        await recargarCrew();
+                    } catch (err) {
+                        error.textContent = err.message;
+                    }
                 },
-                h("div", { class: "menu-titulo" }, "Nombre"),
-                nombre,
-                h("div", { class: "menu-titulo" }, "Correo de Google"),
-                correo,
-                error,
-                h("button", { class: "btn primario pequeno", type: "submit" }, "Guardar"),
-            ),
-            { ancho: 280 },
+            },
+            h("div", { class: "menu-titulo" }, "Nombre"),
+            nombre,
+            h("div", { class: "menu-titulo" }, "Correo de Google"),
+            correo,
+            error,
+            h("button", { class: "btn primario pequeno", type: "submit" }, "Guardar"),
         );
+        quitarErrorAlCorregir(formulario, error);
+        abrirMenu(ancla, formulario, { ancho: 280 });
     }
     function pintarCrew() {
         const personas = [...info.crew].sort((a, b) => Number(a.baja) - Number(b.baja) || a.nombre.localeCompare(b.nombre));
@@ -732,6 +772,7 @@ async function panelCrew() {
         nombre,
         h("button", { class: "btn primario", type: "submit" }, "Añadir"),
     );
+    quitarErrorAlCorregir(form, error);
     ventana(
         "Crew",
         h(
@@ -862,6 +903,7 @@ function ajustesYo() {
             ),
         ),
     );
+    quitarErrorAlCorregir(v.caja, error);
 }
 
 function atajos() {
@@ -971,7 +1013,7 @@ function nuevaTarea(base = {}) {
             entrada.value = "";
             pintarPiezas();
             entrada.focus();
-            aviso(`Creada: «${t.titulo}»`, { accion: "Abrir", alAccion: () => (v.cerrar(), ctx.abrir(t.id)) });
+            aviso(`Creada: «${t.titulo.slice(0, 60)}${t.titulo.length > 60 ? "…" : ""}»`, { accion: "Abrir", alAccion: () => (v.cerrar(), ctx.abrir(t.id)) });
         }
     };
     entrada.addEventListener("keydown", (e) => {
@@ -1012,6 +1054,7 @@ function actualizarUsuario(u) {
 }
 
 function alRecibir(ev) {
+    pestanaCuentas.alRecibir(ev);
     if (ev.tipo === "tarea") {
         E.tareas.set(ev.tarea.id, ev.tarea);
         pintar();
@@ -1040,6 +1083,7 @@ async function recargar() {
         /* sin conexión: ya se avisará */
         return;
     }
+    pestanaCuentas.repintar();
     cargarOficina();
 }
 
@@ -1063,8 +1107,14 @@ function empezar(datos) {
     dejarDeEscuchar?.();
     dejarDeEscuchar = escuchar(alRecibir, recargar);
     cargarOficina();
-    const pedida = new URLSearchParams(location.search).get("tarea");
-    if (pedida && E.tareas.has(pedida)) ctx.abrir(pedida);
+    // «?tarea=…»: el enlace a una tarea (o la página recargada con su ficha abierta). La dirección de debajo se queda
+    // limpia y la ficha pone la suya al abrirse (capas.js): así «atrás» la cierra y deja el tablón, sin la tarea.
+    const pedida = tareaPedida;
+    tareaPedida = null; // solo la primera vez (al volver a entrar tras perder la sesión, no)
+    if (pedida) {
+        if (new URLSearchParams(location.search).has("tarea")) history.replaceState(history.state, "", conSolo(location.pathname));
+        if (E.tareas.has(pedida)) ctx.abrir(pedida);
+    }
 }
 
 function sinSesion() {

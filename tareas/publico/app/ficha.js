@@ -1,13 +1,21 @@
 // Ficha de una tarea: panel lateral para verla y editarla entera, como una página de Notion.
 
-import { h, rellenar, retrasar, estadoDe, prioridadDe, plazo, fechaMedia, fechaCorta, fechaLarga, haceCuanto } from "./util.js";
-import { menuEstado, menuPrioridad, menuPersonas, menuPersona, menuFecha, menuEtiquetas, avatar, chipEtiqueta, cerrarMenu, aviso } from "./menus.js";
+import { h, rellenar, estadoDe, prioridadDe, plazo, fechaMedia, fechaCorta, fechaLarga, haceCuanto } from "./util.js";
+import { menuEstado, menuPrioridad, menuPersonas, menuPersona, menuFecha, menuEtiquetas, avatar, chipEtiqueta, cerrarMenu, aviso, colocarAvisos } from "./menus.js";
+import { abrirCapa } from "./capas.js";
+import { conSolo } from "./solo.js";
+import { guardadoRetrasado, guardarAlSalir } from "./guardado.js";
 
 let abierta = null; // id
 let panel = null;
-let guardarTitulo = null;
+let capa = null; // la ficha es una capa (capas.js): el tabulador no sale de ella y «atrás» la cierra
+let guardarTitulo = null; // los guardados retrasados del título y de las notas de la ficha abierta (guardado.js)
 let guardarNotas = null;
 let notasEnConflicto = false; // otra persona ha cambiado las notas a la vez y quien escribe aún no ha elegido
+
+// Al esconderse o irse la página (cerrarla, recargarla, cambiar de aplicación en el móvil) se guarda lo que estuviera
+// esperando su turno: antes, recargar en el segundo siguiente a escribir perdía la última frase de las notas.
+guardarAlSalir(() => (panel ? [guardarTitulo, guardarNotas] : []));
 
 export const fichaAbierta = () => abierta;
 
@@ -25,17 +33,31 @@ export function cerrarFicha({ forzar = false } = {}) {
         return false;
     }
     notasEnConflicto = false;
-    guardarTitulo?.pendiente() && guardarTitulo.ya();
-    guardarNotas?.pendiente() && guardarNotas.ya();
+    // lo que estuviera esperando y también lo que no se llegó a guardar (un fallo de conexión)
+    guardarTitulo?.ya();
+    guardarNotas?.ya();
     cerrarMenu();
     panel.remove();
     panel = null;
+    colocarAvisos(); // los avisos que estuvieran al pie de la ficha vuelven abajo
     const id = abierta;
     abierta = null;
     document.body.classList.remove("con-ficha");
-    document.querySelector(`[data-id="${CSS.escape(id)}"]`)?.focus({ preventScroll: true });
+    // El foco vuelve a lo que la abrió o, si el tablón se ha repintado mientras tanto, a esa tarea.
+    capa?.quitar({
+        alternativa: () => {
+            const suya = document.querySelector(`[data-id="${CSS.escape(id)}"]`);
+            // en el tablero, el calendario y el cronograma es un botón; en la lista, una fila: ahí, su «Abrir»
+            return suya?.matches("button, a[href], [tabindex]") ? suya : suya?.querySelector(".abrir");
+        },
+    });
+    capa = null;
     return true;
 }
+
+// La dirección que enseña la barra del navegador con la ficha abierta: la de esa tarea, con el modo solo de esta página
+// si lo tiene (el enlace para compartir, «Enlace», va siempre sin él: sale de la oficina).
+const direccionDeTarea = (id) => conSolo(`${location.pathname}?tarea=${encodeURIComponent(id)}`);
 
 function crecer(area) {
     area.style.height = "auto";
@@ -70,14 +92,21 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
         "aria-label": "Título",
         placeholder: "Sin título",
     });
-    guardarTitulo = retrasar(() => {
-        const v = titulo.value.replace(/\s+/g, " ").trim();
-        if (v && v !== ctx.E.tareas.get(id)?.titulo) cambiar({ titulo: v });
-    }, 700);
+    titulo.value = t.titulo;
+    // El título, como las notas: se guarda un rato después de la última letra, al salir del campo, al cerrar la ficha
+    // y al cerrar o recargar la página; si falla el envío, lo escrito se queda y se reintenta al volver la conexión.
+    // Un título vacío no se guarda (cuenta como el que tiene la tarea).
+    const guardadoTitulo = guardadoRetrasado({
+        leer: () => titulo.value.replace(/\s+/g, " ").trim() || guardadoTitulo.base(),
+        base: t.titulo,
+        espera: 700,
+        enviar: (texto, _antes, { alSalir }) => cambiar({ titulo: texto }, { alSalir }),
+    });
+    guardarTitulo = guardadoTitulo;
     titulo.addEventListener("input", () => {
         crecer(titulo);
         marcarGuardando();
-        guardarTitulo();
+        guardadoTitulo.tocar();
     });
     titulo.addEventListener("keydown", (e) => {
         if (e.key === "Enter") {
@@ -87,33 +116,32 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
     });
     titulo.addEventListener("blur", () => {
         if (!titulo.value.trim()) titulo.value = ctx.E.tareas.get(id)?.titulo || "";
-        guardarTitulo.pendiente() && guardarTitulo.ya();
+        guardadoTitulo.pendiente() && guardadoTitulo.ya();
     });
 
     const notas = h("textarea", { class: "ficha-notas", placeholder: "Detalles, enlaces, contactos, lo que haga falta…", "aria-label": "Notas" });
+    notas.value = t.notas;
     const enlaces = h("div", { class: "ficha-enlaces" });
     const avisoConflicto = h("div", { class: "ficha-conflicto", role: "alert", hidden: true });
-    // Las notas del servidor en las que se basa lo que hay escrito. Se mandan al guardar: si otra persona ya las ha
-    // cambiado, el servidor no las pisa (409) y aquí se deja elegir.
-    let baseNotas = t.notas;
-    let enVuelo = false;
     let conflicto = false;
-    const notasSinConfirmar = () => guardarNotas.pendiente() || enVuelo || conflicto;
-    async function enviarNotas() {
-        if (conflicto || enVuelo || notas.value === baseNotas) return;
-        const texto = notas.value;
-        const suPanel = panel;
-        enVuelo = true;
-        const r = await cambiar({ notas: texto }, { antes: { notas: baseNotas } });
-        enVuelo = false;
-        if (r === "ok") baseNotas = texto;
-        if (r === "conflicto") {
-            if (panel === suPanel) mostrarConflicto();
-            else aviso("Notas sin guardar: otra persona las cambió.", { tipo: "malo", accion: "Ver", duracion: 15000, alAccion: () => abrirFicha(id, ctx, { mias: texto }) });
-            return;
-        }
-        if (panel === suPanel && notas.value !== baseNotas) guardarNotas(); // se ha seguido escribiendo mientras tanto
-    }
+    // Las notas se guardan un rato después de la última letra, al salir del campo, al cerrar la ficha y al cerrar o
+    // recargar la página (guardado.js). Con cada envío va «antes», las notas del servidor en las que se basa lo escrito:
+    // si otra persona ya las ha cambiado, el servidor no las pisa (409) y aquí se deja elegir.
+    const guardado = guardadoRetrasado({
+        leer: () => notas.value,
+        espera: 800,
+        parado: () => conflicto,
+        enviar: async (texto, antes, { alSalir }) => {
+            const suPanel = panel;
+            const r = await cambiar({ notas: texto }, { antes: { notas: antes }, alSalir });
+            if (r === "conflicto") {
+                if (panel === suPanel) mostrarConflicto();
+                else aviso("Notas sin guardar: otra persona las cambió.", { tipo: "malo", accion: "Ver", duracion: 15000, alAccion: () => abrirFicha(id, ctx, { mias: texto }) });
+            }
+            return r;
+        },
+    });
+    guardarNotas = guardado;
     function mostrarConflicto() {
         conflicto = true;
         notasEnConflicto = true;
@@ -135,29 +163,28 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
     }
     function dejarLasMias() {
         resolverConflicto();
-        baseNotas = ctx.E.tareas.get(id)?.notas ?? baseNotas; // lo que hay ahora en el servidor: se guarda encima
-        if (notas.value === baseNotas) estadoGuardado.textContent = "Guardado";
-        enviarNotas();
+        guardado.poner(ctx.E.tareas.get(id)?.notas ?? guardado.base()); // lo que hay ahora en el servidor: se guarda encima
+        if (notas.value === guardado.base()) estadoGuardado.textContent = "Guardado";
+        guardado.ya();
     }
     function usarLasSuyas() {
         resolverConflicto();
         const actual = ctx.E.tareas.get(id);
         if (actual) {
             notas.value = actual.notas;
-            baseNotas = actual.notas;
+            guardado.poner(actual.notas);
             crecer(notas);
             pintarEnlaces();
         }
         estadoGuardado.textContent = "Guardado";
     }
-    guardarNotas = retrasar(enviarNotas, 800);
     notas.addEventListener("input", () => {
         crecer(notas);
         if (!conflicto) marcarGuardando();
-        guardarNotas();
+        guardado.tocar();
         pintarEnlaces();
     });
-    notas.addEventListener("blur", () => guardarNotas.pendiente() && guardarNotas.ya());
+    notas.addEventListener("blur", () => guardado.pendiente() && guardado.ya());
     function pintarEnlaces() {
         const urls = [...new Set(notas.value.match(ENLACE) || [])].slice(0, 12);
         rellenar(enlaces, ...urls.map((u) => h("a", { href: u, target: "_blank", rel: "noopener noreferrer" }, u.replace(/^https?:\/\//, "").slice(0, 60), " ↗")));
@@ -217,14 +244,25 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
             pie,
         ),
     );
+    // Una capa, pero no modal: al lado sigue el tablón (pulsar otra tarea la abre). «Atrás» la cierra (en un móvil
+    // ocupa toda la pantalla y el botón de atrás sacaba del tablón entero) y la dirección dice qué tarea es.
+    capa = abrirCapa({ el: panel, cerrar: () => cerrarFicha(), direccion: direccionDeTarea(id) });
     document.body.appendChild(panel);
     document.body.classList.add("con-ficha");
+    colocarAvisos(); // los avisos que hubiera a la vista pasan al pie de la ficha, para no taparla
 
     panel.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && !document.querySelector(".menu")) {
-            e.stopPropagation();
-            cerrarFicha();
+        if (e.key !== "Escape" || document.querySelector(".menu")) return;
+        e.stopPropagation();
+        // Con una subtarea a medio escribir, el primer Escape es para el campo (lo vacía, o lo deja como estaba) y no
+        // cierra la ficha: cerrarla tiraba lo escrito. El segundo, ya sin nada a medias, la cierra.
+        const campo = e.target.closest?.(".subtarea-nueva, .subtarea-texto");
+        if (campo && campo.value !== (campo.dataset.original ?? "")) {
+            e.preventDefault();
+            campo.value = campo.dataset.original ?? "";
+            return;
         }
+        cerrarFicha();
     });
 
     // --- propiedades ---
@@ -258,24 +296,44 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
             fila(
                 "Para quién",
                 responsables.length ? responsables.map((u) => h("span", { class: "persona" }, avatar(u), u.nombre)) : vacio("Sin asignar"),
-                (a) => menuPersonas(a, ctx.activos(), t.responsables, (v) => cambiar({ responsables: v })),
+                (a) => menuPersonas(a, ctx.paraElegir(t.responsables), t.responsables, (v) => cambiar({ responsables: v })),
             ),
             fila("Para cuándo", t.fin ? [h("span", { class: ["chip", "plazo", p.clase] }, p.texto), /\d/.test(p.texto) ? null : h("span", { class: "tenue" }, fechaCorta(t.fin))] : vacio("Sin fecha"), (a) =>
                 menuFecha(a, t.fin, (v) => cambiar({ fin: v }), { titulo: "Para cuándo" }),
             ),
             fila("Empieza", t.inicio ? fechaMedia(t.inicio) : vacio("—"), (a) => menuFecha(a, t.inicio, (v) => cambiar({ inicio: v }), { titulo: "Empieza el" })),
             fila("Etiquetas", t.etiquetas.length ? t.etiquetas.map((e) => chipEtiqueta(e)) : vacio("Ninguna"), (a) => menuEtiquetas(a, t.etiquetas, ctx.todasEtiquetas(), (v) => cambiar({ etiquetas: v }))),
-            fila("Pedido por", pedido ? h("span", { class: "persona" }, avatar(pedido), pedido.nombre) : vacio("—"), (a) => menuPersona(a, ctx.activos(), t.pedidoPor, (v) => cambiar({ pedidoPor: v }))),
+            fila("Pedido por", pedido ? h("span", { class: "persona" }, avatar(pedido), pedido.nombre) : vacio("—"), (a) => menuPersona(a, ctx.paraElegir(t.pedidoPor), t.pedidoPor, (v) => cambiar({ pedidoPor: v }))),
         );
     }
 
     // --- subtareas ---
+    // Cada cambio se hace sobre la lista de AHORA (la que hay en el tablón en ese momento, no la que se pintó) y sobre
+    // ESA subtarea (por su id): si otra persona ha marcado, añadido o quitado otra mientras tanto, no se le pisa. Antes
+    // se mandaba la lista tal como estaba al pintarla, y quien terminaba de escribir una subtarea se llevaba por delante
+    // lo que hubiera hecho el otro.
+    const subtareasDeAhora = () => ctx.E.tareas.get(id)?.subtareas || [];
+    const guardarLista = (lista) => cambiar({ subtareas: lista });
+    // (una subtarea sin id —no debería haberlas— se busca por su sitio en la lista)
+    const esLa = (s, i) => (x, j) => (s.id ? x.id === s.id : j === i);
+    const nuevoIdSubtarea = () => `${Math.random().toString(36)}00000000`.slice(2, 10); // el servidor lo conserva (letras y cifras, de 4 a 24)
+    // ¿Hay una subtarea a medio escribir? Entonces no se repintan (se perdería lo escrito). Con el cursor en un campo
+    // sin tocar sí: se repintan y el cursor vuelve a su campo.
+    const campoDeSubtarea = () => {
+        const activo = document.activeElement;
+        return activo?.matches?.(".subtarea-texto, .subtarea-nueva") && subtareas.contains(activo) ? activo : null;
+    };
+    const subtareaAMedias = () => {
+        const campo = campoDeSubtarea();
+        return Boolean(campo) && campo.value !== (campo.dataset.original ?? "");
+    };
     function pintarSubtareas() {
         const t = ctx.E.tareas.get(id);
         if (!t) return;
+        const conFoco = campoDeSubtarea();
+        const focoEn = conFoco ? (conFoco.matches(".subtarea-nueva") ? "nueva" : conFoco.dataset.id || "") : null;
         const hechas = t.subtareas.filter((s) => s.hecha).length;
         const total = t.subtareas.length;
-        const guardarLista = (lista) => cambiar({ subtareas: lista });
         const lista = h(
             "ul",
             { class: "subtareas" },
@@ -291,12 +349,13 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
                             class: "casilla",
                             checked: s.hecha,
                             "aria-label": "Hecha",
-                            onchange: (e) => guardarLista(t.subtareas.map((x, j) => (j === i ? { ...x, hecha: e.target.checked } : x))),
+                            onchange: (e) => guardarLista(subtareasDeAhora().map((x, j) => (esLa(s, i)(x, j) ? { ...x, hecha: e.target.checked } : x))),
                         }),
                     ),
                     h("input", {
                         class: "subtarea-texto",
                         value: s.texto,
+                        dataset: { original: s.texto, id: s.id || "" }, // «original»: a lo que vuelve con Escape
                         maxlength: 300,
                         "aria-label": "Subtarea",
                         onkeydown: (e) => {
@@ -304,10 +363,11 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
                         },
                         onchange: (e) => {
                             const v = e.target.value.trim();
-                            guardarLista(v ? t.subtareas.map((x, j) => (j === i ? { ...x, texto: v } : x)) : t.subtareas.filter((_, j) => j !== i));
+                            const es = esLa(s, i);
+                            guardarLista(v ? subtareasDeAhora().map((x, j) => (es(x, j) ? { ...x, texto: v } : x)) : subtareasDeAhora().filter((x, j) => !es(x, j)));
                         },
                     }),
-                    h("button", { type: "button", class: "quitar", title: "Quitar", onclick: () => guardarLista(t.subtareas.filter((_, j) => j !== i)) }, "×"),
+                    h("button", { type: "button", class: "quitar", title: "Quitar", onclick: () => guardarLista(subtareasDeAhora().filter((x, j) => !esLa(s, i)(x, j))) }, "×"),
                 ),
             ),
         );
@@ -321,7 +381,7 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
                 const v = e.target.value.trim();
                 if (!v) return;
                 e.target.value = "";
-                await guardarLista([...ctx.E.tareas.get(id).subtareas, { texto: v, hecha: false }]);
+                await guardarLista([...subtareasDeAhora(), { id: nuevoIdSubtarea(), texto: v, hecha: false }]);
                 pintarSubtareas();
                 subtareas.querySelector(".subtarea-nueva")?.focus();
             },
@@ -333,6 +393,11 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
             lista,
             nueva,
         );
+        // el cursor, de vuelta a su campo (si esa subtarea sigue ahí)
+        if (focoEn !== null) {
+            const campo = focoEn === "nueva" ? nueva : focoEn ? [...lista.querySelectorAll(".subtarea-texto")].find((x) => x.dataset.id === focoEn) : null;
+            campo?.focus({ preventScroll: true });
+        }
     }
 
     function pintarPie() {
@@ -351,22 +416,31 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
     panel.pintar = ({ deFuera = false } = {}) => {
         const t = ctx.E.tareas.get(id);
         if (!t) return;
-        if (document.activeElement !== titulo && titulo.value !== t.titulo && !guardarTitulo.pendiente()) {
+        // (el título, igual que las notas de más abajo: solo se cambia por el que llega si aquí no hay otro a medias)
+        if (document.activeElement !== titulo && titulo.value !== t.titulo && guardadoTitulo.limpio()) {
             titulo.value = t.titulo;
+            guardadoTitulo.poner(t.titulo);
             crecer(titulo);
         }
-        // Con el cursor puesto también se actualizan, si no hay nada escrito encima de lo que se veía.
-        if ((document.activeElement !== notas || notas.value === baseNotas) && notas.value !== t.notas && !notasSinConfirmar()) {
+        // Las notas se cambian por las que llegan solo si aquí no hay nada escrito encima de lo que tiene el servidor
+        // (también con el cursor puesto). Si lo hay (esperando, de camino, en conflicto o sin guardar porque falló el
+        // envío), lo escrito no se toca: antes, tras un fallo de conexión, el siguiente cambio que llegaba se lo llevaba.
+        if (notas.value !== t.notas && guardado.limpio() && !conflicto) {
             const { selectionStart: desde, selectionEnd: hasta } = notas;
             notas.value = t.notas;
-            baseNotas = t.notas;
+            guardado.poner(t.notas);
             if (document.activeElement === notas) notas.setSelectionRange(Math.min(desde, t.notas.length), Math.min(hasta, t.notas.length));
             crecer(notas);
             pintarEnlaces();
         }
+        // Lo que no se pudo guardar (se cayó la conexión) se vuelve a intentar cuando llega algo del servidor: es que ha vuelto.
+        if (deFuera) {
+            guardadoTitulo.reintentar();
+            guardado.reintentar();
+        }
         pintarPropiedades();
-        // No se repintan las subtareas mientras se está escribiendo en una (se perdería lo escrito).
-        if (!document.activeElement?.matches?.(".subtarea-texto, .subtarea-nueva")) pintarSubtareas();
+        // No se repintan las subtareas mientras hay una a medio escribir (se perdería lo escrito).
+        if (!subtareaAMedias()) pintarSubtareas();
         pintarPie();
         if (deFuera && !conflicto) {
             const editor = ctx.usuario(t.actualizadaPor);
@@ -374,8 +448,6 @@ export function abrirFicha(id, ctx, { nueva = false, mias } = {}) {
         }
     };
 
-    titulo.value = t.titulo;
-    notas.value = t.notas;
     panel.pintar();
     pintarEnlaces();
     if (mias !== undefined) {

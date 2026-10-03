@@ -1,0 +1,142 @@
+name: Comprobar la oficina (sin publicar)
+
+# Comprueba una rama de trabajo ANTES de fusionarla en «hotspot»: aplica los parches y los archivos propios sobre
+# WorkAdventure, pasa la comprobación de tipos (tsc y svelte-check) y construye la imagen «play» SIN publicarla.
+# La construcción de verdad (hotspot-imagen.yml) no comprueba tipos y solo corre al fusionar, cuando ya es tarde.
+#
+# Este flujo no puede publicar nada: no entra en ningún registro y solo tiene permiso de lectura.
+
+on:
+  push:
+    branches: ["oficina-v*"]
+    paths-ignore:
+      - "tareas/**"
+      - ".github/workflows/hotspot-tareas.yml"
+      - "*.md"
+  pull_request:
+    branches: [hotspot]
+    paths-ignore:
+      - "tareas/**"
+      - ".github/workflows/hotspot-tareas.yml"
+      - "*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  WA_VERSION: v1.33.10
+
+concurrency:
+  group: comprobar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tipos:
+    name: Parches y tipos
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Personalización de HOT-SPOT HQ
+        uses: actions/checkout@v4
+        with:
+          path: hotspot
+
+      - name: Descargar WorkAdventure ${{ env.WA_VERSION }}
+        run: git clone --quiet --depth 1 --branch "$WA_VERSION" https://github.com/workadventure/workadventure.git wa
+
+      - name: Aplicar parches y archivos propios
+        working-directory: wa
+        run: |
+          set -e
+          for p in ../hotspot/parches/*.patch; do
+            echo "Parche $(basename "$p")"
+            git apply --whitespace=nowarn "$p" || { echo "::error title=Parche que no aplica::$(basename "$p")"; exit 1; }
+          done
+          rsync -a --exclude .gitkeep ../hotspot/archivos/ ./
+          git status --short
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Instalar protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: "3.x"
+
+      - name: Instalar dependencias de play
+        working-directory: wa
+        run: npm ci --workspace=workadventure-play
+
+      - name: Mensajes (protobuf)
+        working-directory: wa/messages
+        run: npm ci && npm run ts-proto
+
+      - name: Textos (typesafe-i18n)
+        working-directory: wa/play
+        run: npm run typesafe-i18n
+
+      # La salida de los errores va también como anotación (los registros no siempre se pueden leer desde fuera).
+      - name: Comprobar tipos (tsc)
+        working-directory: wa/play
+        run: |
+          set +e
+          npm run typecheck > /tmp/tsc.txt 2>&1
+          estado=$?
+          tail -n 60 /tmp/tsc.txt
+          if [ $estado -ne 0 ]; then
+            grep -E "error TS" /tmp/tsc.txt | head -n 8 | while IFS= read -r linea; do echo "::error title=tsc::${linea}"; done
+            exit $estado
+          fi
+
+      - name: Comprobar los componentes (svelte-check)
+        working-directory: wa/play
+        run: |
+          set +e
+          npm run svelte-check > /tmp/svelte.txt 2>&1
+          estado=$?
+          tail -n 60 /tmp/svelte.txt
+          if [ $estado -ne 0 ]; then
+            grep -E "Error|error" /tmp/svelte.txt | head -n 8 | while IFS= read -r linea; do echo "::error title=svelte-check::${linea}"; done
+            exit $estado
+          fi
+
+  imagen:
+    name: Construir la imagen (sin publicar)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Liberar espacio en disco
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+
+      - name: Personalización de HOT-SPOT HQ
+        uses: actions/checkout@v4
+        with:
+          path: hotspot
+
+      - name: Descargar WorkAdventure ${{ env.WA_VERSION }}
+        run: git clone --quiet --depth 1 --branch "$WA_VERSION" https://github.com/workadventure/workadventure.git wa
+
+      - name: Aplicar parches y archivos propios
+        working-directory: wa
+        run: |
+          set -e
+          for p in ../hotspot/parches/*.patch; do git apply --whitespace=nowarn "$p"; done
+          rsync -a --exclude .gitkeep ../hotspot/archivos/ ./
+
+      - name: Preparar Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Construir la imagen (no se publica)
+        uses: docker/build-push-action@v6
+        with:
+          context: wa
+          file: wa/play/Dockerfile
+          push: false
+          build-args: |
+            NODE_OPTIONS=--max-old-space-size=12288
+          cache-from: type=gha
+          provenance: false
+          sbom: false

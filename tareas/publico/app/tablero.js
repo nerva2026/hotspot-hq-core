@@ -1,6 +1,6 @@
 // Vista «Tablero»: columnas por estado con tarjetas que se arrastran de una a otra.
 
-import { h, ESTADOS, prioridadDe, plazo, pesoPrioridad } from "./util.js";
+import { h, ESTADOS, prioridadDe, plazo, pesoPrioridad, devolverLoEscrito } from "./util.js";
 import { avatar, chipEtiqueta, menuEstado } from "./menus.js";
 import { arrastrable, autoDesplazamiento, hayArrastre } from "./arrastre.js";
 import { interpretar } from "./rapida.js";
@@ -150,13 +150,15 @@ function cajaAlta(estado, ctx, ev) {
         ctx.pintar();
     };
     async function crear() {
-        const r = interpretar(area.value, ctx.activos());
+        const escrito = area.value;
+        const r = interpretar(escrito, ctx.activos());
         if (!r.titulo) return cerrar();
         area.value = "";
         const datos = { titulo: r.titulo, estado, responsables: r.responsables, etiquetas: r.etiquetas };
         if (r.prioridad) datos.prioridad = r.prioridad;
         if (r.fin) datos.fin = r.fin;
-        await ctx.crear(datos);
+        // Si no se ha podido crear (sin conexión), lo escrito vuelve a su campo en vez de perderse.
+        if (!(await ctx.crear(datos))) devolverLoEscrito(`alta-${estado}`, escrito);
     }
     area.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) {

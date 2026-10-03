@@ -55,21 +55,35 @@ export function proximoCumple(cumple, hoy) {
     return { fecha, enDias: diasEntre(hoy, fecha) };
 }
 
-// Lo que ven la oficina y el tablón: de quién es el cumple hoy y cuáles vienen en los próximos días.
-// Quien ha salido del crew no cuenta.
+// ¿Tiene esta persona un cumpleaños guardado que se pueda enseñar? (uno raro en los datos no cuenta)
+const conCumple = (u) => typeof u.cumple === "string" && fechaReal(`2024-${u.cumple}`);
+
+// Lo que ven la oficina y el tablón: de quién es el cumple hoy, cuáles vienen en los próximos días y todos los del
+// crew («todos», para el cartel de cumpleaños: los que antes llegan, primero; el de hoy va con enDias 0).
+// Quien ha salido del crew no cuenta. Sin año en ningún sitio: «fecha» es la próxima vez que se celebra.
 export function resumenOficina(usuarios, hoy, dias = DIAS_PROXIMOS) {
     const cumples = [];
     const proximos = [];
+    const todos = [];
     for (const u of usuarios) {
-        if (u.baja || typeof u.cumple !== "string" || !fechaReal(`2024-${u.cumple}`)) continue;
+        if (u.baja || !conCumple(u)) continue;
         const { fecha, enDias } = proximoCumple(u.cumple, hoy);
+        todos.push({ id: u.id, nombre: u.nombre, dia: u.cumple, fecha, enDias, color: u.color || null });
         if (enDias === 0) cumples.push({ id: u.id, nombre: u.nombre });
         else if (enDias <= dias) proximos.push({ id: u.id, nombre: u.nombre, dia: u.cumple, fecha, enDias });
     }
     const porNombre = (a, b) => a.nombre.localeCompare(b.nombre, "es");
+    const porLlegada = (a, b) => a.enDias - b.enDias || porNombre(a, b);
     cumples.sort(porNombre);
-    proximos.sort((a, b) => a.enDias - b.enDias || porNombre(a, b));
-    return { hoy, cumples, proximos };
+    proximos.sort(porLlegada);
+    todos.sort(porLlegada);
+    return { hoy, cumples, proximos, todos };
+}
+
+// GET /api/oficina: el resumen y, además, el cumpleaños de quien pregunta («yo»; null si no lo ha puesto), para que
+// el cartel sepa si tiene que ofrecerle ponerlo.
+export function oficinaPara(usuarios, hoy, usuario) {
+    return { ...resumenOficina(usuarios, hoy), yo: { id: usuario.id, cumple: conCumple(usuario) ? usuario.cumple : null } };
 }
 
 // ---------- el día de hoy en la oficina ----------

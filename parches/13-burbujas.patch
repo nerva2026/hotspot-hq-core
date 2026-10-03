@@ -1,0 +1,73 @@
+diff --git a/play/src/front/Phaser/Entity/Character.ts b/play/src/front/Phaser/Entity/Character.ts
+index 399f37b..cb8be71 100644
+--- a/play/src/front/Phaser/Entity/Character.ts
++++ b/play/src/front/Phaser/Entity/Character.ts
+@@ -21,6 +21,7 @@ import { WOKA_SPEED } from "../../Enum/EnvironmentVariable";
+ import { UsernameDisplay } from "../Components/UsernameDisplay";
+ import { lazyLoadPlayerCharacterTextures } from "./PlayerTexturesLoadingManager";
+ import { Acciones } from "./Acciones";
++import { PLAYER_NAME_HEIGHT } from "../Components/UsernameDisplaySizes";
+ import { SpeechBubble } from "./SpeechBubble";
+ import { SpeechDomElement } from "./SpeechDomElement";
+ import { ThinkingCloud } from "./ThinkingCloud";
+@@ -587,6 +588,26 @@ export abstract class Character extends Container implements OutlineableInterfac
+         this.companion?.setTarget(this.x, this.y, this._lastDirection);
+     }
+ 
++    /**
++     * HOT SPOT S.L.: la letra de las burbujas de «decir» y «pensar», a un tamaño que caiga en puntos enteros de la
++     * pantalla. La letra de la casa (Pixelify Sans) es de píxeles: se ve limpia cuando cada punto suyo mide un número
++     * entero de puntos de la pantalla (a 10,75 px, un punto de la letra es 1 px). Las burbujas se amplían con el juego,
++     * y con una ampliación que no es entera (×1,5 en una ventana de 1280 px) una letra fija de 11 px salía con medios
++     * píxeles. Aquí se mide la ampliación de verdad y se elige el tamaño; hotspot-retro.css lo usa (--hs-letra y
++     * --hs-interlinea) y, si no llegara, se queda en 11 px. En pantalla nunca baja de unos 15 px.
++     */
++    private ajustarLetraDeBurbuja(elemento: HTMLElement): void {
++        const PUNTO = 10.75;
++        const medida = this.scene.usernameDomLayer?.getAncestorScale();
++        const ampliacion = typeof medida === "number" && medida > 0.2 ? medida : 1; // px de la página por px del mapa
++        const densidad = window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
++        const minimo = Math.ceil((15 * densidad) / PUNTO - 0.01);
++        const puntos = Math.max(minimo, Math.round((11 * ampliacion * densidad) / PUNTO));
++        const enElMapa = ampliacion * densidad;
++        elemento.style.setProperty("--hs-letra", `${((PUNTO * puntos) / enElMapa).toFixed(3)}px`);
++        elemento.style.setProperty("--hs-interlinea", `${(Math.round(PUNTO * puntos * 1.2) / enElMapa).toFixed(3)}px`);
++    }
++
+     say(text: string, type: SayMessageType) {
+         this.scene.markDirty();
+         if (this.bubble !== null) {
+@@ -602,12 +623,15 @@ export abstract class Character extends Container implements OutlineableInterfac
+             case SayMessageType.SpeechBubble:
+             case SayMessageType.UNRECOGNIZED: {
+                 const speechBubble = new SpeechBubble(text);
++                this.ajustarLetraDeBurbuja(speechBubble.getElement());
++                // HOT SPOT S.L.: la burbuja se apoya por abajo justo encima del nombre (su pico mide 5 px). Antes iba
++                // centrada en un punto fijo y, con dos líneas o más, crecía hacia abajo y tapaba el nombre.
+                 this.bubble = new DOMElement(
+                     this.scene,
+                     0,
+-                    0 - CHARACTER_BODY_HEIGHT / 2 - 50,
++                    this.playerNameOffsetY - PLAYER_NAME_HEIGHT - 7,
+                     speechBubble.getElement(),
+-                );
++                ).setOrigin(0.5, 1);
+                 this.add(this.bubble);
+                 break;
+             }
+@@ -621,7 +645,14 @@ export abstract class Character extends Container implements OutlineableInterfac
+                     fillColor: 0xffffff,
+                     fillAlpha: 0.8,
+                 }).getElement();
+-                this.bubble = new DOMElement(this.scene, 0, 0 - CHARACTER_BODY_HEIGHT / 2 - 70, thinkElement);
++                this.ajustarLetraDeBurbuja(thinkElement);
++                // HOT SPOT S.L.: igual que la de decir, apoyada por abajo (sus tres cuadraditos bajan 17 px).
++                this.bubble = new DOMElement(
++                    this.scene,
++                    0,
++                    this.playerNameOffsetY - PLAYER_NAME_HEIGHT - 19,
++                    thinkElement,
++                ).setOrigin(0.5, 1);
+                 this.add(this.bubble);
+                 break;
+             }

@@ -1,9 +1,5 @@
 /* Pizarra de HOT SPOT S.L. · encima de estilo.css (mismas letras, colores y piezas que el tablón y el libro). */
 
-a.pestana {
-    text-decoration: none;
-}
-
 /* ---------- herramientas ---------- */
 .herramientas-pizarra {
     flex: none;
@@ -77,9 +73,9 @@ a.pestana {
     color: #fff;
 }
 .boton-icono.texto-zoom {
-    min-width: 62px;
-    font-size: 12px;
-    letter-spacing: 0.02em;
+    min-width: 72px;
+    font-size: 16px; /* una cifra: en la rejilla de su letra */
+    letter-spacing: 0;
 }
 .zoom {
     display: flex;
@@ -127,6 +123,14 @@ a.pestana {
 }
 .grosor.activo {
     background: var(--amarillo);
+}
+/* El color y el grosor van juntos: en pantallas anchas, en la barra como siempre; en el móvil, plegados detrás de un
+   botón que enseña los de ahora (más abajo). */
+.trazo-pizarra {
+    display: contents;
+}
+.boton-trazo {
+    display: none;
 }
 
 /* ---------- la pizarra ---------- */
@@ -410,19 +414,7 @@ body[data-herramienta="mover"] .elegida .redimensionar {
     background: var(--tinta-suave);
 }
 
-/* ---------- cabecera y ayuda ---------- */
-.presentes {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.presentes .nota {
-    color: var(--crema-mas);
-    font-size: 12px;
-}
-.presentes .avatar {
-    border-color: #000;
-}
+/* ---------- ayuda (los avatares de «quién más está», .presentes, están en estilo.css: los usa también la música) ---------- */
 .ayuda-pizarra ul {
     margin: 0;
     padding-left: 18px;
@@ -463,9 +455,6 @@ body[data-herramienta="mover"] .elegida .redimensionar {
         width: 24px;
         height: 24px;
     }
-    .boton-icono.texto-zoom {
-        min-width: 54px;
-    }
 }
 @media (pointer: coarse) {
     .color-trazo {
@@ -484,8 +473,67 @@ body[data-herramienta="mover"] .elegida .redimensionar {
 /* Por debajo de 600 px (móvil) todos los controles de la barra miden 44 px o más. Las muestras de color siguen
    pintándose de 24 px: el botón mide 44 px y el cuadrito (con su borde y su sombra) va en ::before. */
 @media (max-width: 599.98px) {
+    /* Dos filas y nada más: arriba las herramientas y el botón del color y el grosor; abajo el tamaño, deshacer,
+       rehacer, descargar y vaciar («¿Cómo funciona?» sigue en el menú de la cuenta). */
     .herramientas-pizarra {
+        position: relative;
         gap: 4px 8px;
+    }
+    .grupo-herramientas {
+        flex: 1 1 100%;
+    }
+    .grupo-herramientas.derecha .zoom {
+        margin-right: auto;
+    }
+    .boton-ayuda {
+        display: none;
+    }
+    .boton-trazo {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        width: auto;
+        margin-left: auto;
+        padding: 0 7px;
+    }
+    .boton-trazo[aria-expanded="true"] {
+        background: var(--amarillo);
+    }
+    .muestra-color {
+        flex: none;
+        width: 22px;
+        height: 22px;
+        background: var(--color-lapiz, var(--tinta));
+        border: 2px solid var(--tinta);
+    }
+    .caja-grosor {
+        flex: none;
+        width: 20px;
+        height: 22px;
+        display: grid;
+        place-items: center;
+    }
+    .muestra-grosor {
+        display: block;
+        background: var(--tinta);
+    }
+    .trazo-pizarra {
+        display: none;
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 100%;
+        z-index: 20;
+        flex-wrap: wrap;
+        gap: 4px 8px;
+        padding: 6px 8px;
+        background: var(--crema-osc);
+        border-top: 2px dashed var(--crema-mas);
+        border-bottom: 2px solid var(--tinta);
+        box-shadow: 0 4px 0 rgba(28, 23, 21, 0.25);
+    }
+    .trazo-pizarra.abierto {
+        display: flex;
     }
     .herramienta {
         min-width: 44px;
@@ -498,13 +546,9 @@ body[data-herramienta="mover"] .elegida .redimensionar {
         height: 44px;
     }
     .boton-icono.texto-zoom {
-        min-width: 60px;
+        min-width: 68px;
         padding: 0 2px;
         white-space: nowrap;
-        letter-spacing: 0;
-    }
-    .grupo-herramientas.derecha {
-        display: contents;
     }
     .grosor {
         width: 44px;
@@ -542,6 +586,30 @@ body[data-herramienta="mover"] .elegida .redimensionar {
         outline: 2px solid var(--tinta);
         outline-offset: 2px;
         box-shadow: none;
+    }
+}
+/* Móviles estrechos. La segunda fila (el tamaño, deshacer, rehacer, descargar y vaciar) mide 372 px: en uno de 360 la
+   papelera salía cortada y la página se desplazaba de lado. Con menos de 372 px los botones van más juntos y el tamaño
+   ocupa lo justo para «100 %» (340 px). Con menos de 340 (un móvil de 320) tampoco caben las herramientas de arriba:
+   el botón del color y el grosor pierde su flecha, y «Descargar» se queda solo en el menú de la cuenta, donde ya
+   estaba («Descargar como imagen»). Todo sigue midiendo 44 px. */
+@media (max-width: 371.98px) {
+    .herramientas-pizarra .grupo-herramientas,
+    .herramientas-pizarra .zoom {
+        gap: 2px;
+    }
+    .boton-icono.texto-zoom {
+        min-width: 64px;
+    }
+}
+@media (max-width: 339.98px) {
+    .boton-trazo {
+        gap: 3px;
+        padding: 0 4px;
+    }
+    .boton-trazo .flecha,
+    .herramientas-pizarra .boton-descargar {
+        display: none;
     }
 }
 @media (prefers-reduced-motion: reduce) {

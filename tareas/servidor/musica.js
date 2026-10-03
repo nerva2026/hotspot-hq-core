@@ -8,6 +8,9 @@
 //      portada, duración, por dónde va y si está en pausa.
 //   3. Cada navegador pone esa misma canción con el reproductor oficial de Spotify (Embed) y salta al mismo punto:
 //      entera si esa persona ha entrado en Spotify en su navegador; si no, 30 segundos de muestra.
+//   4. Cada oyente cuenta cómo le va (le suena, solo la muestra, le falta pulsar ▶, no le carga…) y quien pincha lo
+//      ve junto a cada nombre. Y la oficina entera (el mapa, por el puente /tareas/oficina/) se entera de quién pincha
+//      y de si suena algo con un aviso ligero por el canal general («musica-cabina»).
 //
 // Se guarda en musica.json, en la carpeta de datos (permisos 600): quién está en la cabina, lo que ha sonado (las
 // últimas 20) y, de cada persona que ha conectado Spotify, su token de refresco. Los tokens no salen de aquí: ni en
@@ -26,6 +29,9 @@ import path from "node:path";
 import { ErrorDeDatos } from "./tareas.js";
 
 export const ALCANCE = "user-read-currently-playing user-read-playback-state";
+// Cómo le va a cada oyente (POST /api/musica/escucho, «estado»): lista cerrada, la misma que usa la página
+// (publico/app/musica-seguidor.js). El orden es el de preferencia cuando alguien escucha en dos pestañas a la vez.
+export const ESTADOS_OYENTE = ["suena", "muestra", "falta-pulsar", "pausado", "cargando", "espera", "fallo"];
 const MAXIMO_HISTORIAL = 20;
 const COOKIE_ESTADO = "hs_spotify";
 const DURACION_ESTADO = 15 * 60 * 1000; // lo que se tiene para volver de Spotify
@@ -103,7 +109,9 @@ function posicionEn(s, t) {
 
 // ---------- el módulo ----------
 
-export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir, emitirA, hayOyentes, escuchando }) {
+// «emitir» y «emitirA» escriben solo a quien tiene la música abierta; «emitirATodos», a todo el canal general (el tablón,
+// el puente de la oficina…). «escuchando» y «oyentes» dicen quién escucha ahora y cómo le va a cada uno.
+export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir, emitirA, emitirATodos = () => {}, hayOyentes, escuchando, oyentes = () => [] }) {
     const raiz = urlPublica.replace(/\/?$/, "/");
     const cfg = {
         id: process.env.SPOTIFY_CLIENT_ID || "",
@@ -176,6 +184,12 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
         return u ? { id: u.id, nombre: u.nombre, color: u.color } : { id, nombre: "Alguien", color: "#8d857e" };
     }
 
+    // El estado llega a las páginas por dos caminos (lo que piden con GET y los avisos en directo) y puede llegar
+    // desordenado: cada estado lleva su número de serie, que solo crece (también de un arranque del servidor al
+    // siguiente: empieza en la hora), y la página no aplica uno más viejo que el último que ha visto.
+    let serie = Date.now();
+    const avanzar = () => (serie += 1);
+
     function publico() {
         const ahora = Date.now();
         let sonando = null;
@@ -185,17 +199,22 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
         }
         return {
             configurado,
+            serie,
             cabina: datos.cabina ? { dj: persona(datos.cabina.dj), desde: datos.cabina.desde } : null,
             sonando,
             anuncio: Boolean(datos.cabina && anuncio),
             aviso,
             historial: datos.historial.map((h) => ({ ...h, dj: persona(h.dj) })),
             escuchando: escuchando(),
+            oyentes: oyentes(),
+            suena: resumen().suena,
         };
     }
 
     function emitirEstado(extra = {}) {
+        avanzar();
         emitir({ tipo: "musica", ...publico(), ...extra });
+        avisarCabina();
     }
 
     function ponerAviso(texto, deFallo = true) {
@@ -276,6 +295,24 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
     let noAntesDe = 0; // Spotify ha pedido calma (429) o ha fallado: no se pregunta antes de esto
     let fallosSeguidos = 0;
 
+    // Lo que le interesa a la oficina entera (el mapa): quién pincha y si ahora mismo suena algo que se pueda oír.
+    // «suena» solo se sabe mientras se mira el Spotify del DJ, y solo se mira mientras alguien tiene la música abierta:
+    // con la música cerrada para todos (dormido) es false. Tampoco cuentan la pausa, un anuncio ni un archivo local.
+    function resumen() {
+        const dj = datos.cabina ? persona(datos.cabina.dj).nombre : null;
+        // «desde»: desde cuándo pincha (el mapa lo usa para avisar una sola vez de cada vez que alguien pincha)
+        return { dj, suena: Boolean(dj && !dormido && actual && actual.reproduciendo && !actual.local), desde: dj ? datos.cabina.desde || null : null };
+    }
+    let resumenAnterior = JSON.stringify(resumen());
+    // Aviso ligero por el canal general, solo cuando cambia quién pincha o empieza o deja de sonar.
+    function avisarCabina() {
+        const ahora = resumen();
+        const texto = JSON.stringify(ahora);
+        if (texto === resumenAnterior) return;
+        resumenAnterior = texto;
+        emitirATodos({ tipo: "musica-cabina", ...ahora });
+    }
+
     function programar(ms) {
         clearTimeout(temporizador);
         temporizador = setTimeout(() => {
@@ -351,6 +388,7 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
         const dj = datos.cabina?.dj;
         if (!configurado || !dj || !hayOyentes()) {
             dormido = true;
+            avisarCabina(); // ya no se sabe si suena
             return;
         }
         const ahora = Date.now();
@@ -470,7 +508,8 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
         if (estados.size > 500) estados.delete(estados.keys().next().value);
         const estado = crypto.randomBytes(24).toString("base64url");
         // El «state» va atado a esta sesión (y a una cookie de este navegador): nadie puede colarte su cuenta.
-        estados.set(estado, { usuario: sesion.usuario.id, sesion: sesion.sesion.id, volver: url.searchParams.get("volver") === "1", creado: ahora });
+        // «solo»: la cabina estaba en modo solo (?solo=1, publico/app/solo.js) y, si se vuelve a ella, tiene que seguir así.
+        estados.set(estado, { usuario: sesion.usuario.id, sesion: sesion.sesion.id, volver: url.searchParams.get("volver") === "1", solo: url.searchParams.get("solo") === "1", creado: ahora });
         const destino = new URL(cfg.autorizar);
         destino.searchParams.set("client_id", cfg.id);
         destino.searchParams.set("response_type", "code");
@@ -543,18 +582,39 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
         accesos.set(usuario.id, { token: tokens.access_token, caduca: Date.now() + (Number(tokens.expires_in) || 3600) * 1000 });
         guardarYa();
         console.log(`[música] ${usuario.nombre} ha conectado su Spotify.`);
-        emitirA(usuario.id, { tipo: "musica-yo", spotify: miSpotify(usuario.id) });
+        // Conectar es para pinchar: con la cabina libre, ya está dentro (sin tener que pulsar «Pinchar yo»).
+        let enCabina; // "dentro" (acaba de entrar) · "seguia" (ya pinchaba) · "ocupada" (pincha otra persona)
         if (datos.cabina?.dj === usuario.id) {
             // Estaba pinchando y ha vuelto a conectar: fuera el aviso y a mirar ya.
+            enCabina = "seguia";
             aviso = null;
             emitirEstado();
             despertar();
-        }
+        } else if (!datos.cabina) {
+            enCabina = "dentro";
+            entrar(usuario);
+        } else enCabina = "ocupada";
+        // Después de lo de la cabina: así, cuando la página recibe este aviso, ya sabe si está dentro.
+        emitirA(usuario.id, { tipo: "musica-yo", spotify: miSpotify(usuario.id) });
         if (guardado.volver) {
-            res.writeHead(302, { Location: `${base}/musica/?conectado=1`, "Cache-Control": "no-store" });
+            res.writeHead(302, { Location: `${base}/musica/?conectado=1${guardado.solo ? "&solo=1" : ""}`, "Cache-Control": "no-store" });
             return res.end();
         }
-        return pagina(res, 200, "¡Listo!", [`Tu Spotify (${datos.cuentas[usuario.id].nombre}) ya está conectado.`, "Ya puedes cerrar esta pestaña: la cabina se ha actualizado sola."]);
+        const conectado = `Tu Spotify (${datos.cuentas[usuario.id].nombre}) ya está conectado`;
+        const cerrar = "Ya puedes cerrar esta pestaña: la cabina se ha actualizado sola.";
+        // La página dice el paso siguiente de verdad (el primer párrafo empieza y el último es como siempre).
+        if (enCabina === "ocupada") {
+            return pagina(res, 200, "¡Listo!", [
+                `${conectado}.`,
+                `Ahora pincha ${persona(datos.cabina.dj).nombre}. Cuando deje la cabina, pulsa «Pinchar yo».`, // PROVISIONAL-v0.3.1
+                cerrar,
+            ]);
+        }
+        return pagina(res, 200, "¡Listo!", [
+            enCabina === "dentro" ? `${conectado} y ya estás en la cabina.` : `${conectado} y sigues en la cabina.`, // PROVISIONAL-v0.3.1 (lo de la cabina)
+            "Pon música en tu Spotify (en el móvil o en el ordenador), como siempre. Cada persona la oye cuando abre «Música».", // PROVISIONAL-v0.3.1
+            cerrar,
+        ]);
     }
 
     function miSpotify(usuarioId) {
@@ -570,6 +630,11 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
         const c = datos.cabina;
         if (c && c.dj !== usuario.id) throw error(409, `La cabina está ocupada: está pinchando ${persona(c.dj).nombre}.`);
         if (c) return;
+        entrar(usuario);
+    }
+
+    // La cabina está libre y esta persona (con su Spotify conectado) pasa a pinchar.
+    function entrar(usuario) {
         datos.cabina = { dj: usuario.id, desde: new Date().toISOString() };
         actual = null;
         anuncio = false;
@@ -620,6 +685,7 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
         desconectar,
         olvidar,
         despertar,
+        avanzar,
         emitirEstado,
         guardarYa,
         pendiente: () => temporizadorGuardar !== null,

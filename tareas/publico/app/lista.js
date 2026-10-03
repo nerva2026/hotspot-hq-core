@@ -1,6 +1,6 @@
 // Vista «Lista»: una tabla como la de Notion. Cada celda se edita en el sitio.
 
-import { h, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, estadoDe, prioridadDe, plazo, fechaCorta, pesoPrioridad, normalizar } from "./util.js";
+import { h, ESTADOS, PRIORIDADES, SIN_PRIORIDAD, estadoDe, prioridadDe, plazo, fechaCorta, pesoPrioridad, normalizar, devolverLoEscrito } from "./util.js";
 import { avatar, chipEtiqueta, menuEstado, menuPrioridad, menuPersonas, menuPersona, menuFecha, menuEtiquetas, abrirMenu, cerrarMenu } from "./menus.js";
 import { interpretar } from "./rapida.js";
 
@@ -49,7 +49,8 @@ function grupos(tareas, agrupar, ctx) {
         return [...PRIORIDADES, SIN_PRIORIDAD].map((p) => ({ clave: p.id || "ninguna", nombre: p.nombre, color: p.color, base: { prioridad: p.id }, tareas: tareas.filter((t) => (t.prioridad || null) === p.id) }));
     if (agrupar === "persona")
         return [
-            ...ctx.activos().map((u) => ({ clave: u.id, nombre: u.nombre, color: u.color, base: { responsables: [u.id] }, tareas: tareas.filter((t) => t.responsables.includes(u.id)) })),
+            // también quien ha salido del crew y sigue en alguna tarea: sin su grupo, esa tarea no salía en ninguno
+            ...ctx.conTareas(tareas).map((u) => ({ clave: u.id, nombre: u.nombre, fuera: Boolean(u.baja), color: u.color, base: u.baja ? {} : { responsables: [u.id] }, tareas: tareas.filter((t) => t.responsables.includes(u.id)) })),
             { clave: "nadie", nombre: "Sin asignar", color: "#d8cabb", base: {}, tareas: tareas.filter((t) => !t.responsables.length) },
         ];
     return [{ clave: "todo", nombre: null, base: {}, tareas }];
@@ -63,7 +64,7 @@ export function pintarLista(cont, ctx, ev) {
 
     const barra = h(
         "div",
-        { class: "barra-vista" },
+        { class: "barra-vista barra-lista" },
         h("span", { class: "tenue" }, "Agrupar por"),
         h(
             "div",
@@ -140,7 +141,8 @@ export function pintarLista(cont, ctx, ev) {
                             },
                             h("span", { class: "plegar" }, plegado ? "▸" : "▾"),
                             h("span", { class: "punto-estado", style: { background: g.color } }),
-                            g.nombre,
+                            h("span", { class: "grupo-nombre" }, g.nombre),
+                            g.fuera ? h("span", { class: "fuera-del-crew" }, "fuera del crew") : null,
                             h("span", { class: "cuenta" }, g.tareas.length),
                         ),
                     ),
@@ -149,19 +151,42 @@ export function pintarLista(cont, ctx, ev) {
         }
         if (plegado) continue;
         for (const t of [...g.tareas].sort(orden)) cuerpo.appendChild(fila(t, ctx));
-        cuerpo.appendChild(filaNueva(g.base, ctx, `nueva-${ev.agrupar}-${g.clave}`));
+        if (!g.fuera) cuerpo.appendChild(filaNueva(g.base, ctx, `nueva-${ev.agrupar}-${g.clave}`)); // a quien ha salido del crew no se le ponen tareas nuevas
     }
 
-    cont.append(
-        barra,
-        h(
-            "div",
-            { class: "lista-envoltura", "data-desplazar": "lista" },
-            h("table", { class: "lista" }, h("thead", null, cabecera), cuerpo),
-            tareas.length ? null : h("p", { class: "nota centro vacio-vista" }, ctx.E.tareas.size ? "Ninguna tarea cumple los filtros." : "Todavía no hay tareas. Pulsa «+ Nueva» o escribe en «+ Nueva tarea»."),
-        ),
+    // La tabla va en un marco que marca con una sombra el lado por el que sigue si no cabe a lo ancho (como el mes del
+    // calendario). Las columnas se esconden por orden para que quepa (estilo.css, «la lista en un panel estrecho»): la
+    // sombra es el aviso que queda para un navegador que no sepa esconderlas.
+    const tabla = h("table", { class: "lista" }, h("thead", null, cabecera), cuerpo);
+    const envoltura = h(
+        "div",
+        { class: "lista-envoltura", "data-desplazar": "lista" },
+        tabla,
+        tareas.length ? null : h("p", { class: "nota centro vacio-vista" }, ctx.E.tareas.size ? "Ninguna tarea cumple los filtros." : "Todavía no hay tareas. Pulsa «+ Nueva» o escribe en «+ Nueva tarea»."),
     );
+    const marco = h("div", { class: "lista-marco" }, envoltura);
+    const marcarBordes = () => {
+        marco.classList.toggle("sigue-izquierda", envoltura.scrollLeft > 2);
+        marco.classList.toggle("sigue-derecha", envoltura.scrollLeft + envoltura.clientWidth < envoltura.scrollWidth - 2);
+    };
+    envoltura.addEventListener("scroll", marcarBordes, { passive: true });
+    if (typeof ResizeObserver === "function") {
+        // cambia lo que mide la caja (la ventana) o lo que mide la tabla (las letras, al terminar de cargarse)
+        const observador = new ResizeObserver(marcarBordes);
+        observador.observe(envoltura);
+        observador.observe(tabla);
+    }
+    cont.append(barra, marco);
+    marcarBordes();
 }
+
+// En una pantalla estrecha (≤ 720 px, el mismo corte que estilo.css) cada fila es una ficha pequeña: el título y,
+// debajo, lo esencial. Ahí, y donde no hay ratón, un toque en la fila abre la tarea.
+const filaEstrecha = () => window.matchMedia("(max-width: 720px)").matches;
+const sinRaton = () => window.matchMedia("(hover: none)").matches;
+
+// Una persona en su celda: el avatar y el nombre, que si no cabe en la columna acaba en «…» (entero, al pasar el ratón).
+const persona = (u) => h("span", { class: "persona", title: u.nombre }, avatar(u), h("span", { class: "texto" }, u.nombre));
 
 function celda(clase, contenido, alPulsar, titulo) {
     return h("td", { class: clase }, h("button", { type: "button", class: "celda", title: titulo, onclick: (e) => alPulsar(e.currentTarget) }, contenido));
@@ -179,6 +204,7 @@ function fila(t, ctx) {
         value: t.titulo,
         maxlength: 300,
         "aria-label": "Título",
+        title: t.titulo, // si no cabe en su columna acaba en «…»: entero, al pasar el ratón
         onkeydown: (e) => {
             if (e.key === "Enter") e.target.blur();
             if (e.key === "Escape") {
@@ -192,9 +218,31 @@ function fila(t, ctx) {
             else e.target.value = t.titulo;
         },
     });
+    const subtareas = () => (t.subtareas.length ? h("span", { class: "chip tenue" }, `☑ ${t.subtareas.filter((s) => s.hecha).length}/${t.subtareas.length}`) : null);
+    const notas = () => (t.notas.trim() ? h("span", { class: "chip tenue", title: "Tiene notas" }, "¶") : null);
+    // Lo esencial de la tarea en una línea, para la fila estrecha (en la ancha cada cosa tiene su columna).
+    const resumen = h(
+        "div",
+        { class: "fila-resumen" },
+        h("span", { class: "resumen-estado" }, h("span", { class: "punto-estado", style: { background: est.color } }), est.nombre),
+        t.prioridad ? h("span", { class: "chip prioridad", style: { background: prio.color, color: prio.texto } }, prio.nombre) : null,
+        responsables.length === 1 ? h("span", { class: "persona" }, avatar(responsables[0]), responsables[0].nombre) : responsables.length ? h("span", { class: "avatares" }, responsables.map((u) => avatar(u))) : null,
+        p ? h("span", { class: ["chip", "plazo", p.clase], title: t.fin }, p.texto) : null,
+        subtareas(),
+        notas(),
+    );
     return h(
         "tr",
-        { class: ["fila", hecha && "hecha"], dataset: { id: t.id }, style: { "--color-prioridad": prio.color } },
+        {
+            class: ["fila", hecha && "hecha"],
+            dataset: { id: t.id },
+            style: { "--color-prioridad": prio.color },
+            onclick: (e) => {
+                // Fuera de lo que ya hace algo (la casilla, el texto que se edita, los botones de cada celda).
+                if (!(filaEstrecha() || sinRaton()) || e.target.closest("input, button, a, label, select, textarea")) return;
+                ctx.abrir(t.id);
+            },
+        },
         h(
             "td",
             { class: "col-hecha" },
@@ -218,10 +266,12 @@ function fila(t, ctx) {
                 "div",
                 { class: "titulo-celda" },
                 titulo,
-                t.subtareas.length ? h("span", { class: "chip tenue" }, `☑ ${t.subtareas.filter((s) => s.hecha).length}/${t.subtareas.length}`) : null,
-                t.notas.trim() ? h("span", { class: "chip tenue", title: "Tiene notas" }, "¶") : null,
+                h("span", { class: "titulo-texto" }, t.titulo),
+                subtareas(),
+                notas(),
                 h("button", { type: "button", class: "btn pequeno abrir", title: "Abrir la tarea", onclick: () => ctx.abrir(t.id) }, "Abrir"),
             ),
+            resumen,
         ),
         celda("col-estado", [h("span", { class: "punto-estado", style: { background: est.color } }), est.nombre], (a) => menuEstado(a, t.estado, (v) => ctx.cambiar(t.id, { estado: v }))),
         celda(
@@ -231,13 +281,13 @@ function fila(t, ctx) {
         ),
         celda(
             "col-responsables",
-            responsables.length ? (responsables.length === 1 ? h("span", { class: "persona" }, avatar(responsables[0]), responsables[0].nombre) : h("span", { class: "avatares" }, responsables.map((u) => avatar(u)))) : h("span", { class: "tenue" }, "—"),
-            (a) => menuPersonas(a, ctx.activos(), t.responsables, (v) => ctx.cambiar(t.id, { responsables: v })),
+            responsables.length ? (responsables.length === 1 ? persona(responsables[0]) : h("span", { class: "avatares" }, responsables.map((u) => avatar(u)))) : h("span", { class: "tenue" }, "—"),
+            (a) => menuPersonas(a, ctx.paraElegir(t.responsables), t.responsables, (v) => ctx.cambiar(t.id, { responsables: v })),
         ),
         celda("col-fin", p ? h("span", { class: ["chip", "plazo", p.clase] }, p.texto) : h("span", { class: "tenue" }, "—"), (a) => menuFecha(a, t.fin, (v) => ctx.cambiar(t.id, { fin: v })), t.fin || ""),
         celda("col-inicio", t.inicio ? fechaCorta(t.inicio) : h("span", { class: "tenue" }, "—"), (a) => menuFecha(a, t.inicio, (v) => ctx.cambiar(t.id, { inicio: v }), { titulo: "Empieza el" })),
         celda("col-etiquetas", t.etiquetas.length ? t.etiquetas.map((e) => chipEtiqueta(e)) : h("span", { class: "tenue" }, "—"), (a) => menuEtiquetas(a, t.etiquetas, ctx.todasEtiquetas(), (v) => ctx.cambiar(t.id, { etiquetas: v }))),
-        celda("col-pedidoPor", pedido ? h("span", { class: "persona" }, avatar(pedido), pedido.nombre) : h("span", { class: "tenue" }, "—"), (a) => menuPersona(a, ctx.activos(), t.pedidoPor, (v) => ctx.cambiar(t.id, { pedidoPor: v }))),
+        celda("col-pedidoPor", pedido ? persona(pedido) : h("span", { class: "tenue" }, "—"), (a) => menuPersona(a, ctx.paraElegir(t.pedidoPor), t.pedidoPor, (v) => ctx.cambiar(t.id, { pedidoPor: v }))),
     );
 }
 
@@ -255,13 +305,15 @@ function filaNueva(base, ctx, clave) {
                 return;
             }
             if (e.key !== "Enter") return;
-            const r = interpretar(e.target.value, ctx.activos());
+            const escrito = e.target.value;
+            const r = interpretar(escrito, ctx.activos());
             if (!r.titulo) return;
             e.target.value = "";
             const datos = { ...base, titulo: r.titulo, responsables: [...new Set([...(base.responsables || []), ...r.responsables])], etiquetas: r.etiquetas };
             if (r.prioridad) datos.prioridad = r.prioridad;
             if (r.fin) datos.fin = r.fin;
-            await ctx.crear(datos);
+            // Si no se ha podido crear (sin conexión), lo escrito vuelve a su campo en vez de perderse.
+            if (!(await ctx.crear(datos))) devolverLoEscrito(clave, escrito);
         },
     });
     return h("tr", { class: "fila-nueva" }, h("td"), h("td", { colspan: COLUMNAS.length }, entrada));

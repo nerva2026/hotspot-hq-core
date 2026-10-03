@@ -23,12 +23,62 @@
     font-style: normal;
     font-display: swap;
 }
+/* Pixelify Sans es una sola letra variable (400-700). Se declara partida en dos tramos de peso para poder cambiarle
+   algunos caracteres en cada tramo (ver «los retoques de las letras», justo debajo). */
 @font-face {
     font-family: "Pixelify Sans";
     src: url("/static/fonts/hotspot/pixelify-sans.woff") format("woff");
-    font-weight: 400 700;
+    font-weight: 400 549;
     font-style: normal;
     font-display: swap;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("/static/fonts/hotspot/pixelify-sans.woff") format("woff");
+    font-weight: 550 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ---------- los retoques de las letras ---------- */
+/* Los números de Pixelify Sans cuestan de leer (el 5 es igual que la S; el 2, el 3 y el 4 se confunden), su B, su C y
+   su G son casi el mismo dibujo y su «a» parece una «o». El 4 de Silkscreen parece otra letra. Estas fuentes solo
+   traen esos caracteres, dibujados con las mismas medidas que cada letra (herramientas/retoques.py). Van con el MISMO
+   nombre de familia y el MISMO peso que la letra a la que acompañan, declaradas después y con `unicode-range`: el
+   navegador saca de aquí esos caracteres y lo demás de la letra de siempre. (Chrome y Safari solo juntan las
+   declaraciones que tienen exactamente el mismo peso: por eso van calcadas.) Para volver a lo de antes basta quitar
+   estas cuatro declaraciones. */
+@font-face {
+    font-family: "Silkscreen";
+    src: url("/static/fonts/hotspot/hs-retoques-titulo.woff") format("woff");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+30-39;
+}
+@font-face {
+    font-family: "Silkscreen";
+    src: url("/static/fonts/hotspot/hs-retoques-titulo-negra.woff") format("woff");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+30-39;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("/static/fonts/hotspot/hs-retoques-texto.woff") format("woff");
+    font-weight: 400 549;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+28-29, U+30-39, U+42-43, U+45, U+47, U+5A, U+61, U+63, U+66, U+6A, U+74, U+C9, U+E0-E1, U+ED, U+20AC;
+}
+@font-face {
+    font-family: "Pixelify Sans";
+    src: url("/static/fonts/hotspot/hs-retoques-texto-negra.woff") format("woff");
+    font-weight: 550 700;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+28-29, U+30-39, U+42-43, U+45, U+47, U+5A, U+61, U+63, U+66, U+6A, U+74, U+C9, U+E0-E1, U+ED, U+20AC;
 }
 
 /* ---------- colores ---------- */
@@ -179,5 +229,204 @@ textarea {
     letter-spacing: 0.04em;
 }
 
+/* ---------- decir y pensar: las burbujas sobre la cabeza ---------- */
+/* WorkAdventure las escribe con una letra de cómic (Comic Jens) sobre una pastilla blanca medio transparente: ni se leía
+   bien ni era de la casa. Ahora van con Pixelify Sans, en tinta sobre crema y con borde, como los carteles del mapa, y a
+   un tamaño que la oficina calcula (parche 13) para que cada punto de la letra mida puntos enteros de la pantalla.
+   Las dos burbujas viven dentro del juego (un elemento DOM de Phaser que se amplía con la cámara): los tamaños de aquí
+   son «de mapa», no de pantalla. */
+.say-bubble,
+.thinking-cloud,
+.thinking-cloud .thinking-text {
+    /* El tamaño lo pone la oficina (parche 13) para que la letra caiga en puntos enteros de la pantalla con cualquier
+       ampliación del juego; sin él, 11 px. */
+    font-size: var(--hs-letra, 11px) !important;
+    line-height: var(--hs-interlinea, 13px) !important;
+}
+.say-bubble,
+.thinking-cloud .thinking-text {
+    font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+    font-weight: 500 !important;
+    /* La letra deja 1,29 puntos suyos entre letra y letra: con medio punto de más o de menos, los huecos salían unos
+       de un píxel y otros de dos («¿B a ila mos»). Quitándole 0,027 em el hueco es un punto justo, siempre igual; y a
+       cambio, un punto más entre palabras. */
+    letter-spacing: -0.027em;
+    word-spacing: 0.093em;
+    /* Esa cuenta solo sale si cada letra avanza lo que dice su dibujo (6,29 px a 10,75 px). Donde el navegador ajusta
+       las letras a la rejilla («hinting»: Chromium y Firefox en Linux) cada avance se redondea antes a píxeles enteros,
+       y al quitarle los 0,027 em los huecos salían de 1 y de 2 px. Con `geometricPrecision` se le piden los avances
+       exactos, sin ajustar: las burbujas salen igual que en un Mac, con o sin «hinting». (Los retoques de las letras
+       llevan además sus tablas de «sin ajuste»: herramientas/retoques.py.) */
+    text-rendering: geometricPrecision;
+    color: var(--hs-tinta) !important;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+/* Decir: caja recta con borde de tinta y un pico hacia quien habla. */
+.say-bubble {
+    background: var(--hs-crema) !important;
+    border: 1px solid var(--hs-tinta);
+    border-radius: 0 !important;
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
+    padding: 3px 7px 4px !important;
+    min-width: 24px;
+    max-width: 16em !important;
+    width: max-content;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+.say-bubble::before,
+.say-bubble::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    width: 0;
+    height: 0;
+    transform: translateX(-50%);
+    border-style: solid;
+    border-color: transparent;
+}
+.say-bubble::before {
+    bottom: -5px;
+    border-width: 5px 5px 0 5px;
+    border-top-color: var(--hs-tinta);
+}
+.say-bubble::after {
+    bottom: -3px;
+    border-width: 4px 4px 0 4px;
+    border-top-color: var(--hs-crema);
+}
+/* Pensar: caja de papel con las esquinas comidas (el borde se hace con sombras, así faltan los cuatro píxeles de las
+   esquinas) y tres cuadraditos que bajan hacia la cabeza. Sin el filtro de nube ni la transparencia, que emborronaban. */
+.thinking-cloud {
+    opacity: 1 !important;
+    background: #fffaf3 !important;
+    border-radius: 0 !important;
+    padding: 4px 8px 5px !important;
+    min-width: 24px;
+    max-width: 16em !important;
+    box-shadow:
+        0 -1px 0 0 var(--hs-tinta),
+        0 1px 0 0 var(--hs-tinta),
+        -1px 0 0 0 var(--hs-tinta),
+        1px 0 0 0 var(--hs-tinta),
+        2px 2px 0 0 rgba(0, 0, 0, 0.3);
+}
+.thinking-cloud::before {
+    display: none !important;
+}
+.thinking-cloud .thinking-tail {
+    bottom: -17px;
+    left: 50%;
+    gap: 2px;
+}
+.thinking-cloud .circle {
+    border-radius: 0 !important;
+    filter: none !important;
+    background: #fffaf3 !important;
+    box-shadow: 0 0 0 1px var(--hs-tinta);
+    transform: none !important;
+}
+.thinking-cloud .circle1 {
+    width: 5px;
+    height: 5px;
+    margin-left: 6px;
+}
+.thinking-cloud .circle2 {
+    width: 3px;
+    height: 3px;
+    margin-left: 2px;
+}
+.thinking-cloud .circle3 {
+    width: 2px;
+    height: 2px;
+    margin-left: -2px;
+}
+
+/* ---------- avisos junto al muñeco («Pulse ESPACIO…», mensajes de los scripts) ---------- */
+/* Llevan sus estilos escritos en línea (letra del sistema a 10 px, esquinas redondas, fondo azulado con desenfoque):
+   hace falta !important para ponerlos de la casa. */
+.characterTriggerAction {
+    font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    line-height: 14px !important;
+    letter-spacing: -0.027em !important;
+    word-spacing: 0.093em;
+    /* Como en las burbujas: avances exactos, para que el hueco entre letras sea el mismo con y sin «hinting». */
+    text-rendering: geometricPrecision;
+    color: var(--hs-crema) !important;
+    background: rgba(28, 23, 21, 0.94) !important;
+    border: 1px solid var(--hs-borde) !important;
+    border-radius: 0 !important;
+    box-shadow:
+        inset 1px 1px 0 hsl(var(--contrast-500)),
+        1px 1px 0 rgba(0, 0, 0, 0.35);
+    padding: 4px 8px 5px !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+.characterTriggerAction.speech-dom-inner--warning {
+    border-color: var(--hs-amarillo) !important;
+}
+.characterTriggerAction strong {
+    color: var(--hs-amarillo) !important;
+    font-weight: 700 !important;
+}
+
+/* ---------- el mensaje: chat, avisos y el campo de escribir ---------- */
+/* El texto que se lee de corrido va un punto más grande y con más aire entre líneas; la hora del chat usaba otra
+   letra (Roboto Condensed) y ahora va con la de la casa.
+   Los tamaños, siempre de la rejilla de Pixelify Sans (11, 16 o 21–22 px): a cualquier otro (los 13 y 18 px que trae
+   WorkAdventure) sus puntos caen entre dos píxeles y la letra sale gris y emborronada. */
+.message-bubble {
+    font-size: 16px;
+    line-height: 22px;
+    letter-spacing: 0.01em;
+}
+/* El mensaje citado dentro de una respuesta: lo menudo, a 11 px. */
+.message-bubble.text-xs {
+    font-size: 11px;
+    line-height: 14px;
+}
+.message-input,
+.message-input::placeholder {
+    font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    font-size: 16px;
+    letter-spacing: 0.01em;
+}
+/* La hora de cada mensaje, la fecha que separa los días del chat y el estado de cada persona en la lista
+   (`text-xs font-condensed` en WorkAdventure: 13 px): lo menudo, a 11 px. La hora es una cifra y va al lado del
+   mensaje, que está a 16 px: a 13 px se veía borrosa. La interlínea no se toca (no mueve nada de su sitio). */
+.font-condensed {
+    font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+}
+/* El mensaje con el que empieza cada conversación («Nueva discusión con…», con su hora): WorkAdventure lo escribe
+   con `text-xs` a secas (13 px), sin `font-condensed`. También a 11 px: lleva una hora. */
+#chat .message > span.text-xs.text-center {
+    font-size: 11px;
+    line-height: 14px;
+}
+
+/* ---------- la franja de avisos (WA.ui.banner: el cumpleaños, quién pincha) ---------- */
+/* WorkAdventure escribe el texto a 18 px (`text-lg`), fuera de la rejilla: a 16 px, como el botón de «¡Entendido!»,
+   y los dos con la misma interlínea (el alto de la franja no cambia: lo marca el botón). */
+.warningMain .text-lg,
+.warningMain .btn {
+    font-size: 16px;
+    line-height: 24px;
+    /* Avances exactos, como en las burbujas: donde el navegador ajusta las letras a la rejilla, «¡Entendido!» salía
+       con un hueco de más entre la «d» y la «i». */
+    text-rendering: geometricPrecision;
+}
+/* Los botones del sistema de diseño de WorkAdventure (.btn: «Abrir» en el aviso de una zona, «Cerrar», los de los
+   ajustes…) traen su propia letra (Roboto Condensed): con la de la casa, como todo lo demás. */
+.btn {
+    font-family: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace !important;
+    letter-spacing: 0.02em;
+    text-rendering: geometricPrecision;
+}
 /* El número de versión (abajo a la izquierda, pulsable) y el aviso de novedades llevan su propio estilo
    en Components/Hotspot/Novedades.svelte; qué versión es y qué novedades salen, en novedades.ts. */

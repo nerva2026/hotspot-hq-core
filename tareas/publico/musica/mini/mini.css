@@ -117,6 +117,7 @@ body.pagina-mini {
 }
 .mini-oyentes {
     color: var(--crema-mas);
+    font: 400 11px/1 var(--texto); /* «· +2»: un contador, en la rejilla de su letra */
 }
 .mini-pausa {
     color: var(--tenue-oscuro);
@@ -129,13 +130,57 @@ body.pagina-mini {
     font: 400 13px/1.1 var(--texto);
     color: var(--amarillo);
 }
-.mini-chip {
-    flex: none;
-    font: 400 12px/1 var(--titulo);
+/* Un aviso en la cabeza (qué pasa con el sonido y qué hacer): ocupa la fila y «Silenciar» se queda en su icono. */
+.mini[data-aviso="grande"] #boton-escuchar .texto-boton,
+.mini[data-aviso="linea"] #boton-escuchar .texto-boton {
+    display: none;
+}
+.mini[data-aviso="grande"] #boton-escuchar,
+.mini[data-aviso="linea"] #boton-escuchar {
+    padding: 5px 6px;
+}
+.mini-enlace-linea {
+    color: var(--crema);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.mini-enlace-linea:hover {
+    color: #fff;
+}
+/* El navegador no le deja empezar solo: lo que hay que pulsar, claro y grande, señalando al reproductor de debajo. */
+.mini-pulsa {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 26px;
+    padding: 0 8px;
+    font: 700 15px/1 var(--texto);
+    white-space: nowrap;
+    overflow: hidden;
     color: var(--tinta);
     background: var(--amarillo);
-    padding: 3px 5px 2px;
-    cursor: help;
+    border: 2px solid #000;
+    box-shadow: 2px 2px 0 #000;
+}
+.mini-flecha {
+    font-size: 12px;
+    animation: mini-bote 0.8s steps(2, jump-none) infinite;
+}
+@keyframes mini-bote {
+    from {
+        transform: translateY(-2px);
+    }
+    to {
+        transform: translateY(2px);
+    }
+}
+.mini[data-estado="bloqueado"] .mini-caja {
+    outline: 2px solid var(--amarillo);
+    outline-offset: 1px;
+    border-radius: 12px;
 }
 .led {
     flex: none;
@@ -237,6 +282,14 @@ body.pagina-mini {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+/* Un título que no cabe se desplaza solo mientras suena (musica-mini.js, «marquesina»): entonces va sin «…». */
+.mini-titulo.corre {
+    text-overflow: clip;
+}
+.mini-titulo.corre .mini-corre {
+    display: inline-block;
+    will-change: transform;
+}
 .mini-titulo a {
     text-decoration: none;
 }
@@ -301,7 +354,7 @@ body.pagina-mini {
     flex: none;
     min-width: 34px;
     text-align: right;
-    font-size: 13px;
+    font-size: 11px; /* una cifra: en la rejilla de su letra (ver estilo.css) */
     color: var(--crema-mas);
 }
 
@@ -357,6 +410,21 @@ body.pagina-mini {
     font-size: 13px;
     color: var(--amarillo);
 }
+/* Lo que se puede hacer si el reproductor no carga: probar otra vez o abrir la canción en Spotify. */
+.mini-salidas {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+button.mini-enlace {
+    padding: 0;
+    font-family: var(--texto);
+    background: none;
+    border: 0;
+    text-decoration: underline;
+    cursor: pointer;
+}
 
 @media (prefers-reduced-motion: reduce) {
     .mini * {
@@ -371,5 +439,12 @@ body.pagina-mini {
     .mini-abrir {
         width: 44px;
         height: 44px;
+    }
+    /* …y lo que suena le deja su sitio: el título ya no queda debajo del botón. */
+    .mini-info .mini-textos {
+        padding-right: 44px;
+    }
+    .mini-info .mini-dj {
+        padding-right: 0;
     }
 }

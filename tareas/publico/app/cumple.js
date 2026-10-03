@@ -1,4 +1,5 @@
-// Cumpleaños: cuentas y textos comunes al tablón y al puente de la oficina (/tareas/oficina/).
+// Cumpleaños: cuentas y textos comunes al tablón, al puente de la oficina (/tareas/oficina/) y al cartel de
+// cumpleaños (/tareas/cumples/).
 // Un cumpleaños es «MM-DD» (sin año). El 29 de febrero se celebra el 28 los años que no son bisiestos.
 
 import { MESES } from "./util.js";
@@ -47,4 +48,33 @@ export function textoCumples(cumples, yo) {
     if (!mio) return `¡Hoy es el cumple de ${listaNombres(otros)}!`;
     if (!otros.length) return `¡Feliz cumpleaños, ${mio.nombre}!`;
     return `¡Feliz cumpleaños, ${mio.nombre}! Hoy también es el cumple de ${listaNombres(otros)}.`;
+}
+
+// ---------- el cartel de cumpleaños (/tareas/cumples/) ----------
+// Trabaja con «todos» de /api/oficina: [{ id, nombre, dia: "MM-DD", fecha, enDias, color }], los que antes llegan primero.
+
+// Cuánto falta, con los días que ya ha contado el servidor («enDias», 1 o más): «mañana», «en 5 días».
+export function cuantoFalta(enDias) {
+    if (enDias === 1) return "mañana"; // PROVISIONAL-v0.3.1
+    return `en ${enDias} días`; // PROVISIONAL-v0.3.1
+}
+
+// El siguiente cumpleaños que viene (sin contar los de hoy): todas las personas que lo celebran ese mismo día.
+// Devuelve null si no queda ninguno por venir, o { fecha, enDias, personas }.
+export function elSiguiente(todos) {
+    const primero = (todos || []).find((c) => c.enDias > 0);
+    if (!primero) return null;
+    return { fecha: primero.fecha, enDias: primero.enDias, personas: todos.filter((c) => c.enDias === primero.enDias) };
+}
+
+// Los doce meses seguidos, empezando por «desde» (1 a 12; el cartel empieza por el mes en el que estamos, que es
+// donde están los que antes llegan), cada uno con sus cumpleaños por día (y, el mismo día, por nombre).
+// Cada persona sale en el mes de su día de verdad: quien nació un 29 de febrero, en febrero y con su 29.
+export function porMeses(todos, desde = 1) {
+    const meses = Array.from({ length: 12 }, (_, i) => ({ mes: ((desde - 1 + i) % 12) + 1, cumples: [] }));
+    for (const c of todos || []) {
+        if (cumpleValido(c.dia)) meses.find((m) => m.mes === Number(c.dia.slice(0, 2))).cumples.push(c);
+    }
+    for (const m of meses) m.cumples.sort((a, b) => a.dia.localeCompare(b.dia) || a.nombre.localeCompare(b.nombre, "es"));
+    return meses;
 }

@@ -7,6 +7,7 @@
 //   /tareas/pizarra/ pizarras compartidas (reuniones…)              → publico/pizarra/, servidor/pizarra.js
 //   /tareas/oficina/ puente invisible de la oficina (para el mapa)  → publico/oficina/, publico/app/oficina.js
 //                    tareas y cumpleaños de quien juega               (y /api/oficina: servidor/perfil.js)
+//   /tareas/cumples/ el cartel de cumpleaños (lo abre el mapa)       → publico/cumples/, publico/app/cumples.js
 //   /tareas/musica/  música con Spotify (la cabina del estudio)     → publico/musica/, servidor/musica.js
 //   /tareas/archivo/ archivo de documentos (la sala ARCHIVO)         → publico/archivo/, servidor/archivo.js
 //
@@ -43,7 +44,7 @@ import { crearCrew, correoValido, limpiarCorreo } from "./crew.js";
 import * as libro from "./libro.js";
 import { abrirPizarras, idValido as pizarraValida, COLORES_TRAZO, GROSORES, ANCHO as ANCHO_PIZARRA, ALTO as ALTO_PIZARRA } from "./pizarra.js";
 import * as perfil from "./perfil.js";
-import { crearMusica } from "./musica.js";
+import { crearMusica, ESTADOS_OYENTE } from "./musica.js";
 import { abrirArchivo } from "./archivo.js";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -175,12 +176,23 @@ function emitirMusica(evento, condicion = () => true) {
 }
 
 const quienesEscuchan = () => [...new Set([...oyentes].filter((o) => o.musica && o.escucha).map((o) => o.usuario.id))];
+// Cómo le va a cada persona que escucha: [{ id, estado }], con uno de ESTADOS_OYENTE (lo cuenta su pestaña con
+// POST /api/musica/escucho). Si escucha en dos pestañas, cuenta la que mejor va (el orden de la lista).
+function comoEscuchan() {
+    const mejor = new Map();
+    for (const o of oyentes) {
+        if (!o.musica || !o.escucha) continue;
+        const antes = mejor.get(o.usuario.id);
+        if (antes === undefined || ESTADOS_OYENTE.indexOf(o.estado) < ESTADOS_OYENTE.indexOf(antes)) mejor.set(o.usuario.id, o.estado);
+    }
+    return [...mejor].map(([id, estado]) => ({ id, estado }));
+}
 let escuchabanAntes = "[]";
 function avisarEscuchando() {
-    const ahora = quienesEscuchan();
+    const ahora = comoEscuchan();
     if (JSON.stringify(ahora) === escuchabanAntes) return;
     escuchabanAntes = JSON.stringify(ahora);
-    emitirMusica({ tipo: "musica-oyentes", escuchando: ahora });
+    emitirMusica({ tipo: "musica-oyentes", serie: musica.avanzar(), escuchando: ahora.map((o) => o.id), oyentes: ahora });
 }
 
 const musica = crearMusica({
@@ -190,8 +202,11 @@ const musica = crearMusica({
     usuarioDe: (id) => datos().usuarios.find((u) => u.id === id) || null,
     emitir: (evento) => emitirMusica(evento),
     emitirA: (id, evento) => emitirMusica(evento, (o) => o.usuario.id === id),
+    // Por el canal general (lo oye también el puente de la oficina): quién pincha y si suena («musica-cabina»).
+    emitirATodos: (evento) => emitir(evento),
     hayOyentes: () => [...oyentes].some((o) => o.musica),
     escuchando: quienesEscuchan,
+    oyentes: comoEscuchan,
 });
 
 function cerrarOyentes(condicion) {
@@ -307,6 +322,15 @@ const ipDe = (req) => String(req.headers["x-forwarded-for"] || req.socket.remote
 
 // ---------- archivos de la aplicación ----------
 
+// La parte «?…» de lo pedido: al redirigir a la carpeta no se pierde (/tareas/libro?solo=1 → /tareas/libro/?solo=1).
+function busquedaDe(req) {
+    try {
+        return new URL(req.url, "http://x").search;
+    } catch {
+        return "";
+    }
+}
+
 function servirArchivo(req, res, ruta) {
     // Cada aplicación es una carpeta con su index.html: /tareas/ (el tablón), /tareas/libro/…
     const relativa = ruta.endsWith("/") ? `${ruta}index.html` : ruta;
@@ -319,7 +343,7 @@ function servirArchivo(req, res, ruta) {
         return fallo(res, 404, "No existe");
     }
     if (info.isDirectory() && fs.existsSync(path.join(archivo, "index.html"))) {
-        res.writeHead(301, { Location: `${BASE}${ruta}/` });
+        res.writeHead(301, { Location: `${BASE}${ruta}/${busquedaDe(req)}` });
         return res.end();
     }
     if (!info.isFile()) return fallo(res, 404, "No existe");
@@ -594,6 +618,9 @@ function excelLibro() {
                     { titulo: "Importe (€)", ancho: 14, tipo: "euros" },
                     { titulo: "Notas", ancho: 40, tipo: "largo" },
                     { titulo: "Tique", ancho: 8 },
+                    // Escondida: con ella, al importar esta misma descarga cada fila se reconoce como su movimiento
+                    // (aunque después se haya cambiado en el libro) y no se apunta dos veces (libro.importar).
+                    { titulo: "Id", ancho: 14, oculta: true },
                 ],
                 filas: libro.ordenar(l.movimientos.filter((m) => !m.borrado)).map((m) => [
                     m.fecha,
@@ -605,6 +632,7 @@ function excelLibro() {
                     e(m.importe),
                     m.notas,
                     m.tique ? "Sí" : "",
+                    m.id,
                 ]),
             },
             {
@@ -849,10 +877,11 @@ async function api(req, res, ruta) {
             usuario,
             sesion: encontrada.sesion,
             pizarra: pizarraValida(pizarra) ? pizarra : null,
-            // La música: «cliente» es la pestaña, para saber quién está escuchando (POST /api/musica/escucho).
+            // La música: «cliente» es la pestaña, para saber quién está escuchando y cómo le va (POST /api/musica/escucho).
             musica: parametros.get("musica") === "1",
             cliente: String(parametros.get("cliente") || "").slice(0, 40),
             escucha: false,
+            estado: null,
         };
         oyentes.add(oyente);
         let fuera = false;
@@ -871,6 +900,10 @@ async function api(req, res, ruta) {
         if (oyente.musica) musica.despertar();
         return;
     }
+
+    // Lo propio de quien pregunta, en ligero: lo piden las pantallas cuando un aviso del canal («libro», «usuarios») puede
+    // haberle dado o quitado el libro de cuentas, para poner o quitar su pestaña sin recargar (app/libro-pestana.js).
+    if (ruta === "/api/yo" && metodo === "GET") return json(res, 200, { yo: { ...cuentas.usuarioPublico(usuario), libro: puedeVerLibro(usuario) } });
 
     if (ruta === "/api/yo" && metodo === "PATCH") {
         const { color, clave, claveActual, nombre, cumple } = await leerJson(req);
@@ -898,8 +931,9 @@ async function api(req, res, ruta) {
         return json(res, 200, { yo: cuentas.usuarioPublico(usuario) });
     }
 
-    // --- la oficina: cumpleaños de hoy y de los próximos 30 días (para el mapa, los paneles y el tablón) ---
-    if (ruta === "/api/oficina" && metodo === "GET") return json(res, 200, perfil.resumenOficina(datos().usuarios, hoyOficina()));
+    // --- la oficina: cumpleaños de hoy, de los próximos 30 días y todos los del crew, y el de quien pregunta
+    //     (para el mapa, los paneles, el tablón y el cartel de cumpleaños, /tareas/cumples/) ---
+    if (ruta === "/api/oficina" && metodo === "GET") return json(res, 200, perfil.oficinaPara(datos().usuarios, hoyOficina(), usuario));
 
     // --- el personaje de cada uno en la oficina (WorkAdventure lo guarda aquí para tenerlo en todos sus aparatos) ---
     if (ruta === "/api/yo/personaje" && metodo === "GET") return json(res, 200, perfil.personajeDe(usuario));
@@ -1125,7 +1159,7 @@ async function api(req, res, ruta) {
         const r = libro.importar(hojas, usuario, datos(), cuentas.normalizar, fechaDeCelda);
         almacen.guardar();
         if (r.importados) emitir({ tipo: "libro", autor: usuario.id }, origen);
-        return json(res, 200, { importados: r.importados, repetidos: r.repetidos, sinPersona: r.sinPersona, hoja: r.hoja });
+        return json(res, 200, { importados: r.importados, repetidos: r.repetidos, borrados: r.borrados, sinPersona: r.sinPersona, sinLeer: r.sinLeer, hoja: r.hoja });
     }
 
     // --- pizarras ---
@@ -1253,17 +1287,20 @@ async function api(req, res, ruta) {
         return json(res, 200, datosMusica(usuario));
     }
     if (ruta === "/api/musica/escucho" && metodo === "POST") {
-        // Esta pestaña (x-cliente) se pone a escuchar o lo deja: los demás ven quién está escuchando.
-        const { si } = await leerJson(req);
+        // Esta pestaña (x-cliente) se pone a escuchar o lo deja, y cuenta cómo le va («estado», de una lista cerrada:
+        // le suena, solo la muestra, le falta pulsar ▶…): los demás ven quién escucha, y quien pincha, a quién le suena.
+        const { si, estado } = await leerJson(req);
+        if (estado !== undefined && estado !== null && !ESTADOS_OYENTE.includes(estado)) return fallo(res, 400, "Ese estado no existe.");
         let encontrado = false;
         for (const o of oyentes) {
             if (o.musica && o.usuario.id === usuario.id && origen && o.cliente === origen) {
                 o.escucha = Boolean(si);
+                o.estado = o.escucha ? estado || "cargando" : null; // sin «estado», lo que hay al ponerse a escuchar
                 encontrado = true;
             }
         }
         avisarEscuchando();
-        return json(res, 200, { ok: encontrado, escuchando: quienesEscuchan() });
+        return json(res, 200, { ok: encontrado, escuchando: quienesEscuchan(), oyentes: comoEscuchan() });
     }
 
     return fallo(res, 404, "No existe");
@@ -1288,7 +1325,7 @@ const servidor = http.createServer(async (req, res) => {
         return fallo(res, 400, "Dirección no válida");
     }
     if (ruta === BASE) {
-        res.writeHead(301, { Location: `${BASE}/` });
+        res.writeHead(301, { Location: `${BASE}/${busquedaDe(req)}` });
         return res.end();
     }
     try {

@@ -134,7 +134,7 @@ const serieExcel = (iso) => {
     return Date.UTC(a, m - 1, d) / 86400000 + 25569;
 };
 
-// Una hoja: columnas [{ titulo, ancho, tipo: "texto" | "fecha" | "largo" | "euros" | "porcentaje" }] y filas (arrays
+// Una hoja: columnas [{ titulo, ancho, tipo: "texto" | "fecha" | "largo" | "euros" | "porcentaje", oculta }] y filas (arrays
 // de valores: texto, «AAAA-MM-DD» o números). «euros» y «porcentaje» se guardan como números con su formato
 // (12,5 → «12,50 €»; 50 → «50 %»), para que se pueda sumar en Excel.
 // crearExcel({ hoja, columnas, filas }) hace un libro de una hoja; crearExcel({ hojas: [{ nombre, columnas, filas }] }), de varias.
@@ -165,7 +165,7 @@ export function crearExcel(opciones) {
             `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
             `<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` +
             `<sheetFormatPr defaultRowHeight="15"/>` +
-            `<cols>${columnas.map((c, i) => `<col min="${i + 1}" max="${i + 1}" width="${c.ancho || 14}" customWidth="1"/>`).join("")}</cols>` +
+            `<cols>${columnas.map((c, i) => `<col min="${i + 1}" max="${i + 1}" width="${c.ancho || 14}" customWidth="1"${c.oculta ? ' hidden="1"' : ""}/>`).join("")}</cols>` +
             `<sheetData>${cabecera}${cuerpo}</sheetData>` +
             `<autoFilter ref="A1:${ultima}${Math.max(1, filas.length + 1)}"/>` +
             `</worksheet>`
@@ -307,20 +307,37 @@ export function leerExcel(buf) {
     return hojas;
 }
 
-// Convierte lo que haya en una celda de fecha a «AAAA-MM-DD» (o null).
-export function fechaDeCelda(v) {
+// Convierte lo que haya en una celda de fecha a «AAAA-MM-DD», o null si no es una fecha de verdad (un 31 de febrero,
+// un 29 de febrero de un año que no es bisiesto) o cae fuera de lo que admiten el tablón y el libro (de 2000 a 2100).
+// Entiende el número de Excel y, escrita como texto: «2026-10-01» (con o sin hora), «2026/10/01», «1/10/2026»,
+// «01-10-26», «1.10.2026», «1/10» (de este año), «1 oct 2026», «1 de octubre de 2026», «1-oct-26» y «1 octubre».
+// Con barras, el día va siempre delante (como se escribe aquí): «3/4/2026» es el 3 de abril.
+const MESES_ESCRITOS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const MESES_EN_INGLES = { jan: 1, apr: 4, aug: 8, dec: 12 };
+export function fechaDeCelda(v, hoy = new Date()) {
     if (v === null || v === undefined || v === "") return null;
-    if (typeof v === "number" && v > 20000 && v < 80000) {
-        const d = new Date(Math.round((v - 25569) * 86400000));
-        return d.toISOString().slice(0, 10);
+    const fecha = (a, m, d) => {
+        [a, m, d] = [Number(a), Number(m), Number(d)];
+        const f = new Date(Date.UTC(a, m - 1, d));
+        if (a < 2000 || a > 2100 || f.getUTCFullYear() !== a || f.getUTCMonth() !== m - 1 || f.getUTCDate() !== d) return null;
+        return f.toISOString().slice(0, 10);
+    };
+    const anio = (texto) => (texto === undefined ? hoy.getFullYear() : texto.length === 2 ? `20${texto}` : texto);
+    if (typeof v === "number") {
+        if (!(v > 20000 && v < 80000)) return null;
+        const d = new Date(Math.round((Math.floor(v) - 25569) * 86400000)); // la parte entera es el día; la fracción, la hora
+        return fecha(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
     }
-    const s = String(v).trim();
-    let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s);
-    if (m) return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
-    m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/.exec(s);
+    const s = String(v).trim().toLowerCase();
+    let m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?![\d])/.exec(s);
+    if (m) return fecha(m[1], m[2], m[3]);
+    m = /^(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{4}|\d{2}))?(?![\d/.-])/.exec(s);
+    if (m) return fecha(anio(m[3]), m[2], m[1]);
+    m = /^(\d{1,2})(?:\s+de\s+|[\s/.-]+)([a-záéíóú]{3,})\.?(?:(?:\s+de\s+|[\s/.,-]+)(\d{4}|\d{2}))?(?![\d])/.exec(s);
     if (m) {
-        const a = m[3].length === 2 ? `20${m[3]}` : m[3];
-        return `${a}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+        const nombre = m[2].normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 3);
+        const mes = MESES_ESCRITOS.indexOf(nombre) + 1 || MESES_EN_INGLES[nombre];
+        if (mes) return fecha(anio(m[3]), mes, m[1]);
     }
     return null;
 }
