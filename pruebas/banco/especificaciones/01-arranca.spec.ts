@@ -42,7 +42,7 @@ test("1 · arranca: versión y aviso de bienvenida", async ({ browser }) => {
         if (!a || entrada.estado === "no se pudo") throw new Error("No se ha podido entrar: " + JSON.stringify(entrada.dato));
         const pagina = a.pagina;
 
-        await comprobar(P, "aviso", "Sale el aviso «¡Bienvenido a la v0.3.1!»", [pagina], async () => {
+        await comprobar(P, "aviso", "Sale el aviso «¡Bienvenido a la v0.4.0!»", [pagina], async () => {
             const titulo = pagina.locator("#hs-novedades-titulo");
             await expect(titulo).toBeVisible({ timeout: 20_000 });
             const texto = ((await titulo.textContent()) ?? "").trim();
@@ -52,7 +52,7 @@ test("1 · arranca: versión y aviso de bienvenida", async ({ browser }) => {
                 await capturaDeElemento(pagina, ".hs-ventana", "1-aviso", 12),
             ];
             return {
-                estado: texto === "¡Bienvenido a la v0.3.1!" ? "bien" : "mal",
+                estado: texto === "¡Bienvenido a la v0.4.0!" ? "bien" : "mal",
                 dato: { titulo: texto, lineas },
                 capturas,
             };
@@ -76,7 +76,7 @@ test("1 · arranca: versión y aviso de bienvenida", async ({ browser }) => {
             ];
             const esquina = !!caja && !!ventana && caja.x < 200 && caja.y + caja.height > ventana.height - 120;
             return {
-                estado: texto === "v0.3.1-alpha" && esquina ? "bien" : "mal",
+                estado: texto === "v0.4.0" && esquina ? "bien" : "mal",
                 dato: { texto, caja, ventana, versionDelRepositorio: VERSION },
                 capturas,
             };
