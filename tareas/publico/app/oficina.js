@@ -15,21 +15,26 @@
 //   hsTareas   { abiertas, hoy, atrasadas } | null               sus tareas sin terminar, las que vencen hoy y las
 //                                                                atrasadas (como las cuenta la Jefa de Producción)
 //   hsCumples  { hoy: "AAAA-MM-DD", cumples: [{ id, nombre }] } | null    cumpleaños de hoy en la oficina
-//   hsMusica   { configurado, dj, suena, desde } | null          configurado: si el servidor tiene conectado Spotify
+//   hsMusica   { configurado, dj, suena, desde, silenciada } | null    configurado: si el servidor tiene conectado Spotify
 //                                                                (SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET); el mapa solo pone el
 //                                                                botón «Música» si es true. dj: el nombre de quien pincha (null si
 //                                                                la cabina está libre). suena: true si ahora mismo suena algo que
-//                                                                se puede oír (solo se sabe mientras alguien tiene la música abierta)
-//                                                                desde: desde cuándo pincha (fecha ISO; null con la cabina libre): el
-//                                                                mapa avisa una sola vez de cada vez que alguien se pone a pinchar
+//                                                                se puede oír (se sabe mientras haya alguien en la oficina: este
+//                                                                puente cuenta). desde: desde cuándo pincha (fecha ISO; null con la
+//                                                                cabina libre): el mapa avisa (y abre el reproductor) una sola vez de
+//                                                                cada vez que alguien se pone a pinchar. silenciada: true si en este
+//                                                                navegador se pulsó «Silenciar» (la preferencia del reproductor,
+//                                                                «hs-tablon:musica-escuchar»): entonces el mapa no abre el
+//                                                                reproductor solo, solo avisa
 //
 // Sin sesión: hsSesion false y las otras tres a null. También saca el aviso de los cumpleaños de hoy (una vez al día
 // en cada navegador; el día visto se recuerda aquí, porque el mapa no puede recordar nada).
 // Se actualiza con los avisos en directo del tablón (/api/eventos), y al reconectar se vuelve a leer todo (también si
 // han conectado Spotify al reiniciar el servidor); cada minuto se recuentan las tareas (a medianoche cambian «hoy» y
-// «atrasadas»). Quién pincha y si suena llegan en directo por ese mismo canal (aviso «musica-cabina»): el puente no
-// abre el canal de la música, porque entonces el servidor estaría mirando Spotify siempre que hubiera alguien en la
-// oficina. Sin sesión se vuelve a probar cada vez más espaciado (1, 2, 4… hasta
+// «atrasadas»). Quién pincha y si suena llegan en directo por ese mismo canal (aviso «musica-cabina»). El puente lo
+// abre como «la oficina» (?oficina=1): con alguien en la oficina y alguien pinchando, el servidor mira el Spotify de quien
+// pincha aunque nadie tenga abierto el reproductor, para saber si suena y que el mapa lo abra solo (la música suena en
+// toda la oficina, no solo a quien le da a la nota); con la cabina libre no se mira nada. Sin sesión se vuelve a probar cada vez más espaciado (1, 2, 4… hasta
 // 15 minutos, para no llenar la consola de 401) y al momento cuando se vuelve a la pestaña o se entra en el tablón
 // en este navegador (el tablón lo anuncia en localStorage, «hs-tablon:sesion»). Al cerrarse la página, se para.
 // Fuera de la oficina (sin WA, por ejemplo abierta en una pestaña) no hace nada.
@@ -46,6 +51,7 @@ const MINUTO = 60 * 1000;
 const RATO = 10 * 60 * 1000; // cada cuánto se vuelve a preguntar el día, los cumpleaños de la oficina y si hay música
 const ESPERA_MAXIMA = 15 * MINUTO;
 const AVISO_DEL_TABLON = "hs-tablon:sesion"; // lo escribe el tablón cada vez que arranca con sesión
+const PREFERENCIA_MUSICA = "hs-tablon:musica-escuchar"; // la de app/musica-comun.js: "0" es que se pulsó «Silenciar»
 
 let WA = null;
 let parado = false;
@@ -55,7 +61,7 @@ let dejarDeEscuchar = null;
 let reloj = null;
 let ultimaOficina = 0;
 let ultimaMusica = 0;
-let musica = null; // lo último que se sabe de la música: { configurado, dj, suena }
+let musica = null; // lo último que se sabe de la música: { configurado, dj, suena, desde, silenciada }
 let avisosDeCabina = 0; // cuántos «musica-cabina» han llegado (para no pisar uno con una lectura más vieja)
 let espera = MINUTO; // sin sesión: lo que se espera antes de volver a probar (se dobla cada vez)
 let reintento = null;
@@ -143,6 +149,15 @@ const releerOficina = retrasar(leerOficina, 1000);
 
 const desdeCuando = (valor) => (typeof valor === "string" && valor ? valor : null);
 
+// ¿Se pulsó «Silenciar» en este navegador? (el reproductor lo guarda; este puente es de la misma web y lo puede leer)
+function silenciada() {
+    try {
+        return localStorage.getItem(PREFERENCIA_MUSICA) === "0";
+    } catch {
+        return false;
+    }
+}
+
 // La música: ¿está conectada (Spotify) en el servidor?, ¿quién pincha? y ¿suena algo? Si no contesta, no se escribe
 // nada (y mientras tanto el mapa no pone el botón «Música») y se vuelve a probar luego.
 async function leerMusica() {
@@ -160,7 +175,7 @@ async function leerMusica() {
     ultimaMusica = Date.now();
     const dj = estado?.cabina?.dj?.nombre;
     const quien = typeof dj === "string" && dj ? dj : null;
-    musica = { configurado: estado?.configurado === true, dj: quien, suena: estado?.suena === true, desde: quien ? desdeCuando(estado?.cabina?.desde) : null };
+    musica = { configurado: estado?.configurado === true, dj: quien, suena: estado?.suena === true, desde: quien ? desdeCuando(estado?.cabina?.desde) : null, silenciada: silenciada() };
     escribir("hsMusica", musica);
 }
 const releerMusica = retrasar(leerMusica, 1000);
@@ -170,7 +185,14 @@ function alCambiarLaCabina(ev) {
     avisosDeCabina += 1;
     if (!musica) return; // todavía no se ha leído la música: lo que se lea ya vendrá al día
     const quien = typeof ev.dj === "string" && ev.dj ? ev.dj : null;
-    musica = { ...musica, dj: quien, suena: ev.suena === true, desde: quien ? desdeCuando(ev.desde) : null };
+    musica = { ...musica, dj: quien, suena: ev.suena === true, desde: quien ? desdeCuando(ev.desde) : null, silenciada: silenciada() };
+    escribir("hsMusica", musica);
+}
+
+// Se ha pulsado «Silenciar» o «Escuchar» en el reproductor (en otro marco de esta misma web)
+function alCambiarLaPreferencia() {
+    if (!musica || musica.silenciada === silenciada()) return;
+    musica = { ...musica, silenciada: silenciada() };
     escribir("hsMusica", musica);
 }
 
@@ -193,7 +215,7 @@ async function actualizar() {
     escribir("hsSesion", true);
     escribir("hsTareas", contarTareas());
     await Promise.all([leerOficina(), leerMusica()]);
-    if (!dejarDeEscuchar && !parado && yo) dejarDeEscuchar = escuchar(alRecibir, actualizar, { aviso: false }); // invisible: sin franja
+    if (!dejarDeEscuchar && !parado && yo) dejarDeEscuchar = escuchar(alRecibir, actualizar, { aviso: false, oficina: true }); // invisible: sin franja
 }
 
 function sinSesion() {
@@ -287,6 +309,7 @@ function apiDeLaOficina() {
     });
     addEventListener("storage", (e) => {
         if (e.key === AVISO_DEL_TABLON) probarYa();
+        if (e.key === PREFERENCIA_MUSICA) alCambiarLaPreferencia();
     });
     document.addEventListener("visibilitychange", () => {
         if (!document.hidden) probarYa();

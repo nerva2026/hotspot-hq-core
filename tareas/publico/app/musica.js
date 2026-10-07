@@ -260,7 +260,7 @@ function pintarAhora() {
         } else {
             titulo = `Pincha ${dj.nombre}`;
             texto = soyDj()
-                ? "Pon algo en tu Spotify (en el móvil o en el ordenador): en unos segundos sale aquí. Cada persona la oye cuando abre «Música»." // PROVISIONAL-v0.3.1
+                ? "Pon algo en tu Spotify (en el móvil o en el ordenador): en unos segundos sale aquí. En la oficina se oye sola: a quien esté dentro se le abre el reproductor." // PROVISIONAL-v0.3.1
                 : `Ahora mismo no suena nada en el Spotify de ${dj.nombre}.`;
         }
         cuerpo.replaceChildren(portada(null, { clase: "portada portada-grande apagada" }), h("div", { class: "ahora-datos vacio" }, h("p", { class: "ahora-titulo" }, titulo), h("p", { class: "nota" }, texto)));
@@ -393,7 +393,7 @@ function pintarCabina() {
         partes.push(h("p", { class: "cabina-estado libre" }, h("strong", null, "Libre."), " Ahora no pincha nadie."));
         if (E.spotify.conectado) {
             partes.push(
-                h("p", { class: "nota" }, "Entra y pon lo que quieras en tu Spotify (móvil u ordenador). Cada persona la oye cuando abre «Música»."), // PROVISIONAL-v0.3.1
+                h("p", { class: "nota" }, "Entra y pon lo que quieras en tu Spotify (móvil u ordenador). En la oficina se oye sola: a quien esté dentro se le abre el reproductor."), // PROVISIONAL-v0.3.1
                 h("button", { type: "button", class: "btn primario", id: "boton-pinchar", onclick: pinchar }, "Pinchar yo"),
             );
         } else {
@@ -405,7 +405,7 @@ function pintarCabina() {
         partes.push(
             h("p", { class: "cabina-estado mia" }, avatar(E.yo), h("span", null, h("strong", null, "Estás pinchando tú"), h("small", null, `desde ${laHora(E.cabina.desde)}`))),
             // PROVISIONAL-v0.3.1
-            h("p", { class: "nota" }, "Pon música en tu Spotify (en el móvil o en el ordenador) como siempre: en unos segundos sale aquí. Cada persona la oye cuando abre «Música»: abajo ves a quién le suena. Si no aparece, mira que no tengas puesta la sesión privada."),
+            h("p", { class: "nota" }, "Pon música en tu Spotify (en el móvil o en el ordenador) como siempre: en unos segundos sale aquí. En la oficina se oye sola (a quien esté dentro se le abre el reproductor): abajo ves a quién le suena. Si no aparece, mira que no tengas puesta la sesión privada."), // PROVISIONAL-v0.3.1
             h("button", { type: "button", class: "btn", id: "boton-dejar", onclick: () => dejarCabina() }, "Dejar la cabina"),
         );
     } else {

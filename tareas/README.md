@@ -385,7 +385,7 @@ ve nadie más ni se guardan (`scope: "world"` sin `persist: true` lo rechaza Wor
 | `hsSesion` | `true` si quien juega ha entrado en el tablón; `false` si no (o si se le ha caducado la sesión). |
 | `hsTareas` | `{ abiertas, hoy, atrasadas }`: sus tareas sin terminar, las que vencen hoy y las atrasadas (como las cuenta la Jefa de Producción). `null` sin sesión. Es lo que necesita el número del botón «Tareas». |
 | `hsCumples` | `{ hoy: "AAAA-MM-DD", cumples: [{ id, nombre }] }`: de quién es el cumple hoy en la oficina. `null` sin sesión. |
-| `hsMusica` | `{ configurado, dj, suena, desde }` (siempre las cuatro; `null` sin sesión). `configurado`: `true` si el servidor tiene conectado Spotify; el mapa solo pone el botón «Música» si lo es (mientras no llegue la respuesta, no hay botón). `dj`: el nombre de quien pincha, o `null` si la cabina está libre. `suena`: `true` si ahora mismo suena algo que se puede oír; `false` si no (pausa, anuncio, archivo local del DJ, cabina libre… o si no se sabe, ver abajo). `desde`: desde cuándo pincha (fecha ISO, la de entrar en la cabina; `null` con la cabina libre): el mapa lo usa para avisar una sola vez de cada vez que alguien se pone a pinchar. |
+| `hsMusica` | `{ configurado, dj, suena, desde, silenciada }` (siempre las cinco; `null` sin sesión). `configurado`: `true` si el servidor tiene conectado Spotify; el mapa solo pone el botón «Música» si lo es (mientras no llegue la respuesta, no hay botón). `dj`: el nombre de quien pincha, o `null` si la cabina está libre. `suena`: `true` si ahora mismo suena algo que se puede oír; `false` si no (pausa, anuncio, archivo local del DJ, cabina libre… o si no se sabe, ver abajo). `desde`: desde cuándo pincha (fecha ISO, la de entrar en la cabina; `null` con la cabina libre): el mapa lo usa para avisar (y abrir el reproductor) una sola vez de cada vez que alguien se pone a pinchar. `silenciada`: `true` si en este navegador se pulsó «Silenciar» en el reproductor (`hs-tablon:musica-escuchar` es `0`); entonces el mapa no lo abre solo. |
 
 - **Al día:** se actualiza con los avisos en directo del tablón; cada minuto recuenta las tareas (a medianoche
   cambian «hoy» y «atrasadas») y cada 10 minutos vuelve a preguntar qué día es, quién cumple y cómo está la música (y lo vuelve a leer todo al
@@ -395,10 +395,11 @@ ve nadie más ni se guardan (`scope: "world"` sin `persist: true` lo rechaza Wor
 - **`hsMusica` en directo:** el puente la lee de `GET /api/musica` (`configurado`, `cabina.dj.nombre` y `suena`) y
   la cambia al momento cuando el servidor avisa por el canal general con `{ tipo: "musica-cabina", dj, suena, desde }`: al
   entrar o salir alguien de la cabina y cuando empieza o deja de sonar (un cambio de canción no avisa). Si quien pincha
-  cambia de nombre, se vuelve a leer. El puente **no** abre el canal de la música: el servidor solo mira el Spotify del
-  DJ mientras alguien tiene la música abierta (la cabina o el reproductor pequeño), y por eso `suena` solo se sabe
-  entonces; con la música cerrada para todos es `false` aunque el DJ tenga algo puesto. Para avisar de que alguien
-  pincha, el mapa tiene que fiarse de `dj`; `suena` es un extra. El mapa todavía solo usa `configurado`.
+  cambia de nombre, se vuelve a leer. El puente abre el canal general como «la oficina» (`/api/eventos?oficina=1`): con
+  alguien dentro y alguien pinchando, el servidor mira el Spotify del DJ aunque nadie tenga la música abierta, así que
+  `suena` se sabe siempre que hay alguien en la oficina. Con eso el mapa abre el reproductor pequeño solo cuando
+  empieza a sonar (no basta con que alguien esté en la cabina). Si se pulsa «Silenciar» o «Escuchar» en el
+  reproductor, el puente se entera por el evento `storage` y cambia `silenciada`.
 - **Aviso de cumpleaños:** lo saca él mismo (`WA.ui.banner.openBanner`, amarillo, se cierra a mano): «¡Hoy es el
   cumple de Diego!», «…de Diego y Víctor!» y, a quien cumple, «¡Feliz cumpleaños, Diego!». Una vez al día en cada
   navegador: el día visto lo recuerda en su `localStorage`, porque el mapa no puede recordar nada.
@@ -414,7 +415,14 @@ mira qué le suena al DJ y lo cuenta a todos por el canal en directo; cada naveg
 el reproductor oficial de Spotify (Embed, `https://open.spotify.com/embed/iframe-api/v1`) y salta al mismo
 punto. Si esa persona ha entrado en Spotify en su navegador suena entera; si no, Spotify solo deja 30 segundos
 de muestra (la pantalla lo avisa). Los anuncios, los archivos locales del DJ y lo que no está en Spotify no se
-pueden poner. Por eso **no suena sola en la oficina**: cada persona la oye cuando abre «Música».
+pueden poner. En la oficina **suena sola**: cuando empieza a sonar algo en el Spotify de quien pincha, el mapa le
+abre a cada uno el reproductor pequeño, que arranca solo (si el navegador no le deja, pide pulsar ▶). Una vez por
+cada vez que alguien se pone a pinchar: quien lo cierra con la nota no lo vuelve a ver abrirse, y a quien pulsó
+«Silenciar» solo se le avisa. Quien pincha no lo oye en la oficina: ya lo oye en su Spotify.
+- **La cabina olvidada:** si en el Spotify de quien pincha no suena nada durante 30 minutos (`MUSICA_CABINA_PARADA_MS`),
+  la cabina queda libre sola y la cabina lo dice. Si cuando se vuelve a mirar ya hacía más de ese rato que no sonaba
+  nada (el servidor no miraba: no había nadie), bastan 2 minutos mirando sin que suene. Antes, quien se iba sin dejar
+  la cabina se quedaba en ella días, y la oficina anunciaba a un DJ que no ponía nada.
 
 - **`/tareas/musica/`** (la cabina): lo que suena (portada, título, artistas, por dónde va), «Escuchar» /
   «Silenciar», «Pinchar yo» / «Dejar la cabina», conectar y desconectar tu Spotify, las últimas 20 canciones
@@ -487,13 +495,14 @@ pueden poner. Por eso **no suena sola en la oficina**: cada persona la oye cuand
   del servidor (ni por la API, ni al registro) y el de acceso solo vive en memoria. Se pide únicamente permiso
   de lectura (`user-read-currently-playing user-read-playback-state`). Quien sale del crew, quita el permiso
   en Spotify o pulsa «Desconectar» pierde su token y deja la cabina.
-- **Cuánto se pregunta a Spotify:** solo mientras haya alguien con la música abierta (la cabina o el reproductor
-  pequeño; el puente de la oficina no cuenta), cada 5 segundos (`MUSICA_INTERVALO_MS`); si Spotify pide calma (429) se
-  espera lo que diga.
+- **Cuánto se pregunta a Spotify:** solo con alguien en la cabina y mientras haya alguien con la música abierta (la
+  cabina o el reproductor pequeño) o en la oficina (el puente; el tablón no cuenta), cada 5 segundos
+  (`MUSICA_INTERVALO_MS`); si Spotify pide calma (429) se espera lo que diga. Como la cabina olvidada queda libre a los
+  30 minutos, con la oficina abierta y nadie pinchando de verdad no se pregunta más que ese rato.
 - **Variables** (en el `.env` del servidor, nunca en el repositorio): `SPOTIFY_CLIENT_ID` y
   `SPOTIFY_CLIENT_SECRET` (la aplicación de Spotify); opcionales `SPOTIFY_REDIRECT_URI` (por defecto
-  `<TAREAS_URL>api/musica/vuelta`, o sea `https://oficina.hot-spot.es/tareas/api/musica/vuelta`) y
-  `MUSICA_INTERVALO_MS`. `SPOTIFY_AUTH_URL`, `SPOTIFY_TOKEN_URL` y `SPOTIFY_API_URL` son solo para las pruebas
+  `<TAREAS_URL>api/musica/vuelta`, o sea `https://oficina.hot-spot.es/tareas/api/musica/vuelta`),
+  `MUSICA_INTERVALO_MS` y `MUSICA_CABINA_PARADA_MS`. `SPOTIFY_AUTH_URL`, `SPOTIFY_TOKEN_URL` y `SPOTIFY_API_URL` son solo para las pruebas
   (el Spotify de mentira). Sin las dos primeras, la música sale como «sin configurar».
 
 ### Ponerlo en marcha (una sola vez, lo hace una persona del equipo)

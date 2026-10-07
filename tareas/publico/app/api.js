@@ -157,8 +157,9 @@ export function subirDocumento(archivo, { carpeta = "", alProgreso } = {}) {
 
 // Cambios en directo: el servidor avisa de todo lo que hacen los demás (y, con «pizarra», de lo que pasa en ella).
 // «aviso»: que salga la franja «Sin conexión…» (app/conexion.js) mientras el canal esté caído. Todas las pantallas la
-// sacan por este mismo código; solo el puente invisible de la oficina no la quiere.
-export function escuchar(alRecibir, alReconectar, { pizarra, aviso = true } = {}) {
+// sacan por este mismo código; solo el puente invisible de la oficina no la quiere. «oficina»: es el puente de la oficina
+// (alguien está dentro): con alguien pinchando, el servidor mira qué suena aunque nadie tenga la música abierta.
+export function escuchar(alRecibir, alReconectar, { pizarra, aviso = true, oficina = false } = {}) {
     let fuente = null;
     let cayo = false;
     let parado = false;
@@ -167,6 +168,7 @@ export function escuchar(alRecibir, alReconectar, { pizarra, aviso = true } = {}
         if (parado) return;
         const direccion = new URL("eventos", BASE_API);
         if (pizarra) direccion.searchParams.set("pizarra", pizarra);
+        if (oficina) direccion.searchParams.set("oficina", "1");
         fuente = new EventSource(direccion);
         fuente.onopen = () => {
             franja?.volvio();

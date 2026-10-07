@@ -3,7 +3,8 @@
 // Spotify no deja captar el audio de una cuenta y retransmitirlo, así que por aquí no pasa nada de audio:
 //   1. Una persona del crew entra en la cabina (quien pincha, el DJ). Conecta su cuenta de Spotify (OAuth con
 //      código, desde el servidor y con el secreto de la aplicación) y pone música en su Spotify de siempre.
-//   2. Mientras alguien tenga la música abierta, el servidor mira cada pocos segundos qué le suena al DJ
+//   2. Mientras alguien tenga la música abierta, o esté en la oficina (el puente /tareas/oficina/), el servidor mira cada
+//      pocos segundos qué le suena al DJ
 //      (/v1/me/player/currently-playing) y se lo cuenta a todos por el canal en directo: canción, artistas,
 //      portada, duración, por dónde va y si está en pausa.
 //   3. Cada navegador pone esa misma canción con el reproductor oficial de Spotify (Embed) y salta al mismo punto:
@@ -22,6 +23,7 @@
 //   SPOTIFY_REDIRECT_URI     dirección de vuelta (por defecto <TAREAS_URL>api/musica/vuelta)
 //   SPOTIFY_AUTH_URL, SPOTIFY_TOKEN_URL, SPOTIFY_API_URL   otro Spotify (el de mentira de las pruebas)
 //   MUSICA_INTERVALO_MS      cada cuánto se mira qué suena (5000)
+//   MUSICA_CABINA_PARADA_MS  con este rato sin sonar nada en el Spotify de quien pincha, la cabina queda libre (30 min)
 
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -38,6 +40,12 @@ const DURACION_ESTADO = 15 * 60 * 1000; // lo que se tiene para volver de Spotif
 const MARGEN_SALTO = 2500; // ms: si la posición se aleja más que esto de la esperada, el DJ ha saltado
 const ESPERA_MAXIMA = 60 * 60 * 1000; // aunque Spotify pida esperar más (429), como mucho una hora
 const ESPERA_ERRORES = 60 * 1000;
+// Una cabina olvidada (quien pincha se fue y no la dejó) hacía que la oficina anunciara a un DJ que no ponía nada: con
+// este rato sin que suene nada en su Spotify, queda libre. Y si cuando se vuelve a mirar ya hacía rato que no sonaba
+// nada (el servidor no miraba: no había nadie), basta con este otro rato mirando sin que suene para dejarla libre.
+const CABINA_PARADA = 30 * 60 * 1000;
+const CABINA_PARADA_MIRANDO = 2 * 60 * 1000;
+const GUARDAR_SONADO_CADA = 60 * 1000; // cada cuánto se apunta en musica.json que sigue sonando (no en cada consulta)
 
 const escapar = (s) =>
     String(s ?? "")
@@ -121,6 +129,7 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
         api: (process.env.SPOTIFY_API_URL || "https://api.spotify.com/v1").replace(/\/$/, ""),
         vuelta: process.env.SPOTIFY_REDIRECT_URI || new URL("api/musica/vuelta", raiz).href,
         intervalo: Math.min(60000, Math.max(100, Number(process.env.MUSICA_INTERVALO_MS) || 5000)),
+        parada: Math.max(1000, Number(process.env.MUSICA_CABINA_PARADA_MS) || CABINA_PARADA),
     };
     const configurado = Boolean(cfg.id && cfg.secreto);
     const seguro = cfg.vuelta.startsWith("https:");
@@ -292,12 +301,14 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
     let temporizador = null;
     let mirando = false;
     let dormido = true; // nadie escucha o no hay DJ: no se pregunta a Spotify
+    let despierto = 0; // desde cuándo se está mirando sin parar (para no dejar libre una cabina a la primera consulta)
+    let sonado = 0; // la última vez que se vio sonar algo en el Spotify de quien pincha (en musica.json, «cabina.sonado», cada minuto)
     let noAntesDe = 0; // Spotify ha pedido calma (429) o ha fallado: no se pregunta antes de esto
     let fallosSeguidos = 0;
 
     // Lo que le interesa a la oficina entera (el mapa): quién pincha y si ahora mismo suena algo que se pueda oír.
-    // «suena» solo se sabe mientras se mira el Spotify del DJ, y solo se mira mientras alguien tiene la música abierta:
-    // con la música cerrada para todos (dormido) es false. Tampoco cuentan la pausa, un anuncio ni un archivo local.
+    // «suena» solo se sabe mientras se mira el Spotify del DJ, y solo se mira mientras alguien tiene la música abierta o
+    // está en la oficina: con nadie (dormido) es false. Tampoco cuentan la pausa, un anuncio ni un archivo local.
     function resumen() {
         const dj = datos.cabina ? persona(datos.cabina.dj).nombre : null;
         // «desde»: desde cuándo pincha (el mapa lo usa para avisar una sola vez de cada vez que alguien pincha)
@@ -347,6 +358,14 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
     function actualizar(nuevo, { forzar = false, esAnuncio = false, dj }) {
         const ahora = Date.now();
         let cambio = forzar;
+        // (lo último que sonó: para dejar libre una cabina olvidada; un anuncio también es que tiene Spotify en marcha)
+        if (datos.cabina && (esAnuncio || nuevo?.reproduciendo)) {
+            sonado = ahora;
+            if (ahora - (Date.parse(datos.cabina.sonado || "") || 0) >= GUARDAR_SONADO_CADA) {
+                datos.cabina.sonado = new Date(ahora).toISOString();
+                guardar();
+            }
+        }
         if (anuncio !== esAnuncio) cambio = true;
         anuncio = esAnuncio;
         if (!nuevo) {
@@ -396,6 +415,7 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
         mirando = true;
         const despertando = dormido;
         dormido = false;
+        if (despertando) despierto = ahora;
         let espera = cfg.intervalo;
         const nombreDj = persona(dj).nombre;
         try {
@@ -408,10 +428,12 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
                 const j = await r.json();
                 fallosSeguidos = 0;
                 actualizar(leerSonando(j), { forzar: despertando, esAnuncio: j?.currently_playing_type === "ad", dj });
+                dejarSiEstaParada(nombreDj);
             } else if (r.status === 204) {
                 fallosSeguidos = 0;
                 await r.body?.cancel();
                 actualizar(null, { forzar: despertando, dj });
+                dejarSiEstaParada(nombreDj);
             } else if (r.status === 429) {
                 await r.body?.cancel();
                 espera = esperaDe429(Number(r.headers.get("retry-after")));
@@ -441,6 +463,19 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
         }
         noAntesDe = Math.max(noAntesDe, Date.now() + (espera > cfg.intervalo ? espera : 0));
         programar(espera);
+    }
+
+    // La cabina olvidada: si hace «cfg.parada» que no suena nada en el Spotify de quien pincha (ni desde que entró), queda
+    // libre, con un aviso en la cabina. Solo con una respuesta de Spotify en la mano (200 o 204), nunca por un fallo.
+    function dejarSiEstaParada(nombreDj) {
+        const c = datos.cabina;
+        if (!c || anuncio || actual?.reproduciendo) return;
+        const ahora = Date.now();
+        const ultima = Math.max(sonado, Date.parse(c.sonado || "") || 0, Date.parse(c.desde || "") || 0);
+        if (ahora - ultima < cfg.parada || ahora - despierto < Math.min(cfg.parada, CABINA_PARADA_MIRANDO)) return;
+        console.log(`[música] Hace rato que no suena nada en el Spotify de ${nombreDj}: se deja la cabina libre.`);
+        ponerAviso(`${nombreDj} llevaba un rato sin poner nada y la cabina ha quedado libre.`, false); // PROVISIONAL-v0.3.1
+        liberar();
     }
 
     // Spotify pide calma (429): se espera lo que diga «Retry-After» (o medio minuto si no lo dice).
@@ -612,7 +647,7 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
         }
         return pagina(res, 200, "¡Listo!", [
             enCabina === "dentro" ? `${conectado} y ya estás en la cabina.` : `${conectado} y sigues en la cabina.`, // PROVISIONAL-v0.3.1 (lo de la cabina)
-            "Pon música en tu Spotify (en el móvil o en el ordenador), como siempre. Cada persona la oye cuando abre «Música».", // PROVISIONAL-v0.3.1
+            "Pon música en tu Spotify (en el móvil o en el ordenador), como siempre. En la oficina se oye sola: a quien esté dentro se le abre el reproductor.", // PROVISIONAL-v0.3.1
             cerrar,
         ]);
     }
