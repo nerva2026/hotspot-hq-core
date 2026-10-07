@@ -301,7 +301,8 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
     let temporizador = null;
     let mirando = false;
     let dormido = true; // nadie escucha o no hay DJ: no se pregunta a Spotify
-    let despierto = 0; // desde cuándo se está mirando sin parar (para no dejar libre una cabina a la primera consulta)
+    let despierto = 0; // desde cuándo se ve sin cortes lo que suena (para no dejar libre una cabina a la primera consulta)
+    let ciego = true; // no se ve lo que suena: dormido, o la última consulta no dio una respuesta buena (un fallo, un 429…)
     let sonado = 0; // la última vez que se vio sonar algo en el Spotify de quien pincha (en musica.json, «cabina.sonado», cada minuto)
     let noAntesDe = 0; // Spotify ha pedido calma (429) o ha fallado: no se pregunta antes de esto
     let fallosSeguidos = 0;
@@ -415,8 +416,16 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
         mirando = true;
         const despertando = dormido;
         dormido = false;
-        if (despertando) despierto = ahora;
+        if (despertando) ciego = true;
         let espera = cfg.intervalo;
+        let visto = false; // si esta consulta ha dicho qué suena (200 o 204)
+        // (los 2 minutos de «CABINA_PARADA_MIRANDO» cuentan desde la primera respuesta buena tras no ver nada: lo que sonara
+        // mientras Spotify fallaba o pedía calma no se sabe, y no puede dejar libre la cabina a la primera)
+        const loVe = () => {
+            visto = true;
+            if (ciego) despierto = Date.now();
+            ciego = false;
+        };
         const nombreDj = persona(dj).nombre;
         try {
             const r = await llamarApi(dj, "/me/player/currently-playing?additional_types=track,episode");
@@ -427,11 +436,13 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
             } else if (r.status === 200) {
                 const j = await r.json();
                 fallosSeguidos = 0;
+                loVe();
                 actualizar(leerSonando(j), { forzar: despertando, esAnuncio: j?.currently_playing_type === "ad", dj });
                 dejarSiEstaParada(nombreDj);
             } else if (r.status === 204) {
                 fallosSeguidos = 0;
                 await r.body?.cancel();
+                loVe();
                 actualizar(null, { forzar: despertando, dj });
                 dejarSiEstaParada(nombreDj);
             } else if (r.status === 429) {
@@ -460,13 +471,15 @@ export function crearMusica({ carpetaDatos, urlPublica, base, usuarioDe, emitir,
             }
         } finally {
             mirando = false;
+            if (!visto) ciego = true;
         }
         noAntesDe = Math.max(noAntesDe, Date.now() + (espera > cfg.intervalo ? espera : 0));
         programar(espera);
     }
 
     // La cabina olvidada: si hace «cfg.parada» que no suena nada en el Spotify de quien pincha (ni desde que entró), queda
-    // libre, con un aviso en la cabina. Solo con una respuesta de Spotify en la mano (200 o 204), nunca por un fallo.
+    // libre, con un aviso en la cabina. Solo con una respuesta de Spotify en la mano (200 o 204), nunca por un fallo, y
+    // después de llevar un rato viendo sin cortes lo que suena (tras despertar, un fallo o un 429, se vuelve a esperar).
     function dejarSiEstaParada(nombreDj) {
         const c = datos.cabina;
         if (!c || anuncio || actual?.reproduciendo) return;

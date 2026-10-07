@@ -421,7 +421,8 @@ cada vez que alguien se pone a pinchar: quien lo cierra con la nota no lo vuelve
 «Silenciar» solo se le avisa. Quien pincha no lo oye en la oficina: ya lo oye en su Spotify.
 - **La cabina olvidada:** si en el Spotify de quien pincha no suena nada durante 30 minutos (`MUSICA_CABINA_PARADA_MS`),
   la cabina queda libre sola y la cabina lo dice. Si cuando se vuelve a mirar ya hacía más de ese rato que no sonaba
-  nada (el servidor no miraba: no había nadie), bastan 2 minutos mirando sin que suene. Antes, quien se iba sin dejar
+  nada (el servidor no miraba: no había nadie; o Spotify fallaba o pedía calma), bastan 2 minutos viendo sin que suene,
+  contados desde la primera respuesta buena de Spotify. Antes, quien se iba sin dejar
   la cabina se quedaba en ella días, y la oficina anunciaba a un DJ que no ponía nada.
 
 - **`/tareas/musica/`** (la cabina): lo que suena (portada, título, artistas, por dónde va), «Escuchar» /

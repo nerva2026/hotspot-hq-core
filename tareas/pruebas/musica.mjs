@@ -1012,8 +1012,8 @@ if (puertoSinSpotify) {
         await hastaQueConteste(raiz);
         const dj = cliente("dj-parada", raiz);
         assert.equal((await dj("POST", "alta", { codigo, nombre: "Diego", clave: "una clave muy larga" })).estado, 200);
-        await sonar("diego", null);
-        await (await conectarSpotify(dj, "diego")).abrirVuelta();
+        await sonar("parada", null);
+        await (await conectarSpotify(dj, "parada")).abrirVuelta();
         assert.equal((await dj("GET", "musica")).datos.cabina?.dj?.nombre, "Diego", "al conectar con la cabina libre, ya pincha");
         // Alguien en la oficina (el puente), y en el Spotify de quien pincha no suena nada
         const oficina = await dj.escuchar({ oficina: true });
@@ -1024,17 +1024,34 @@ if (puertoSinSpotify) {
         assert.match(m.aviso, /Diego llevaba un rato sin poner nada/, "y la cabina dice por qué");
         assert.match(salida, /Hace rato que no suena nada en el Spotify de Diego/, "y queda en el registro");
         // Vuelve a entrar y pone música: mientras suena no se la quitan, aunque pase el rato
-        await sonar("diego", pista("pista-parada"));
+        await sonar("parada", pista("pista-parada"));
         assert.equal((await dj("POST", "musica/cabina")).estado, 200);
         assert.equal((await dj("GET", "musica")).datos.aviso, null, "al volver a entrar, el aviso se va");
         await esperar(3000);
         let ahora = (await dj("GET", "musica")).datos;
         assert.equal(ahora.cabina?.dj?.nombre, "Diego", "mientras suena algo, la cabina sigue siendo suya");
         assert.equal(ahora.suena, true);
-        // En pausa también cuenta el rato: a los 1,5 s sin sonar, libre
+        // Spotify deja de contestar un rato (aquí, un 429 de 2 s, más que el rato de la cabina olvidada) y, a la vuelta, está
+        // en pausa: no se deja libre a la primera respuesta (lo que sonara mientras no se veía no se sabe); el rato vuelve a
+        // contar desde ahí. En pausa también cuenta: pasado ese rato sin sonar, libre
         const marca = oficina.marca();
-        await sonar("diego", pista("pista-parada", { sonando: false }));
-        await oficina.esperar((e) => e.tipo === "musica-cabina" && e.dj === null, "en pausa, pasado el rato, libre", marca, 6000);
+        // (las consultas de este servidor son las de la cuenta «parada»: el de las otras pruebas sigue en marcha)
+        const deEste = async () => (await control("GET", "estado")).llamadas.sonando.filter((l) => l.cuenta === "parada");
+        await control("POST", "limite?veces=1&espera=2");
+        for (let i = 0; i < 40 && !(await deEste()).some((l) => l.respuesta === 429); i++) await esperar(50);
+        await sonar("parada", pista("pista-parada", { sonando: false }));
+        let trasEl429 = false;
+        for (let i = 0; i < 80 && !trasEl429; i++) {
+            const llamadas = await deEste();
+            const i429 = llamadas.findLastIndex((l) => l.respuesta === 429);
+            trasEl429 = i429 >= 0 && Boolean(llamadas[i429 + 1]);
+            if (!trasEl429) await esperar(50);
+        }
+        assert.ok(trasEl429, "ha habido un 429 y después otra consulta");
+        await esperar(150);
+        ahora = (await dj("GET", "musica")).datos;
+        assert.equal(ahora.cabina?.dj?.nombre, "Diego", "tras no ver nada un rato, la primera respuesta en pausa no deja la cabina libre");
+        await oficina.esperar((e) => e.tipo === "musica-cabina" && e.dj === null, "en pausa, pasado el rato viéndolo, libre", marca, 6000);
         oficina.cerrar();
     } finally {
         await new Promise((listo) => {
@@ -1043,7 +1060,7 @@ if (puertoSinSpotify) {
             setTimeout(listo, 3000).unref();
         });
         fs.rmSync(datosParada, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
-        await sonar("diego", null);
+        await sonar("parada", null);
     }
 }
 
