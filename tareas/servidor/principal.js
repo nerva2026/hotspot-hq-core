@@ -204,7 +204,8 @@ const musica = crearMusica({
     emitirA: (id, evento) => emitirMusica(evento, (o) => o.usuario.id === id),
     // Por el canal general (lo oye también el puente de la oficina): quién pincha y si suena («musica-cabina»).
     emitirATodos: (evento) => emitir(evento),
-    hayOyentes: () => [...oyentes].some((o) => o.musica),
+    // (alguien con la música abierta, o en la oficina: allí el mapa abre el reproductor solo cuando suena algo)
+    hayOyentes: () => [...oyentes].some((o) => o.musica || o.oficina),
     escuchando: quienesEscuchan,
     oyentes: comoEscuchan,
 });
@@ -879,6 +880,9 @@ async function api(req, res, ruta) {
             pizarra: pizarraValida(pizarra) ? pizarra : null,
             // La música: «cliente» es la pestaña, para saber quién está escuchando y cómo le va (POST /api/musica/escucho).
             musica: parametros.get("musica") === "1",
+            // El puente de la oficina (/tareas/oficina/): alguien está dentro. Cuenta para mirar qué suena (para que el
+            // mapa sepa si suena y abra el reproductor solo), pero no como alguien que escucha.
+            oficina: parametros.get("oficina") === "1",
             cliente: String(parametros.get("cliente") || "").slice(0, 40),
             escucha: false,
             estado: null,
@@ -896,8 +900,8 @@ async function api(req, res, ruta) {
         res.on("close", quitar);
         res.on("error", quitar);
         avisarPresentes(oyente.pizarra);
-        // Con la música abierta, el servidor mira qué suena (si estaba parado porque no había nadie).
-        if (oyente.musica) musica.despertar();
+        // Con la música abierta, o alguien en la oficina, el servidor mira qué suena (si estaba parado porque no había nadie).
+        if (oyente.musica || oyente.oficina) musica.despertar();
         return;
     }
 

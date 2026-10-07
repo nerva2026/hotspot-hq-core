@@ -15,7 +15,8 @@
 // cerrada); que no se pregunta a Spotify si nadie tiene la música abierta; el aviso a toda la oficina de quién pincha
 // y si suena («musica-cabina», por el canal general) y el puente de la oficina, que lo deja en la variable hsMusica
 // (el módulo de verdad, con una oficina de mentira); permiso retirado en Spotify; desconectar; la vuelta a la cabina
-// fuera de la oficina (y en modo solo, ?solo=1, si lo estaba); salir del crew; lo que ha sonado y las páginas.
+// fuera de la oficina (y en modo solo, ?solo=1, si lo estaba); salir del crew; lo que ha sonado y las páginas; y la cabina
+// olvidada (sin sonar nada un rato, queda libre: con su propio servidor, en el puerto libre del final).
 // Con TAREAS_DATOS mira también el archivo (musica.json, permisos 600). Con el último número arranca en ese puerto
 // otro servidor sin Spotify para ver la música «sin configurar».
 
@@ -40,7 +41,7 @@ const VUELTA = `${base}/api/musica/vuelta`;
 
 const respuestas = []; // todo lo que contesta la API, para comprobar al final que no lleva ningún token
 
-function cliente(nombre) {
+function cliente(nombre, raiz = base) {
     const galletas = new Map();
     const id = `prueba-${nombre}`;
     const guardarGalletas = (r) => {
@@ -61,7 +62,7 @@ function cliente(nombre) {
             body = JSON.stringify(cuerpo);
             cabeceras["content-type"] = "application/json";
         }
-        const r = await fetch(`${base}/api/${ruta}`, { method: metodo, headers: cabeceras, body, redirect: "manual" });
+        const r = await fetch(`${raiz}/api/${ruta}`, { method: metodo, headers: cabeceras, body, redirect: "manual" });
         guardarGalletas(r);
         if (crudo) return r;
         const texto = await r.text();
@@ -77,17 +78,18 @@ function cliente(nombre) {
     // Abrir una dirección cualquiera como el navegador (sin seguir redirecciones, con las galletas de esta persona).
     llamar.ir = async (direccion, { conGalletas = true } = {}) => {
         const r = await fetch(direccion, { headers: conGalletas && galletas.size ? { cookie: galleta() } : {}, redirect: "manual" });
-        if (direccion.startsWith(base)) guardarGalletas(r);
+        if (direccion.startsWith(raiz)) guardarGalletas(r);
         return r;
     };
     llamar.galletas = galletas;
     llamar.id = id;
     llamar.galleta = galleta;
     // El canal en directo de la música, como lo abre la página (EventSource). «pestana»: otra pestaña de la misma
-    // persona. Con «general», el canal de todas las pantallas (sin «musica=1»): el del tablón y el del puente de la oficina.
-    llamar.escuchar = async ({ pestana = id, general = false } = {}) => {
+    // persona. Con «general», el canal de todas las pantallas (sin «musica=1»): el del tablón. Con «oficina», el general
+    // como lo abre el puente de la oficina (?oficina=1: hay alguien dentro).
+    llamar.escuchar = async ({ pestana = id, general = false, oficina = false } = {}) => {
         const control = new AbortController();
-        const r = await fetch(`${base}/api/eventos${general ? "" : `?musica=1&cliente=${pestana}`}`, { headers: { cookie: galleta() }, signal: control.signal });
+        const r = await fetch(`${raiz}/api/eventos${oficina ? "?oficina=1" : general ? "" : `?musica=1&cliente=${pestana}`}`, { headers: { cookie: galleta() }, signal: control.signal });
         assert.equal(r.status, 200);
         const eventos = [];
         let crudo = "";
@@ -205,7 +207,7 @@ assert.match(r.datos.error, /conecta/i);
 
 const ojosDiego = await diego.escuchar();
 const ojosVictor = await victor.escuchar();
-// Ana no abre la música: está por la oficina (el canal general, el que oye el puente /tareas/oficina/).
+// Ana no abre la música: está en el tablón (el canal general; el puente de la oficina lo abre con ?oficina=1, más abajo).
 const ojosOficina = await ana.escuchar({ general: true });
 const cabinaEnLaOficina = (desde = 0) => ojosOficina.eventos.slice(desde).filter((e) => e.tipo === "musica-cabina").map((e) => [e.dj, e.suena]);
 assert.equal((await diego("GET", "musica")).datos.suena, false, "sin nadie pinchando, no suena");
@@ -549,7 +551,7 @@ assert.deepEqual(ev.oyentes, []);
 
 // ---------- si nadie tiene la música abierta, no se pregunta a Spotify ----------
 
-// (Ana sigue con el canal general abierto, como el puente de la oficina: eso no cuenta como tener la música abierta.)
+// (Ana sigue con el canal general abierto, como el tablón: eso no cuenta. El puente de la oficina sí: ver más abajo.)
 assert.equal((await ana("GET", "musica")).datos.suena, true);
 marcaOficina = ojosOficina.marca();
 ojosVictor.cerrar();
@@ -557,7 +559,7 @@ await esperar(700);
 antes = (await control("GET", "estado")).llamadas.sonando.length;
 await esperar(1200);
 despues = (await control("GET", "estado")).llamadas.sonando.length;
-assert.equal(despues, antes, "sin nadie con la música abierta no se llama a Spotify (aunque haya gente en la oficina)");
+assert.equal(despues, antes, "sin nadie con la música abierta ni en la oficina no se llama a Spotify (aunque haya alguien en el tablón)");
 assert.deepEqual(cabinaEnLaOficina(marcaOficina), [["Víctor", false]], "y como ya no se sabe si suena, a la oficina se le dice que no");
 assert.equal((await ana("GET", "musica")).datos.suena, false);
 assert.equal((await ana("GET", "musica")).datos.cabina.dj.id, idVictor, "pero Víctor sigue en la cabina");
@@ -717,6 +719,12 @@ ojosOficina.cerrar();
 const variables = new Map();
 const guardadas = []; // [nombre, valor, opciones], en orden
 const alCerrarLaPagina = [];
+const alCambiarElAlmacen = [];
+// Otra página de la misma web (el reproductor) cambia la preferencia: el navegador avisa a las demás con «storage».
+const cambiarPreferencia = (valor) => {
+    localStorage.setItem("hs-tablon:musica-escuchar", valor);
+    for (const f of alCambiarElAlmacen) f({ key: "hs-tablon:musica-escuchar", newValue: valor });
+};
 {
     const raizApi = new URL("../publico/api/", import.meta.url).href;
     const pedir = globalThis.fetch;
@@ -767,6 +775,14 @@ const alCerrarLaPagina = [];
     globalThis.document = { hidden: false, visibilityState: "visible", addEventListener() {} };
     globalThis.addEventListener = (tipo, f) => {
         if (tipo === "pagehide") alCerrarLaPagina.push(f);
+        if (tipo === "storage") alCambiarElAlmacen.push(f);
+    };
+    // El almacén del navegador: la preferencia del reproductor («Silenciar» guarda "0»), que el puente pasa al mapa.
+    const almacen = new Map();
+    globalThis.localStorage = {
+        getItem: (k) => (almacen.has(k) ? almacen.get(k) : null),
+        setItem: (k, v) => almacen.set(k, String(v)),
+        removeItem: (k) => almacen.delete(k),
     };
     globalThis.window = {
         WA: {
@@ -805,43 +821,49 @@ try {
     for (const [nombre, , opciones] of guardadas) assert.deepEqual(opciones, { public: false, persist: false, scope: "room" }, `${nombre}: privada y sin guardar`);
     await esperar(300); // (que el puente tenga ya abierto su canal en directo)
     // Diego entra en la cabina: el mapa lo sabe al momento, sin que nadie tenga la música abierta
-    antes = (await control("GET", "estado")).llamadas.sonando.length;
     assert.equal((await diego("POST", "musica/cabina")).estado, 200);
     await enElPuente({ configurado: true, dj: "Diego", suena: false }, "alguien pincha");
     const desdePrimera = desdeEnElPuente();
     assert.equal(desdePrimera, (await diego("GET", "musica")).datos.cabina.desde, "«desde» es el de la cabina");
+    // Pone música: con el puente abierto (alguien en la oficina) se mira su Spotify sin que nadie tenga la música
+    // abierta, y el mapa sabe que suena (para abrir el reproductor solo)
+    antes = (await control("GET", "estado")).llamadas.sonando.length;
     await sonar("diego", pista("pista-puente"));
-    await esperar(900);
-    assert.deepEqual(sinDesde(variables.get("hsMusica")), { configurado: true, dj: "Diego", suena: false }, "sin nadie con la música abierta no se sabe si suena");
-    assert.equal((await control("GET", "estado")).llamadas.sonando.length, antes, "el puente no hace que se pregunte a Spotify");
-    // Alguien abre la música: ahora sí se sabe que suena
+    await enElPuente({ configurado: true, dj: "Diego", suena: true }, "empieza a sonar, sin nadie con la música abierta: lo sabe porque hay alguien en la oficina");
+    assert.ok((await control("GET", "estado")).llamadas.sonando.length > antes, "con alguien en la oficina y alguien pinchando, se pregunta a Spotify");
     const ojosAlguien = await diego.escuchar();
-    await enElPuente({ configurado: true, dj: "Diego", suena: true }, "empieza a sonar");
     await sonar("diego", pista("pista-puente", { sonando: false }));
     await enElPuente({ configurado: true, dj: "Diego", suena: false }, "pausa");
     await sonar("diego", pista("pista-puente-2"));
     await enElPuente({ configurado: true, dj: "Diego", suena: true }, "suena otra");
+    // La preferencia del reproductor de este navegador: con «Silenciar» el mapa no lo abre solo
+    assert.equal(variables.get("hsMusica").silenciada, false, "sin haber dicho nada, no está silenciada");
+    cambiarPreferencia("0");
+    assert.equal(variables.get("hsMusica").silenciada, true, "pulsa «Silenciar» en el reproductor: el mapa lo sabe al momento");
+    cambiarPreferencia("1");
+    assert.equal(variables.get("hsMusica").silenciada, false, "y «Escuchar»");
     // Quien pincha cambia de nombre: el puente lo vuelve a leer
     assert.equal((await diego("PATCH", "yo", { nombre: "Diego DJ" })).estado, 200);
     await enElPuente({ configurado: true, dj: "Diego DJ", suena: true }, "el nombre nuevo de quien pincha");
     assert.equal((await diego("PATCH", "yo", { nombre: "Diego" })).estado, 200);
     await enElPuente({ configurado: true, dj: "Diego", suena: true }, "y el de siempre");
     ojosAlguien.cerrar();
-    await enElPuente({ configurado: true, dj: "Diego", suena: false }, "se cierra la música: ya no se sabe si suena");
+    await esperar(900);
+    assert.deepEqual(sinDesde(variables.get("hsMusica")), { configurado: true, dj: "Diego", suena: true }, "se cierra la música: con alguien en la oficina se sigue sabiendo que suena");
     assert.equal(desdeEnElPuente(), desdePrimera, "mientras pincha la misma persona, «desde» no cambia (ni al sonar, ni en pausa, ni al cambiar de nombre)");
     assert.equal((await diego("DELETE", "musica/cabina")).estado, 200);
     await enElPuente({ configurado: true, dj: null, suena: false }, "la cabina queda libre");
     // Vuelve a entrar: es otra vez, y el mapa lo distingue por «desde» (para avisar de nuevo)
     await esperar(15);
     assert.equal((await diego("POST", "musica/cabina")).estado, 200);
-    await enElPuente({ configurado: true, dj: "Diego", suena: false }, "vuelve a pinchar");
+    await enElPuente({ configurado: true, dj: "Diego", suena: true }, "vuelve a pinchar (y en su Spotify sigue sonando la de antes)");
     assert.notEqual(desdeEnElPuente(), desdePrimera, "al volver a entrar en la cabina, «desde» es otro");
     assert.equal((await diego("DELETE", "musica/cabina")).estado, 200);
     await enElPuente({ configurado: true, dj: null, suena: false }, "y la deja otra vez");
     await sonar("diego", null);
     const deMusica = guardadas.filter(([nombre]) => nombre === "hsMusica").map(([, valor]) => valor);
-    for (const valor of deMusica) assert.deepEqual(Object.keys(valor), ["configurado", "dj", "suena", "desde"], "hsMusica tiene siempre la misma forma");
-    assert.ok(deMusica.length <= 14, `el puente solo escribe cuando cambia algo (ha escrito ${deMusica.length} veces)`);
+    for (const valor of deMusica) assert.deepEqual(Object.keys(valor), ["configurado", "dj", "suena", "desde", "silenciada"], "hsMusica tiene siempre la misma forma");
+    assert.ok(deMusica.length <= 16, `el puente solo escribe cuando cambia algo (ha escrito ${deMusica.length} veces)`);
     respuestas.push(JSON.stringify(guardadas));
 } finally {
     for (const f of alCerrarLaPagina) f(); // la página se cierra: el puente para su reloj y su canal
@@ -915,6 +937,14 @@ for (const archivo of fs.readdirSync(carpetaApp).filter((f) => f.endsWith(".js")
 const cabina = fs.readFileSync(new URL("musica.js", carpetaApp), "utf8");
 assert.equal(cabina.match(/`desde \$\{laHora\(E\.cabina\.desde\)\}`/g)?.length, 2, "«Estás pinchando tú» y «Pincha …» dicen la hora con laHora()");
 
+// Los servidores que arranca la prueba dicen su código de alta antes de escuchar: se espera a que contesten.
+async function hastaQueConteste(raiz) {
+    for (let i = 0; i < 40; i++) {
+        if (await fetch(`${raiz}/salud`).then((r) => r.ok, () => false)) return;
+        await esperar(150);
+    }
+}
+
 // ---------- un servidor sin Spotify: «sin configurar» ----------
 
 if (puertoSinSpotify) {
@@ -930,6 +960,7 @@ if (puertoSinSpotify) {
         for (let i = 0; i < 40 && !/#alta=/.test(salida); i++) await esperar(150);
         const codigo = /#alta=([\w-]+)/.exec(salida)?.[1];
         assert.ok(codigo, `el servidor sin Spotify no ha arrancado:\n${salida}`);
+        await hastaQueConteste(baseSin);
         const admin = async (metodo, ruta, cuerpo, galleta) =>
             fetch(`${baseSin}/api/${ruta}`, { method: metodo, headers: { "x-tablon": "1", "content-type": "application/json", ...(galleta ? { cookie: galleta } : {}) }, body: cuerpo ? JSON.stringify(cuerpo) : undefined, redirect: "manual" });
         const alta = await admin("POST", "alta", { codigo, nombre: "Diego", clave: "una clave muy larga" });
@@ -958,6 +989,79 @@ if (puertoSinSpotify) {
     }
 } else {
     console.log("(sin puerto libre: no se prueba la música sin configurar)");
+}
+
+// ---------- la cabina olvidada: sin sonar nada un rato, queda libre ----------
+
+// En ese mismo puerto (el servidor de antes ya se ha ido), otro servidor con el Spotify de mentira y la cabina olvidada a
+// los 1,5 s (MUSICA_CABINA_PARADA_MS) en vez de a los 30 minutos.
+if (puertoSinSpotify) {
+    const datosParada = fs.mkdtempSync(path.join(os.tmpdir(), "musica-parada-"));
+    const raiz = `http://127.0.0.1:${puertoSinSpotify}/tareas`;
+    const entorno = { ...process.env, TAREAS_DATOS: datosParada, TAREAS_PUERTO: puertoSinSpotify, TAREAS_URL: `${raiz}/`, MUSICA_CABINA_PARADA_MS: "1500", MUSICA_INTERVALO_MS: "200" };
+    for (const k of Object.keys(entorno)) if (k.startsWith("GOOGLE_") || k === "CREW_ADMIN") delete entorno[k];
+    Object.assign(entorno, { SPOTIFY_CLIENT_ID: "cliente-spotify", SPOTIFY_CLIENT_SECRET: "secreto-spotify", SPOTIFY_AUTH_URL: `${spotify}/authorize`, SPOTIFY_TOKEN_URL: `${spotify}/api/token`, SPOTIFY_API_URL: `${spotify}/v1` });
+    const hijo = spawn(process.execPath, [fileURLToPath(new URL("../servidor/principal.js", import.meta.url))], { env: entorno, stdio: ["ignore", "pipe", "pipe"] });
+    let salida = "";
+    hijo.stdout.on("data", (t) => (salida += t));
+    hijo.stderr.on("data", (t) => (salida += t));
+    try {
+        for (let i = 0; i < 40 && !/#alta=/.test(salida); i++) await esperar(150);
+        const codigo = /#alta=([\w-]+)/.exec(salida)?.[1];
+        assert.ok(codigo, `el servidor de la cabina olvidada no ha arrancado:\n${salida}`);
+        await hastaQueConteste(raiz);
+        const dj = cliente("dj-parada", raiz);
+        assert.equal((await dj("POST", "alta", { codigo, nombre: "Diego", clave: "una clave muy larga" })).estado, 200);
+        await sonar("parada", null);
+        await (await conectarSpotify(dj, "parada")).abrirVuelta();
+        assert.equal((await dj("GET", "musica")).datos.cabina?.dj?.nombre, "Diego", "al conectar con la cabina libre, ya pincha");
+        // Alguien en la oficina (el puente), y en el Spotify de quien pincha no suena nada
+        const oficina = await dj.escuchar({ oficina: true });
+        const libre = await oficina.esperar((e) => e.tipo === "musica-cabina" && e.dj === null, "la cabina olvidada queda libre", 0, 6000);
+        assert.equal(libre.suena, false);
+        const m = (await dj("GET", "musica")).datos;
+        assert.equal(m.cabina, null, "sin sonar nada en su Spotify, la cabina queda libre sola");
+        assert.match(m.aviso, /Diego llevaba un rato sin poner nada/, "y la cabina dice por qué");
+        assert.match(salida, /Hace rato que no suena nada en el Spotify de Diego/, "y queda en el registro");
+        // Vuelve a entrar y pone música: mientras suena no se la quitan, aunque pase el rato
+        await sonar("parada", pista("pista-parada"));
+        assert.equal((await dj("POST", "musica/cabina")).estado, 200);
+        assert.equal((await dj("GET", "musica")).datos.aviso, null, "al volver a entrar, el aviso se va");
+        await esperar(3000);
+        let ahora = (await dj("GET", "musica")).datos;
+        assert.equal(ahora.cabina?.dj?.nombre, "Diego", "mientras suena algo, la cabina sigue siendo suya");
+        assert.equal(ahora.suena, true);
+        // Spotify deja de contestar un rato (aquí, un 429 de 2 s, más que el rato de la cabina olvidada) y, a la vuelta, está
+        // en pausa: no se deja libre a la primera respuesta (lo que sonara mientras no se veía no se sabe); el rato vuelve a
+        // contar desde ahí. En pausa también cuenta: pasado ese rato sin sonar, libre
+        const marca = oficina.marca();
+        // (las consultas de este servidor son las de la cuenta «parada»: el de las otras pruebas sigue en marcha)
+        const deEste = async () => (await control("GET", "estado")).llamadas.sonando.filter((l) => l.cuenta === "parada");
+        await control("POST", "limite?veces=1&espera=2");
+        for (let i = 0; i < 40 && !(await deEste()).some((l) => l.respuesta === 429); i++) await esperar(50);
+        await sonar("parada", pista("pista-parada", { sonando: false }));
+        let trasEl429 = false;
+        for (let i = 0; i < 80 && !trasEl429; i++) {
+            const llamadas = await deEste();
+            const i429 = llamadas.findLastIndex((l) => l.respuesta === 429);
+            trasEl429 = i429 >= 0 && Boolean(llamadas[i429 + 1]);
+            if (!trasEl429) await esperar(50);
+        }
+        assert.ok(trasEl429, "ha habido un 429 y después otra consulta");
+        await esperar(150);
+        ahora = (await dj("GET", "musica")).datos;
+        assert.equal(ahora.cabina?.dj?.nombre, "Diego", "tras no ver nada un rato, la primera respuesta en pausa no deja la cabina libre");
+        await oficina.esperar((e) => e.tipo === "musica-cabina" && e.dj === null, "en pausa, pasado el rato viéndolo, libre", marca, 6000);
+        oficina.cerrar();
+    } finally {
+        await new Promise((listo) => {
+            hijo.once("exit", listo);
+            hijo.kill();
+            setTimeout(listo, 3000).unref();
+        });
+        fs.rmSync(datosParada, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+        await sonar("parada", null);
+    }
 }
 
 console.log("Música: bien");
